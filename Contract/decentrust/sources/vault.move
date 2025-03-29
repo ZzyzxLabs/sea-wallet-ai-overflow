@@ -1,4 +1,4 @@
-module aitrust::vault {
+module decentrust::vault {
     use sui::dynamic_object_field as dof;
     use sui::balance::{Self, Balance};
     use sui::coin::{Self, Coin};
@@ -27,7 +27,7 @@ module aitrust::vault {
         transfer::public_transfer(aicap, ctx.sender());
     }
 
-    public fun add_trust_asset<Asset: key + store>(cap: &AImanagercap vault: &mut TrustVault, asset: Asset, name: vector<u8>, ctx: &mut TxContext) {
+    public fun add_trust_asset<Asset: key + store>(cap: &AImanagercap, vault: &mut TrustVault, asset: Asset, name: vector<u8>, ctx: &mut TxContext) {
         dof::add(
             &mut vault.id,
             name,
@@ -35,7 +35,7 @@ module aitrust::vault {
         )
     }
 
-    public fun add_trust_asset_coin<Asset>(cap: &AImanagercap vault: &mut TrustVault, asset: Coin<Asset>, name: vector<u8>, ctx: &mut TxContext) {
+    public fun add_trust_asset_coin<Asset>(cap: &AImanagercap, vault: &mut TrustVault, asset: Coin<Asset>, name: vector<u8>, ctx: &mut TxContext) {
         dof::add(
             &mut vault.id,
             name,
@@ -43,7 +43,7 @@ module aitrust::vault {
         );
     }
 
-    public fun reclaim_trust_asset<Asset: key + store>(cap: &AImanagercap vault: &mut TrustVault, asset_name: vector<u8>, ctx: &mut TxContext) {
+    public fun reclaim_trust_asset<Asset: key + store>(cap: &AImanagercap, vault: &mut TrustVault, asset_name: vector<u8>, ctx: &mut TxContext) {
         let asset = dof::remove<vector<u8>, Asset>(
             &mut vault.id,
             asset_name,
@@ -51,7 +51,7 @@ module aitrust::vault {
         transfer::public_transfer(asset, ctx.sender());
     }
 
-    public fun organize_trust_asset<Asset: key + store>(cap: &AImanagercap vault: &mut TrustVault, asset_name: vector<u8>, asset: Coin<Asset>, ctx: &mut TxContext) {
+    public fun organize_trust_asset<Asset: key + store>(cap: &AImanagercap, vault: &mut TrustVault, asset_name: vector<u8>, asset: Coin<Asset>, ctx: &mut TxContext) {
         let coin_from_vault = dof::borrow_mut<vector<u8>, Coin<Asset>>(
             &mut vault.id,
             asset_name
