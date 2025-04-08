@@ -1,6 +1,6 @@
-module decentrust::agentConfig{
+module contract::agentConfig{
     
-    use decentrust::vault::{Self, AImanagercap};
+    use contract::vault::{Self, AImanagercap};
 
     public struct AgentConfig has key, store {
         id: UID,
