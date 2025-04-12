@@ -4,9 +4,11 @@ import { ConnectButton } from "@mysten/dapp-kit";
 import { useCurrentAccount } from "@mysten/dapp-kit";
 import { useState, useEffect } from "react";
 import useHeirStore from "../../store/heirStore"; // 確保正確引入 store 路徑
+import { useRouter } from 'next/navigation';
 
 export default function TestingP() {
   const account = useCurrentAccount();
+  const router = useRouter();
 
   // 從 Zustand store 獲取狀態和方法
   const {
@@ -59,6 +61,16 @@ export default function TestingP() {
       return () => clearTimeout(timerShowWelcome);
     }
   }, [account, isConnecting, setShowWelcome, setShowNextCard]);
+
+  // Add this effect to handle redirection when showDashboardIndicator changes
+  useEffect(() => {
+    if (showDashboardIndicator) {
+      const timer = setTimeout(() => {
+        router.push('/dashboard');
+      }, 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [showDashboardIndicator, router]);
 
   // 格式化地址顯示
   const formatAddress = (address) => {

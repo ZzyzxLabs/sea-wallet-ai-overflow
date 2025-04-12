@@ -1,7 +1,8 @@
 // store.js
 import { create } from 'zustand';
+import { persist } from 'zustand/middleware';
 
-const useHeirStore = create((set, get) => ({
+const useHeirStore = create(persist((set, get) => ({
   // 連接狀態
   isConnecting: false,
   showWelcome: false,
@@ -147,7 +148,7 @@ const useHeirStore = create((set, get) => ({
       
       // 延遲後重定向到儀表板
       setTimeout(() => {
-        window.location.href = '/dashboard';
+        // window.location.href = '/dashboard';
       }, 3000);
       
       return true;
@@ -155,6 +156,6 @@ const useHeirStore = create((set, get) => ({
     
     return false;
   }
-}));
+})));
 
 export default useHeirStore;

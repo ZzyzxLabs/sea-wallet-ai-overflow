@@ -33,14 +33,14 @@ export default function dashboard() {
   } = useHeirStore();
   useEffect(() => {
     // 範例繼承人數據
-    const exampleHeirs = [
-      { id: 1, email: "alice@example.com", ratio: "50" },
-      { id: 2, email: "bob@example.com", ratio: "30" },
-      { id: 3, email: "charlie@example.com", ratio: "20" },
-    ];
+    // const exampleHeirs = [
+    //   { id: 1, email: "alice@example.com", ratio: "50" },
+    //   { id: 2, email: "bob@example.com", ratio: "30" },
+    //   { id: 3, email: "charlie@example.com", ratio: "20" },
+    // ];
 
-    // 更新 store 中的數據
-    setHeirs(exampleHeirs);
+    // // 更新 store 中的數據
+    // setHeirs(exampleHeirs);
   }, []);
   // 100 days countdown state
   const [daysRemaining, setDaysRemaining] = useState(100);
@@ -153,7 +153,7 @@ export default function dashboard() {
                   >
                     <div className="flex justify-between items-center">
                       <div>
-                        <h3 className="text-lg font-medium">
+                        <h3 className="text-lg font-medium text-gray-800">
                           Heir #{index + 1}
                         </h3>
                         <p className="text-gray-600 mt-1">
@@ -161,18 +161,18 @@ export default function dashboard() {
                           {heir.email || "Not set"}
                         </p>
                         <div className="mt-2 flex items-center">
-                          <span className="mr-2">Allocation ratio:</span>
-                          <span className="font-medium">{heir.ratio}%</span>
+                          <span className="mr-2 text-gray-800"> Allocation ratio:</span>
+                          <span className="font-medium text-gray-800">{heir.ratio}%</span>
                         </div>
                       </div>
                       <div className="flex items-center">
                         {heir.email ? (
-                          <span className="bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm font-medium">
-                            Set
+                          <span className="bg-green-100 text-green-800 px-6 py-2 rounded-full text-sm font-medium">
+                            Confirmed Life status
                           </span>
                         ) : (
-                          <span className="bg-yellow-100 text-yellow-800 px-3 py-1 rounded-full text-sm font-medium">
-                            Not set
+                          <span className="bg-yellow-100 text-yellow-800 px-6 py-2 rounded-full text-sm font-medium">
+                            Not Confirmed
                           </span>
                         )}
                       </div>
