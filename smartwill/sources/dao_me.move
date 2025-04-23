@@ -47,16 +47,17 @@ module smartwill::dao_me {
             id: object::new(ctx),
             threshold: threshold
         };
-        let v_address = vec_set::keys<address>(&dao.member)
+        let v_address = vec_set::keys<address>(&dao.member);
+        let mut x = 0;
         while(x < vec_set::size(&dao.member)){
-            receipent = v_address[x];
+            let receipent = v_address[x];
             let ballot = Ballot {
                 id: object::new(ctx),
-                proposal_id: object::new(ctx)
+                proposal_id: object::id(&ticketBox)
             };
             transfer::transfer(ballot, receipent);
-            let x = x + 1;
-        }
+            x = x + 1;
+        };
         transfer::share_object(ticketBox);
     }
 }
