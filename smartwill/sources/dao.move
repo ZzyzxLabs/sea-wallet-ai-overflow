@@ -1,6 +1,8 @@
-module smartwill::dao_me {
+module smartwill::dao {
     use sui::vec_set::{Self, VecSet};
     use std::string::{Self, String};
+
+    const EwrongBallot: u64 = 1;
 
     public struct DAO_ME has drop {} //one-time witness
 
@@ -21,6 +23,8 @@ module smartwill::dao_me {
     public struct TicketBox has key {
         id: UID,
         threshold: u16,
+        approve_count: u16,
+        reject_count: u16,
     }
 
     fun init(_otw: DAO_ME, ctx: &mut TxContext) {
@@ -45,7 +49,10 @@ module smartwill::dao_me {
     public fun create_Vote(cap: &WillerCap, dao: &mut Dao, threshold: u16, ctx: &mut TxContext) {
         let ticketBox = TicketBox {
             id: object::new(ctx),
-            threshold: threshold
+            threshold: threshold,
+            approve_count: 0,
+            reject_count: 0,
+
         };
         let v_address = vec_set::keys<address>(&dao.member);
         let mut x = 0;
@@ -59,6 +66,20 @@ module smartwill::dao_me {
             x = x + 1;
         };
         transfer::share_object(ticketBox);
+    }
+
+    public fun vote_approve(ballot: Ballot, ticketBox: &mut TicketBox, ctx: &mut TxContext) {
+        assert!(ballot.proposal_id == object::id(ticketBox), EwrongBallot);
+        let Ballot { id, proposal_id: _ } = ballot;
+        object::delete(id);
+        ticketBox.approve_count = ticketBox.approve_count + 1;
+    }
+
+    public fun vote_reject(ballot: Ballot, ticketBox: &mut TicketBox, ctx: &mut TxContext) {
+        assert!(ballot.proposal_id == object::id(ticketBox), EwrongBallot);
+        let Ballot { id, proposal_id: _ } = ballot;
+        object::delete(id);
+        ticketBox.reject_count = ticketBox.reject_count + 1;
     }
 }
 
