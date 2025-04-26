@@ -31,6 +31,7 @@ module smartwill::vault {
     public struct HeirCap has key, store {
         id: UID,
         percentage: u8
+
     }
 
     // public struct VAULT has drop {}
@@ -63,14 +64,23 @@ module smartwill::vault {
         }
     }
 
-    // add heirs one by one
-    public fun addHeir(_cap: &OwnerCap, vault: &mut Vault, heir: address, percentage: u8, ctx: &mut TxContext) {
+    // add heir by address
+    public fun addHeirByAddress(_cap: &OwnerCap, vault: &mut Vault, heir: address, percentage: u8, ctx: &mut TxContext) {
         let heirCap = HeirCap {
             id: object::new(ctx),
             percentage: percentage,
         };
         vault.heirs.insert(heir, percentage);
         transfer::public_transfer(heirCap, heir);
+    }
+
+    // add heir by email (use zk)
+    public fun addHeirByEmail(_cap: &OwnerCap, vault: &mut Vault, email: vector<u8>, percentage: u8, ctx: &mut TxContext) : HeirCap{
+        let heirCap = HeirCap {
+            id: object::new(ctx),
+            percentage: percentage,
+        }
+        
     }
 
     // change heirs
