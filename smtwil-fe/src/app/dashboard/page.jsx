@@ -5,7 +5,7 @@ import { useCurrentAccount } from "@mysten/dapp-kit";
 import { useState, useEffect } from "react";
 import useHeirStore from "../../store/heirStore"; // 確保正確引入 store 路徑
 import { useRouter } from "next/navigation";
-
+import ContractAlter from "../../component/ContractAlter"; // 確保正確引入 ContractAlter 組件
 export default function Dashboard() {
   const account = useCurrentAccount();
   const router = useRouter();
@@ -225,6 +225,7 @@ export default function Dashboard() {
           </div>
         </div>
       </div>
+      < ContractAlter /> 
     </div>
   );
 }
