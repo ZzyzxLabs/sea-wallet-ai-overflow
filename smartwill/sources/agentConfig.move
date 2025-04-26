@@ -1,11 +1,11 @@
-module smartwill::agentConfig{
+// module smartwill::agentConfig{
     
-    use smartwill::vault::{Self, AICap};
+//     use smartwill::vault::{Self, AICap};
 
-    public struct AgentConfig has key, store {
-        id: UID,
-        vault_key: AICap,
-        agent_name: vector<u8>,
-        // agent ability boolean
-    }
-}
+//     public struct AgentConfig has key, store {
+//         id: UID,
+//         vault_key: AICap,
+//         agent_name: vector<u8>,
+//         // agent ability boolean
+//     }
+// }

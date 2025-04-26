@@ -2,11 +2,11 @@ module smartwill::vault {
     use sui::dynamic_object_field as dof;
     use sui::balance::{Self, Balance};
     use sui::coin::{Self, Coin};
-    use sui::object::{Self, UID};
+    use sui::object::{Self, UID, ID};
     use sui::transfer;
     use sui::tx_context::{Self, TxContext};
     use sui::vec_map::{Self, VecMap};
-    use std::address;
+    use std::string::{Self, String};
     use sui::sui::SUI;
 
     public struct Vault has key {
@@ -14,114 +14,120 @@ module smartwill::vault {
         last_time: u64,
         warned: bool,
         timeleft: u64,
-        heirs: VecMap<address, u8>,
+        capercentage: VecMap<u8, u8>,
+        capbool: VecMap<u8, bool>, 
     }
     
-    // The owner of the vault, he/she can deposit, withdraw, and send assets
     public struct OwnerCap has key, store {
         id: UID,
+        vault_id: ID
     }
 
-    // The ai agent that helps owner to stake/loan assets
-    // public struct AICap has key, store {
-    //     id: UID,
-    // }
-
-    // Heirs are who can validate the deathness of the owner, and withdraw assets if the owner is dead
-    public struct HeirCap has key, store {
+    public struct MemberCap has key, store {
         id: UID,
-        percentage: u8
-
+        vault_id: ID,
+        capid: u8,
     }
 
-    // public struct VAULT has drop {}
-
-    fun init(ctx: &mut TxContext) {
-        let ownerCap = OwnerCap {
-            id: object::new(ctx)
-        };
+    public fun createVault(ctx: &mut TxContext) {
         let vault = Vault {
             id: object::new(ctx),
-            last_time: ctx.epoch_timestamp_ms(),
+            last_time: tx_context::epoch_timestamp_ms(ctx),
             warned: false,
             timeleft: 6 * 30 * 24 * 60 * 60 * 1000,
-            heirs: vec_map::empty<address, u8>(),
+            capercentage: vec_map::empty<u8, u8>(),
+            capbool: vec_map::empty<u8, bool>(),
+        };
+        let ownerCap = OwnerCap {
+            id: object::new(ctx),
+            vault_id: object::id(&vault),
         };
         transfer::share_object(vault);
-        transfer::public_transfer(ownerCap, ctx.sender());
+        transfer::public_transfer(ownerCap, tx_context::sender(ctx));
     }
 
-    // initialization of heirs
-    public fun initHeirs(_cap: &OwnerCap, vault: &mut Vault, heirs: VecMap<address, u8>, ctx: &mut TxContext) {
-        vault.heirs = heirs;
-        while (!heirs.is_empty()) {
-            let (heir, percentage) = heirs.pop();
-            let heirCap = HeirCap {
-                id: object::new(ctx),
-                percentage: percentage,
-            };
-            transfer::public_transfer(heirCap, heir);
-        }
-    }
-
-    // add heir by address
-    public fun addHeirByAddress(_cap: &OwnerCap, vault: &mut Vault, heir: address, percentage: u8, ctx: &mut TxContext) {
-        let heirCap = HeirCap {
-            id: object::new(ctx),
-            percentage: percentage,
-        };
-        vault.heirs.insert(heir, percentage);
-        transfer::public_transfer(heirCap, heir);
-    }
-
-    // add heir by email (use zk)
-    public fun addHeirByEmail(_cap: &OwnerCap, vault: &mut Vault, email: vector<u8>, percentage: u8, ctx: &mut TxContext) : HeirCap{
-        let heirCap = HeirCap {
-            id: object::new(ctx),
-            percentage: percentage,
-        }
+    public fun initMember(_cap: &OwnerCap, vault: &mut Vault, addrPer: VecMap<address, u8>, emailPer: VecMap<String, u8>, ctx: &mut TxContext): VecMap<String, MemberCap> {
+        let mut x = 0;
+        let mut emailCapMap = vec_map::empty<String, MemberCap>();
         
+        // Handle emails
+        let emails = vec_map::keys(&emailPer);
+        let mut i = 0;
+        while (i < vector::length(&emails)) {
+            let email = *vector::borrow(&emails, i);
+            let percentage = *vec_map::get(&emailPer, &email);
+            let memberCap = MemberCap {
+                id: object::new(ctx),
+                vault_id: object::id(vault),
+                capid: x
+            };
+            vec_map::insert(&mut vault.capercentage, x, percentage);
+            vec_map::insert(&mut vault.capbool, x, true);
+            vec_map::insert(&mut emailCapMap, email, memberCap);
+            x = x + 1;
+            i = i + 1;
+        };
+        
+        // Handle addresses
+        let addresses = vec_map::keys(&addrPer);
+        let mut j = 0;
+        while (j < vector::length(&addresses)) {
+            let addr = *vector::borrow(&addresses, j);
+            let percentage = *vec_map::get(&addrPer, &addr);
+            let memberCap = MemberCap {
+                id: object::new(ctx),
+                vault_id: object::id(vault),
+                capid: x
+            };
+            vec_map::insert(&mut vault.capercentage, x, percentage);
+            vec_map::insert(&mut vault.capbool, x, true);
+            transfer::public_transfer(memberCap, addr);
+            x = x + 1;
+            j = j + 1;
+        };
+        
+        emailCapMap
     }
 
-    // change heirs
-    public fun changeHeirs(_cap: &OwnerCap, vault: &mut Vault, heirs: VecMap<address, u8>, ctx: &mut TxContext) {
-        initHeirs(_cap, vault, heirs, ctx);
+    public fun addMemberByAddress(_cap: &OwnerCap, vault: &mut Vault, member: address, percentage: u8, ctx: &mut TxContext) {
+        let x = (vec_map::size(&vault.capercentage) as u8);
+        let memberCap = MemberCap {
+            id: object::new(ctx),
+            vault_id: object::id(vault),
+            capid: x
+        };
+        vec_map::insert(&mut vault.capercentage, x, percentage);
+        vec_map::insert(&mut vault.capbool, x, true);
+        transfer::public_transfer(memberCap, member);
+    }
+
+    public fun addMemberByEmail(_cap: &OwnerCap, vault: &mut Vault, email: String, percentage: u8, ctx: &mut TxContext): MemberCap {
+        let x = (vec_map::size(&vault.capercentage) as u8);
+        let memberCap = MemberCap {
+            id: object::new(ctx),
+            vault_id: object::id(vault),
+            capid: x
+        };
+        vec_map::insert(&mut vault.capercentage, x, percentage);
+        vec_map::insert(&mut vault.capbool, x, true);
+        memberCap
     }
 
     public fun add_trust_asset<Asset: key + store>(cap: &OwnerCap, vault: &mut Vault, asset: Asset, name: vector<u8>, ctx: &mut TxContext) {
-        dof::add(
-            &mut vault.id,
-            name,
-            asset
-        )
+        dof::add(&mut vault.id, name, asset);
     }
 
     public fun add_trust_asset_coin<Asset>(cap: &OwnerCap, vault: &mut Vault, asset: Coin<Asset>, name: vector<u8>, ctx: &mut TxContext) {
-        dof::add(
-            &mut vault.id,
-            name,
-            asset
-        );
+        dof::add(&mut vault.id, name, asset);
     }
 
     public fun reclaim_trust_asset<Asset: key + store>(cap: &OwnerCap, vault: &mut Vault, asset_name: vector<u8>, ctx: &mut TxContext) {
-        let asset = dof::remove<vector<u8>, Asset>(
-            &mut vault.id,
-            asset_name,
-        );
-        transfer::public_transfer(asset, ctx.sender());
+        let asset = dof::remove<vector<u8>, Asset>(&mut vault.id, asset_name);
+        transfer::public_transfer(asset, tx_context::sender(ctx));
     }
 
     public fun organize_trust_asset<Asset: key + store>(cap: &OwnerCap, vault: &mut Vault, asset_name: vector<u8>, asset: Coin<Asset>, ctx: &mut TxContext) {
-        let coin_from_vault = dof::borrow_mut<vector<u8>, Coin<Asset>>(
-            &mut vault.id,
-            asset_name
-        );
+        let coin_from_vault = dof::borrow_mut<vector<u8>, Coin<Asset>>(&mut vault.id, asset_name);
         coin::join<Asset>(coin_from_vault, asset);
-    }
-
-    #[test_only]
-    public fun test_init(ctx: &mut TxContext) {
-        init( ctx);
     }
 }
