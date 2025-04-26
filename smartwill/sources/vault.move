@@ -5,9 +5,16 @@ module smartwill::vault {
     use sui::object::{Self, UID};
     use sui::transfer;
     use sui::tx_context::{Self, TxContext};
+    use sui::vec_map::{Self, VecMap};
+    use std::address;
+    use sui::sui::SUI;
 
     public struct Vault has key {
-        id: UID
+        id: UID,
+        last_time: u64,
+        warned: bool,
+        timeleft: u64,
+        heirs: VecMap<address, u8>,
     }
     
     // The owner of the vault, he/she can deposit, withdraw, and send assets
@@ -16,13 +23,14 @@ module smartwill::vault {
     }
 
     // The ai agent that helps owner to stake/loan assets
-    public struct AICap has key, store {
-        id: UID,
-    }
+    // public struct AICap has key, store {
+    //     id: UID,
+    // }
 
-    // Validator are who can validate the deathness of the owner
-    public struct ValidatorCap has key, store {
+    // Heirs are who can validate the deathness of the owner, and withdraw assets if the owner is dead
+    public struct HeirCap has key, store {
         id: UID,
+        percentage: u8
     }
 
     // public struct VAULT has drop {}
@@ -32,10 +40,42 @@ module smartwill::vault {
             id: object::new(ctx)
         };
         let vault = Vault {
-            id: object::new(ctx)
+            id: object::new(ctx),
+            last_time: ctx.epoch_timestamp_ms(),
+            warned: false,
+            timeleft: 6 * 30 * 24 * 60 * 60 * 1000,
+            heirs: vec_map::empty<address, u8>(),
         };
         transfer::share_object(vault);
         transfer::public_transfer(ownerCap, ctx.sender());
+    }
+
+    // initialization of heirs
+    public fun initHeirs(_cap: &OwnerCap, vault: &mut Vault, heirs: VecMap<address, u8>, ctx: &mut TxContext) {
+        vault.heirs = heirs;
+        while (!heirs.is_empty()) {
+            let (heir, percentage) = heirs.pop();
+            let heirCap = HeirCap {
+                id: object::new(ctx),
+                percentage: percentage,
+            };
+            transfer::public_transfer(heirCap, heir);
+        }
+    }
+
+    // add heirs one by one
+    public fun addHeir(_cap: &OwnerCap, vault: &mut Vault, heir: address, percentage: u8, ctx: &mut TxContext) {
+        let heirCap = HeirCap {
+            id: object::new(ctx),
+            percentage: percentage,
+        };
+        vault.heirs.insert(heir, percentage);
+        transfer::public_transfer(heirCap, heir);
+    }
+
+    // change heirs
+    public fun changeHeirs(_cap: &OwnerCap, vault: &mut Vault, heirs: VecMap<address, u8>, ctx: &mut TxContext) {
+        initHeirs(_cap, vault, heirs, ctx);
     }
 
     public fun add_trust_asset<Asset: key + store>(cap: &OwnerCap, vault: &mut Vault, asset: Asset, name: vector<u8>, ctx: &mut TxContext) {
