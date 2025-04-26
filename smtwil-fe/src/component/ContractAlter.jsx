@@ -5,7 +5,7 @@ const coinlistExample = [
   ["SeWa", "0x4::sewa::sewa", 100],
 ];
 import { useCurrentAccount, useSuiClientQuery } from "@mysten/dapp-kit";
-
+import ButtonInContractAlter from "./ButtonInContractAlter";
 const ContractAlter = () => {
 return (
     <div className="flex justify-center items-center w-full h-fit bg-white">
@@ -28,6 +28,7 @@ return (
                 ))}
             </div>
         </div>
+        <ButtonInContractAlter />
     </div>
 );
 };
