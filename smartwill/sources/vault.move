@@ -8,6 +8,10 @@ module smartwill::vault {
     use sui::vec_map::{Self, VecMap};
     use std::string::{Self, String};
     use sui::sui::SUI;
+    use sui::clock::{Self, Clock};
+    use sui::tx_context::epoch_timestamp_ms;
+
+    const ELocked: u64 = 0;
 
     public struct Vault has key {
         id: UID,
@@ -130,4 +134,32 @@ module smartwill::vault {
         let coin_from_vault = dof::borrow_mut<vector<u8>, Coin<Asset>>(&mut vault.id, asset_name);
         coin::join<Asset>(coin_from_vault, asset);
     }
+
+    public fun update_time(_cap: &OwnerCap, vault: &mut Vault, clock: &Clock, ctx: &mut TxContext) {
+        vault.last_time = clock.timestamp_ms();
+        if (vault.warned) {
+            vault.timeleft = 6 * 30 * 24 * 60 * 60 * 1000;
+            vault.warned = false;
+        }
+    }
+
+    // grace period - 7 days grace period for owner to confirm their aliveness
+    fun grace_period(_cap: &MemberCap, vault: &mut Vault, clock: &Clock, ctx: &mut TxContext) {
+        vault.last_time = clock.timestamp_ms();
+        vault.timeleft = 7 * 24 * 60 * 60 * 1000;
+        vault.warned = true;
+    }
+
+    // withdraw after 6 months
+    public fun heir_withdraw(cap: &MemberCap, vault: &mut Vault, clock: &Clock, ctx: &mut TxContext): bool {
+        let current_time = clock.timestamp_ms();
+        assert!(current_time - vault.last_time >= vault.timeleft, ELocked);
+        if (!vault.warned) {
+            grace_period(cap, vault, clock, ctx);
+            return false
+        };
+        // transfer::transfer(vault.id, ctx.sender());
+        true
+    }
+
 }

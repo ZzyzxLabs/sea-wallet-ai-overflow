@@ -1,7 +1,6 @@
 // module smartwill::countdown;
 
-// use sui::clock::{Self, Clock};
-// use sui::tx_context::epoch_timestamp_ms;
+
 // use smartwill::vault::{OwnerCap, HeirCap};
 // use sui::vec_map::{Self, VecMap};
 
@@ -21,7 +20,7 @@
 
 // // public struct OwnerCap has key, store {
 // //     id: UID,
-
+// // }
 
 // // public struct HeirCap has key, store {
 // //     id: UID,
@@ -62,33 +61,6 @@
 // // }
 
 // // update time - update the last time of the vault
-// public fun update_time(_cap: &OwnerCap, vault: &mut Vault, clock: &Clock) {
-//     vault.last_time = clock.timestamp_ms();
-//     if (vault.warned) {
-//         vault.timeleft = SixMonths; 
-//         vault.warned = false;
-//     }
-// }
-
-// // grace period - 7 days grace period for owner to confirm their aliveness
-// fun grace_period(_cap: &HeirCap, vault: &mut Vault, clock: &Clock) {
-//     vault.last_time = clock.timestamp_ms();
-//     vault.timeleft = SevenDays; // 7 days
-//     vault.warned = true;
-// }
-
-// // withdraw after 6 months
-// public fun heir_withdraw(heirCap: &HeirCap, vault: &mut Vault, clock: &Clock, ctx: &mut TxContext): bool {
-//     let current_time = clock.timestamp_ms();
-//     assert!(current_time - vault.last_time >= vault.timeleft, ELocked);
-//     if (!vault.warned) {
-//         grace_period(heirCap, vault, clock);
-//         return false
-//     };
-//     // transfer::transfer(vault.id, ctx.sender());
-//     true
-// }
-
 
 // // #[test_only]
 // // use sui::test_scenario::{Self as ts};
