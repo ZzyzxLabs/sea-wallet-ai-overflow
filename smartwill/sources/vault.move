@@ -125,7 +125,7 @@ module smartwill::vault {
     public fun add_trust_asset<Asset: key + store>(cap: &OwnerCap, vault: &mut Vault, asset: Asset, name: vector<u8>, ctx: &mut TxContext) {
         dof::add(&mut vault.id, name, asset);
     }
-
+    //put coinType into vault
     public fun add_trust_asset_coin<Asset>(cap: &OwnerCap, vault: &mut Vault, asset: Coin<Asset>, name: vector<u8>, ctx: &mut TxContext) {
         let amount = coin::value<Asset>(&asset);
         table::add(&mut vault.withdraw_table, name, amount);

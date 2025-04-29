@@ -1,6 +1,6 @@
 "use client";
 import "@mysten/dapp-kit/dist/index.css";
-import { ConnectButton, useAutoConnectWallet } from "@mysten/dapp-kit";
+import { ConnectButton, useAutoConnectWallet, useSuiClientQuery } from "@mysten/dapp-kit";
 import { useCurrentAccount } from "@mysten/dapp-kit";
 import { useState, useEffect } from "react";
 import useHeirStore from "../../store/heirStore"; // 確保正確引入 store 路徑
@@ -70,7 +70,7 @@ export default function Dashboard() {
 
     return () => clearInterval(timer);
   }, []);
-
+  
   // 處理地址顯示格式化
   const formatAddress = (address) => {
     if (!address) return "Not set";
@@ -87,6 +87,17 @@ export default function Dashboard() {
     }
     return "./mail-142.svg";
   };
+  // const { data, isPending, error, refetch } = useSuiClientQuery('getDynamicFieldObject', {
+	// 	parentId: "0x89d0c03b5d8afbc76c7b4a1c63dc27490a5457caab2c40ce53e91b8825a58dcb",
+  //   name:{
+  //     "type": "vector<u8>",
+  //     "value": [
+  //         115,
+  //         117,
+  //         105
+  //     ]
+  // }
+	// });
 
   return (
     <div className="flex flex-col h-screen bg-gray-100">
