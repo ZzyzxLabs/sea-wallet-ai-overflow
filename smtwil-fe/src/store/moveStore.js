@@ -1,38 +1,59 @@
 import { Transaction } from '@mysten/sui/transactions';
 import { create } from 'zustand';
-
 const useMoveStore = create((set, get) => ({
-  packageName: "0", // 替換為你的 package name
+  
+  packageName: "0xbb4e6631f81e79d76c47d4acc6193c4fee55c48fc0854e4fd15f5564ca4a3584", // 替換為你的 package name
   
   createVaultTx: () => {
     const vaultTx = new Transaction();
     vaultTx.moveCall({
-      target: `${get().packageName}::smartwill::vault`,
+      target: `${get().packageName}::vault::createVault`,
       arguments: [],
     });
     return vaultTx;
   },
-  //asset is an object,name is costumized
-  addToVaultTx: (cap,vault,asset,name) => {
-    const vaultTx = new Transaction();
-    vaultTx.moveCall({
-      target: `${get().packageName}::smartwill::add_trust_asset_coin`,
-      arguments: [cap, vault, asset, name],
-      //put in coinType here.
-      typeArguments: [asset.coinType],
-    });
-    return vaultTx;
-  },
-  coinEmittion:(ori,snd) => {
-    const organizeTx = new Transaction();
-    // Merge every other element into ori[0]
-    if (ori && ori.length > 1) {
-      for (let i = 1; i < ori.length; i += 2) {
-      organizeTx.mergeCoins(ori[0], [ori[i]]);
-      }
+    // capId, vaultId, coinIds (array of objectIds), amount, name, coinType
+  fuseTxFunctions: (capId, vaultId, coinIds, amount, name, coinType) => {
+    const tx = new Transaction();
+    
+    // Basic validation
+    if (!Array.isArray(coinIds) || coinIds.length === 0) {
+      throw new Error("coinIds must be a non-empty array of object IDs");
     }
-    organizeTx.splitCoins(ori[0], [snd]);
-    return organizeTx;
+    
+    // CRITICAL FIX: Create proper object references for all IDs
+    const coinObjects = coinIds.map(id => tx.object(id));
+    console.log("coinObjects", coinObjects);
+    // Step 1: merge coins if needed
+    if (coinIds.length > 1) {
+      tx.mergeCoins(coinObjects[0], coinObjects.slice(1));
+    }
+    
+    // Step 2: Split coins - USING OBJECT REFERENCE, NOT STRING
+    const [goods] = tx.splitCoins(coinObjects[0], [amount]);
+    
+    // Step 3: use goods as asset input into addToVault
+    tx.moveCall({
+      target: `${get().packageName}::vault::add_trust_asset_coin`,
+      arguments: [
+        tx.object(capId), 
+        tx.object(vaultId), 
+        goods, 
+        tx.pure.u8(name)
+      ],
+      typeArguments: [coinType || 'unknown_coin_type'],
+    });
+  
+    return tx;
+  },
+  
+  coinSpTester() {
+    const tx = new Transaction();
+    const [coin] = tx.splitCoins(
+      tx.object("0xdb48537af69fb165da9576ad65e55c80fc65034343fc1f737d44f2083f5db1fb"),
+      [100000]
+    );
+    return tx;
   },
 
   // 重置所有狀態到初始值
@@ -40,5 +61,5 @@ const useMoveStore = create((set, get) => ({
     packageName: "0"
   })
 }));
-
+  
 export default useMoveStore;
