@@ -12,7 +12,6 @@ module smartwill::vault {
     use sui::tx_context::epoch_timestamp_ms;
     use sui::table::{Table, Self};
     use std::vector;
-    use sui::bls12381::scalar_add;
     
     const ELocked: u64 = 0;
 
