@@ -1,94 +1,171 @@
 "use client";
-import React, { useState } from "react";
-import { useCurrentAccount, useSignAndExecuteTransaction, useSuiClientQuery, useAutoConnectWallet } from "@mysten/dapp-kit";
+import React, { useState, useEffect } from "react";
+import {
+  useCurrentAccount,
+  useSignAndExecuteTransaction,
+  useSuiClientQuery,
+  useAutoConnectWallet,
+  useSuiClient,
+} from "@mysten/dapp-kit";
 // Popular Sui network coins for reference
 const popularCoins = [
   ["SUI", "0x2::sui::SUI"],
-  ["USDC", "0x5d4b302506645c37ff133b98c4b50a5ae14841659738d6d733d59d0d217a93bf::coin::COIN"],
-  ["WETH", "0x27792d9fed7f9844eb4839566001bb6f6cb4804f66aa2da6fe1ee242d896881::coin::COIN"],
-  ["BTC", "0xc44f8d1a9d1048bdd3777fe4a1bf74c3f4e97f234ce9e68608d8a3a2743eda8b::coin::COIN"],
-  ["CETUS", "0x06864a6f921804860930db6ddbe2e16acdf8504495ea7481637a1c8b9a8fe54b::cetus::CETUS"],
+  [
+    "USDC",
+    "0x5d4b302506645c37ff133b98c4b50a5ae14841659738d6d733d59d0d217a93bf::coin::COIN",
+  ],
+  [
+    "WETH",
+    "0x27792d9fed7f9844eb4839566001bb6f6cb4804f66aa2da6fe1ee242d896881::coin::COIN",
+  ],
+  [
+    "BTC",
+    "0xc44f8d1a9d1048bdd3777fe4a1bf74c3f4e97f234ce9e68608d8a3a2743eda8b::coin::COIN",
+  ],
+  [
+    "CETUS",
+    "0x06864a6f921804860930db6ddbe2e16acdf8504495ea7481637a1c8b9a8fe54b::cetus::CETUS",
+  ],
 ];
-
 import useMoveStore from "../store/moveStore"; // Ensure correct path to your store
+import { sign } from "crypto";
+
 // Format address function to prevent overflow
 const formatAddress = (address) => {
   if (!address) return "";
   return `${address.slice(0, 8)}...${address.slice(-6)}`;
 };
 
-const buttonInContractAlter = ({ onAddAsset }) => {
-  
+const ButtonInContractAlter = () => {
   const account = useCurrentAccount();
   const autoConnectionStatus = useAutoConnectWallet();
-  const {mutate: signAndExecuteTransaction} = useSignAndExecuteTransaction();
-  console.log("autoConnectionStatus", autoConnectionStatus);
-  const addToVaultTx = useMoveStore((state) => state.addToVaultTx);
-
+  // Use the hook with custom execute function to get more detailed transaction results
+  const { mutate: signAndExecuteTransaction } = useSignAndExecuteTransaction({
+    execute: async ({ bytes, signature }) =>
+      await suiClient.executeTransactionBlock({
+        transactionBlock: bytes,
+        signature,
+        options: {
+          showEffects: true,
+          showEvents: true,
+          showObjectChanges: true,
+          showBalanceChanges: true,
+          showRawEffects: true,
+        },
+      }),
+  });
+  // Get fuseTxFunctions from store
+  const fuseTxFunctions = useMoveStore((state) => state.fuseTxFunctions);
+  // Get the Sui client for advanced transaction options
+  const suiClient = useSuiClient();
   const [showModal, setShowModal] = useState(false);
   const [selectedCoin, setSelectedCoin] = useState(null);
   const [amount, setAmount] = useState(0);
   const [errorr, setErrorr] = useState("");
   const [modalAnimation, setModalAnimation] = useState("");
-  const availableCoins = [];
-  const AllBLN = useSuiClientQuery('getAllBalances', {
-    owner: account.address,
-  });
-  if(AllBLN.data) {
-    // Extract user's coins from data
-    const userCoins = AllBLN.data.map(coin => {
-      // Extract coin name from the coinType path
-      const coinPath = coin.coinType.split('::');
-      const coinName = coinPath.length > 2 ? coinPath[2] : coinPath[1];
-      
-      // Format balance for display (convert from smallest units)
-      const balance = parseInt(coin.totalBalance) / 1000000000;
-      
-      return [coinName, coin.coinType, balance];
-    });
-    
-    // Update popular coins with user balance data if available
+  const [availableCoins, setAvailableCoins] = useState([]);
+  const [transactionDigest, setTransactionDigest] = useState("");
+  const [transactionStatus, setTransactionStatus] = useState("");
+  const [isProcessing, setIsProcessing] = useState(false);
 
-    userCoins.forEach(userCoin => {
-      const existingIndex = availableCoins.findIndex(coin => coin[1] === userCoin[1]);
-      if (existingIndex >= 0) {
-      // Update existing coin with balance
-      availableCoins[existingIndex] = [...availableCoins[existingIndex], userCoin[2]];
-      } else {
-      // Add new coin
-      availableCoins.push(userCoin);
-      }
-    });
-    
-  }
-
-
-  //----------------------------------------------------------------
-  const vaultAndCap = useSuiClientQuery('getOwnedObjects',
+  // Get all balances for current account
+  const AllBLN = useSuiClientQuery(
+    "getAllBalances",
     {
-      owner: account.address,
-      options:{ showType: true,showContent: true },
+      owner: account?.address,
+    },
+    {
+      enabled: !!account,
     }
-  )
-  let ownerCapObjects = null
-  if(vaultAndCap.data) {
-    console.log(vaultAndCap.data);
-    // Search for smart will owner cap in the data
-    ownerCapObjects = vaultAndCap.data.data.filter(obj => 
-      obj.data?.type?.includes('::smartwill::OwnerCap')
-    );
+  );
+
+  function normalizeType(typeStr) {
+    return typeStr.replace(/^0x0+/, "0x");
   }
-  vault=ownerCapObjects[0].data?.content?.fields?.vault
 
-  
-//----------------------------------------------------------------
+  // Update available coins when balances are fetched
+  useEffect(() => {
+    if (AllBLN.data) {
+      // Extract user's coins from data
+      const userCoins = AllBLN.data.map((coin) => {
+        // Extract coin name from the coinType path
+        const coinPath = coin.coinType.split("::");
+        const coinName = coinPath.length > 2 ? coinPath[2] : coinPath[1];
 
+        // Format balance for display (convert from smallest units)
+        const balance = parseInt(coin.totalBalance) / 1000000000;
 
+        return [coinName, coin.coinType, balance];
+      });
+
+      // Set available coins to user's coins only
+      setAvailableCoins(userCoins);
+    }
+  }, [AllBLN.data]);
+
+  // Get the metadata for the selected coin
+  const selectedCoinMetadata = useSuiClientQuery(
+    "getCoinMetadata",
+    {
+      coinType: selectedCoin ? normalizeType(selectedCoin[1]) : "",
+    },
+    {
+      enabled: !!selectedCoin && !!account,
+    }
+  );
+
+  // Get vault and owner cap objects
+  const vaultAndCap = useSuiClientQuery(
+    "getOwnedObjects",
+    {
+      owner: account?.address,
+      options: { showType: true, showContent: true },
+    },
+    {
+      enabled: !!account,
+    }
+  );
+
+  // Extract owner cap and find vault ID
+  const { ownerCapObjects, vaultID } = React.useMemo(() => {
+    let ownerCapObjects = null;
+    let vaultID = null;
+    if (vaultAndCap.data) {
+      // Search for smart will owner cap in the data
+      ownerCapObjects = vaultAndCap.data.data.filter((obj) =>
+        obj.data?.type?.includes("::vault::OwnerCap")
+      );
+      vaultID = ownerCapObjects[0]?.data?.content?.fields?.vault_id;
+    }
+
+    return { ownerCapObjects, vaultID };
+  }, [vaultAndCap.data]);
+
+  // Query for the vault object separately
+  const vaultObject = useSuiClientQuery(
+    "getObject",
+    {
+      id: vaultID,
+      options: { showContent: true },
+    },
+    {
+      enabled: !!vaultID,
+    }
+  );
+
+  // Function to handle coin selection
+  const handleCoinSelect = (coin) => {
+    setSelectedCoin(coin);
+    setErrorr(""); // Clear any previous errors
+  };
+
+  // Modal functions
   const openModal = () => {
     setShowModal(true);
     // Apply fade-in animation
     setModalAnimation("animate-fadeIn");
   };
+
   const closeModal = () => {
     // Apply fade-out animation
     setModalAnimation("animate-fadeOut");
@@ -98,83 +175,174 @@ const buttonInContractAlter = ({ onAddAsset }) => {
       setErrorr("");
       setSelectedCoin(null);
       setAmount(0);
+      setIsProcessing(false);
     }, 300);
   };
 
-  const handleCoinSelect = (coin) => {
-    setSelectedCoin(coin);
+  // Safely extract object IDs from coins
+  const safeExtractObjectIds = (coins) => {
+    if (!coins) {
+      console.log("No coins provided");
+      return [];
+    }
+    
+    if (!Array.isArray(coins)) {
+      console.log("Coins is not an array:", typeof coins);
+      return [];
+    }
+    
+    return coins
+      .filter(coin => coin && coin.data && coin.data.objectId)
+      .map(coin => coin.data.objectId);
+  };
+  
+  // Function to find matching coins for the selected coin type
+  const findMatchingCoins = () => {
+    if (!selectedCoin) return [];
+
+    // Get the full coin type path
+    const coinType = normalizeType(selectedCoin[1]);
+    console.log(`Searching for coin type: ${coinType}`);
+
+    // Find coins that match the coin type within a Coin<Type> structure
+    const coinss =
+      vaultAndCap.data?.data.filter((obj) => {
+        const objType = obj.data?.type;
+        if (!objType) return false;
+
+        // Extract coin type from within <>
+        const match = objType.match(/<([^>]+)>/);
+        if (match && match[1]) {
+          const extractedCoinType = match[1];
+          console.log(
+            `Matching: extracted coin type = ${extractedCoinType}, target = ${normalizeType(selectedCoin[1])}`
+          );
+
+          return extractedCoinType === normalizeType(selectedCoin[1]);
+        }
+        return false;
+      }) || [];
+
+    console.log(`Found ${coinss.length} matching coins`, coinss, coinType);
+
+    return coinss;
   };
 
-//----------------------------------------------------------------
-
+  // Handle adding a new coin - using modified fuseTxFunctions
   const handleAddCoin = async () => {
-    // Basic validation
-    if (!selectedCoin || amount <= 0) {
-      setErrorr("Please select a coin and ensure amount is greater than 0");
+    // Validate input
+    if (!selectedCoin) {
+      setErrorr("Please select a coin");
       return;
     }
-    tx=addToVaultTx(ownerCapObjects[0],vault,coinEmittion(),"ok");
-    const transactionResult = signAndExecuteTransaction(
-      {
-        transaction: tx,
-        chain: "sui:testnet",
-      },
-      {
-        onSuccess: (result) => {
-          console.log("executed transaction", result);
-          // 交易成功後，再改變界面狀態
-          setTimeout(() => {
-            setShowNextCard(false);
-            setShowDashboardIndicator(true);
-          }, 100);
-        },
-        onError: (error) => {
-          console.error("Transaction error:", error);
-          // 顯示交易錯誤訊息
-          showWarningMessage("交易執行失敗: " + error.message);
-          // Debug: 交易失敗後，仍然改變界面狀態
-          setTimeout(() => {
-            setShowNextCard(false);
-            setShowDashboardIndicator(true);
-          }, 100);
-        }
+
+    if (amount <= 0) {
+      setErrorr("Please enter an amount greater than 0");
+      return;
+    }
+
+    if (!ownerCapObjects || ownerCapObjects.length === 0) {
+      setErrorr("Owner capability object not found");
+      return;
+    }
+
+    if (!vaultObject.data || !vaultObject.data.data) {
+      setErrorr("Vault object not found");
+      return;
+    }
+
+    // Prevent double submission
+    if (isProcessing) {
+      return;
+    }
+    
+    setIsProcessing(true);
+    setErrorr("Processing transaction... Please wait.");
+
+    try {
+      setErrorr("Processing transaction... Please wait.");
+      setIsProcessing(true);
+      
+      // Get the matching coins and safely extract object IDs
+      const matchingCoins = findMatchingCoins();
+      console.log("Found matching coins:", matchingCoins);
+      
+      // Safely extract the object IDs
+      const coinObjectIds = safeExtractObjectIds(matchingCoins);
+      console.log("Extracted coin object IDs:", coinObjectIds);
+      
+      if (coinObjectIds.length === 0) {
+        setErrorr("No valid coin objects found");
+        setIsProcessing(false);
+        return;
       }
-    );
-    if (transactionResult) {
-      // First show success message
-      setErrorr("");
-      const originalButtonText = document.activeElement.textContent;
-      document.activeElement.textContent = "Processing...";
       
-      // Show success message in a mini modal
-      const successElement = document.createElement('div');
-      successElement.className = 'fixed inset-0 bg-black/50 flex items-center justify-center z-50 animate-fadeIn';
-      successElement.innerHTML = `
-      <div class="bg-white rounded-lg shadow-md p-6 w-80 animate-scaleIn">
-        <div class="flex items-center justify-center mb-4">
-        <svg class="w-8 h-8 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
-        </svg>
-        </div>
-        <h3 class="text-xl font-semibold text-black text-center">Transaction Complete</h3>
-        <p class="text-center text-gray-600 mt-2">Asset successfully added</p>
-      </div>
-      `;
-      document.body.appendChild(successElement);
+      const dec = selectedCoinMetadata.data?.decimals || 9;
+      const amountInSmallestUnit = BigInt(
+        Math.floor(amount * Math.pow(10, dec))
+      );
       
-      // Remove success message after a delay and close modal
-      setTimeout(() => {
-      successElement.classList.replace('animate-fadeIn', 'animate-fadeOut');
-      setTimeout(() => {
-        document.body.removeChild(successElement);
-        document.activeElement.textContent = originalButtonText;
-        closeModal();
-      }, 300);
-      }, 1500);
+      // Get the correct vault object
+      const vault = vaultObject.data.data;
+      
+      // Extract the coin type
+      const finalCoinType = normalizeType(selectedCoin[1]);
+      
+      console.log("Transaction parameters:", {
+        capId: ownerCapObjects[0].data.objectId,
+        vaultId: vault.objectId,
+        coinIds: coinObjectIds,
+        amountInSmallestUnit: amountInSmallestUnit.toString(),
+        name: selectedCoin[0], // Using the coin name (first element in selectedCoin array)
+        coinType: finalCoinType
+      });
+      
+      // Create transaction without gas handling
+      let tx = fuseTxFunctions(
+        ownerCapObjects[0].data.objectId,
+        vault.objectId, 
+        coinObjectIds,
+        amountInSmallestUnit,
+        0,
+        finalCoinType
+      );
+      
+      console.log("Executing transaction...");
+      setErrorr("Executing transaction...");
+      
+      // Execute the transaction with callback handlers
+      signAndExecuteTransaction(
+        {
+          transaction: tx,
+          chain: "sui:testnet"
+        },
+        {
+          onSuccess: (result) => {
+            console.log("Transaction executed successfully", result);
+            setTransactionDigest(result.digest);
+            setTransactionStatus("Success");
+            setErrorr("");
+            // Don't close modal immediately to show the transaction digest
+        setTimeout(() => {
+          closeModal();
+        }, 5000); // Show transaction result for 5 seconds before closing
+            // You can do additional operations with the result here
+            // Such as showing transaction details or refreshing data
+          },
+          onError: (error) => {
+            console.error("Transaction error:", error);
+            setTransactionStatus("Failed");
+            setErrorr("Transaction failed: " + (error.message || "Unknown error"));
+            setIsProcessing(false);
+          }
+        }
+      );
+    } catch (error) {
+      console.error("Error preparing transaction:", error);
+      setErrorr("Error preparing transaction: " + (error.message || "Unknown error"));
+      setIsProcessing(false);
     }
   };
-
-//----------------------------------------------------------------
 
   return (
     <>
@@ -187,116 +355,162 @@ const buttonInContractAlter = ({ onAddAsset }) => {
       </button>
 
       {/* Modal Window - Hidden by default */}
-        {showModal && (
-          <div className={`fixed inset-0 bg-black/50 flex items-center justify-center z-50 ${modalAnimation}`}>
-            <div className={`bg-white rounded-lg shadow-md p-6 w-96 max-w-full ${modalAnimation === "animate-fadeIn" ? "animate-scaleIn" : "animate-scaleOut"}`}>
-          <h3 className="text-2xl font-semibold text-black mb-4">
-            Add New Asset
-          </h3>
-          
-          {errorr && (
-            <div className="mb-4 p-2 bg-red-100 text-red-700 rounded-md">
-              {errorr}
-            </div>
-          )}
-          
-          <div className="mb-4">
-            <label className="block text-lg font-medium text-black mb-2">
-              Select Coin
-            </label>
-            <div className="space-y-2">
-              {availableCoins.map((coin, index) => (
-            <div 
-              key={index}
-              className={`p-3 border rounded-lg cursor-pointer transition ${
-                selectedCoin && selectedCoin[0] === coin[0] 
-              ? 'border-blue-500 bg-blue-50' 
-              : 'border-gray-300 hover:border-gray-400 bg-gray-50'
-              }`}
-              onClick={() => handleCoinSelect(coin)}
-            >
-              <div className="flex items-center justify-between">
-                <div>
-              <div className="font-medium text-black">{coin[0]}</div>
-              <div className="ml-1 text-xs text-gray-500 overflow-hidden text-ellipsis" title={coin[1]}>
-                {formatAddress(coin[1])}
-              </div>
-                </div>
-                <div className="text-sm text-gray-600">
-              {coin[2] || 0}
-                </div>
-              </div>
-            </div>
-              ))}
-            </div>
-          </div>
-          
-          <div className="mb-6">
-            <label className="block text-lg font-medium text-black mb-2">
-              Amount
-            </label>
-            <input
-              type="number"
-              min="0"
-              value={amount}
-              onChange={(e) => setAmount(Number(e.target.value))}
-              className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50 text-black"
-              placeholder="Enter amount"
-            />
-          </div>
-          
-          <div className="flex justify-end space-x-3">
-            <button
-              onClick={closeModal}
-              className="px-4 py-2 border border-gray-300 rounded hover:bg-gray-100 transition text-black"
-            >
-              Cancel
-            </button>
-            <button
-              onClick={handleAddCoin}
-              className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition"
-            >
-              Add
-            </button>
-          </div>
-            </div>
-          </div>
-        )}
+      {showModal && (
+        <div
+          className={`fixed inset-0 bg-black/50 flex items-center justify-center z-50 ${modalAnimation}`}
+        >
+          <div
+            className={`bg-white rounded-lg shadow-md p-6 w-96 max-w-full ${modalAnimation === "animate-fadeIn" ? "animate-scaleIn" : "animate-scaleOut"}`}
+          >
+            <h3 className="text-2xl font-semibold text-black mb-4">
+              Add New Asset
+            </h3>
 
-        {/* CSS for animations */}
+            {errorr && (
+              <div className="mb-4 p-2 bg-red-100 text-red-700 rounded-md">
+                {errorr}
+              </div>
+            )}
+
+            <div className="mb-4">
+              <label className="block text-lg font-medium text-black mb-2">
+                Select Coin
+              </label>
+              <div className="space-y-2 max-h-48 overflow-y-auto">
+                {availableCoins.map((coin, index) => (
+                  <div
+                    key={index}
+                    className={`p-3 border rounded-lg cursor-pointer transition ${
+                      selectedCoin && selectedCoin[0] === coin[0]
+                        ? "border-blue-500 bg-blue-50"
+                        : "border-gray-300 hover:border-gray-400 bg-gray-50"
+                    }`}
+                    onClick={() => handleCoinSelect(coin)}
+                    disabled={isProcessing}
+                  >
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <div className="font-medium text-black">{coin[0]}</div>
+                        <div
+                          className="ml-1 text-xs text-gray-500 overflow-hidden text-ellipsis"
+                          title={coin[1]}
+                        >
+                          {formatAddress(coin[1])}
+                        </div>
+                      </div>
+                      <div className="text-sm text-gray-600">
+                        {coin[2] || 0}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="mb-6">
+              <label className="block text-lg font-medium text-black mb-2">
+                Amount
+              </label>
+              <input
+                type="number"
+                min="0"
+                step="0.000000001"
+                value={amount}
+                onChange={(e) => setAmount(Number(e.target.value))}
+                className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50 text-black"
+                placeholder="Enter amount"
+                disabled={isProcessing}
+              />
+            </div>
+
+            {/* Show transaction digest if available */}
+            {transactionDigest && (
+              <div className="mb-4 p-3 bg-green-100 text-green-700 rounded-md">
+                <p className="font-medium">Transaction {transactionStatus}</p>
+                <p className="text-xs break-all mt-1">
+                  Digest: {transactionDigest}
+                </p>
+              </div>
+            )}
+
+            <div className="flex justify-end space-x-3">
+              <button
+                onClick={closeModal}
+                className="px-4 py-2 border border-gray-300 rounded hover:bg-gray-100 transition text-black"
+                disabled={isProcessing}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleAddCoin}
+                disabled={!selectedCoin || amount <= 0 || isProcessing}
+                className={`px-4 py-2 text-white rounded transition ${
+                  !selectedCoin || amount <= 0 || isProcessing
+                    ? "bg-blue-300 cursor-not-allowed"
+                    : "bg-blue-500 hover:bg-blue-600"
+                }`}
+              >
+                {isProcessing ? "Processing..." : "Add"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* CSS for animations */}
       <style jsx global>{`
         @keyframes fadeIn {
-          from { opacity: 0; }
-          to { opacity: 1; }
+          from {
+            opacity: 0;
+          }
+          to {
+            opacity: 1;
+          }
         }
-        
+
         @keyframes fadeOut {
-          from { opacity: 1; }
-          to { opacity: 0; }
+          from {
+            opacity: 1;
+          }
+          to {
+            opacity: 0;
+          }
         }
-        
+
         @keyframes scaleIn {
-          from { transform: scale(0.95); opacity: 0; }
-          to { transform: scale(1); opacity: 1; }
+          from {
+            transform: scale(0.95);
+            opacity: 0;
+          }
+          to {
+            transform: scale(1);
+            opacity: 1;
+          }
         }
-        
+
         @keyframes scaleOut {
-          from { transform: scale(1); opacity: 1; }
-          to { transform: scale(0.95); opacity: 0; }
+          from {
+            transform: scale(1);
+            opacity: 1;
+          }
+          to {
+            transform: scale(0.95);
+            opacity: 0;
+          }
         }
-        
+
         .animate-fadeIn {
           animation: fadeIn 0.3s ease-out forwards;
         }
-        
+
         .animate-fadeOut {
           animation: fadeOut 0.3s ease-out forwards;
         }
-        
+
         .animate-scaleIn {
           animation: scaleIn 0.3s ease-out forwards;
         }
-        
+
         .animate-scaleOut {
           animation: scaleOut 0.3s ease-out forwards;
         }
@@ -305,4 +519,4 @@ const buttonInContractAlter = ({ onAddAsset }) => {
   );
 };
 
-export default buttonInContractAlter;
+export default ButtonInContractAlter;
