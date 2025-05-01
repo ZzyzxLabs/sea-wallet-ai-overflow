@@ -1,5 +1,6 @@
 import { Transaction } from '@mysten/sui/transactions';
 import { create } from 'zustand';
+import { ZkSendLinkBuilder } from "@mysten/zksend"
 const useMoveStore = create((set, get) => ({
   
   packageName: "0xbb4e6631f81e79d76c47d4acc6193c4fee55c48fc0854e4fd15f5564ca4a3584", // 替換為你的 package name
@@ -55,7 +56,39 @@ const useMoveStore = create((set, get) => ({
     );
     return tx;
   },
-
+  sendHeirTx(sui,email,cap,vault){
+    const tx = new Transaction()
+    tx.moveCall({
+      target: `${get().packageName}::vault::initmember`,
+      arguments: [
+        tx.object(cap), 
+        tx.object(vault), 
+        tx.pure.u8()
+      ],
+      typeArguments: [coinType || 'unknown_coin_type'],
+    })
+  },
+  async zkTransaction(sender, network, prope, count){
+    const links = [];
+ 
+	for (let i = 0; i < count; i++) {
+		const link = new ZkSendLinkBuilder({
+			sender: sender,
+			network: network,
+		});
+	 
+		link.addClaimableObject(prope[i])
+		links.push(link);
+	}
+	 
+	const urls = links.map((link) => link.getLink());
+	 
+	const tx = await ZkSendLinkBuilder.createLinks({
+		links,
+	});
+	
+	return { urls, tx };
+  },
   // 重置所有狀態到初始值
   resetState: () => set({
     packageName: "0"
