@@ -19,7 +19,7 @@ use protocol::reserve::MarketCoin;
 use sui::transfer;
 use whitelist::whitelist;
 use protocol::error;
-use SCALLOP_VERSION_OBJECT;
+
 public struct SeaVault has store, key {
     id: UID,
 }
