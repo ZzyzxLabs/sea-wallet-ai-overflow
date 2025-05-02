@@ -1,6 +1,16 @@
 import { Transaction } from '@mysten/sui/transactions';
 import { create } from 'zustand';
 import { ZkSendLinkBuilder } from "@mysten/zksend"
+import { bcs, BcsType } from "@mysten/bcs";
+function VecMap(K, V) {
+  return bcs.struct(
+    `VecMap<${K.name}, ${V.name}>`,
+    {
+      keys: bcs.vector(K),
+      values: bcs.vector(V),
+    }
+  );
+}
 const useMoveStore = create((set, get) => ({
   
   packageName: "0xbb4e6631f81e79d76c47d4acc6193c4fee55c48fc0854e4fd15f5564ca4a3584", // 替換為你的 package name
@@ -61,14 +71,34 @@ const useMoveStore = create((set, get) => ({
     tx.moveCall({
       target: `${get().packageName}::vault::initmember`,
       arguments: [
+        sui,
+        email,
         tx.object(cap), 
         tx.object(vault), 
-        tx.pure.u8()
+
       ],
-      typeArguments: [coinType || 'unknown_coin_type'],
     })
   },
-  async zkTransaction(sender, network, prope, count){
+  mintCap(cap, vault, sui, email){
+    const suiAddressVecMap = VecMap(bcs.string(), bcs.u8()).serialize(sui)
+  
+    // 序列化 Email VecMap
+    const emailVecMap = VecMap(bcs.string(), bcs.u8()).serialize(email)
+    const tx = new Transaction()
+    tx.moveCall({
+      target: `${get().packageName}::vault::initMember`,
+      arguments: [
+        tx.object(cap), 
+        tx.object(vault),
+        suiAddressVecMap,
+        emailVecMap,
+      ],
+
+    })
+    return tx;
+  }
+  ,
+  zkTransaction(sender, network, prope, count){
     const links = [];
  
 	for (let i = 0; i < count; i++) {
@@ -83,7 +113,7 @@ const useMoveStore = create((set, get) => ({
 	 
 	const urls = links.map((link) => link.getLink());
 	 
-	const tx = await ZkSendLinkBuilder.createLinks({
+	const tx = ZkSendLinkBuilder.createLinks({
 		links,
 	});
 	
