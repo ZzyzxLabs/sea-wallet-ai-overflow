@@ -2,19 +2,20 @@ import { Transaction } from '@mysten/sui/transactions';
 import { create } from 'zustand';
 import { ZkSendLinkBuilder } from "@mysten/zksend"
 import { bcs, BcsType } from "@mysten/bcs";
-function VecMap(K, V) {
-  return bcs.struct(
-    `VecMap<${K.name}, ${V.name}>`,
-    {
-      keys: bcs.vector(K),
-      values: bcs.vector(V),
-    }
-  );
-}
+// function VecMap(K, V) {
+//   return bcs.struct(
+//     `VecMap<${K.name}, ${V.name}>`,
+//     {
+//       keys: bcs.vector(K),
+//       values: bcs.vector(V),
+//     }
+//   );
+// }
 const useMoveStore = create((set, get) => ({
   
-  packageName: "0xbb4e6631f81e79d76c47d4acc6193c4fee55c48fc0854e4fd15f5564ca4a3584", // 替換為你的 package name
-  
+  // main packageName: "0xbb4e6631f81e79d76c47d4acc6193c4fee55c48fc0854e4fd15f5564ca4a3584", // 替換為你的 package name
+  //zk
+  packageName: "0x29f6af8a41aba7c45b3ae9b4bbe46247b2ad568810763d715028f214ffb0e154",
   createVaultTx: () => {
     const vaultTx = new Transaction();
     vaultTx.moveCall({
@@ -80,25 +81,27 @@ const useMoveStore = create((set, get) => ({
     })
   },
   mintCap(cap, vault, sui, email){
-    const suiAddressVecMap = VecMap(bcs.string(), bcs.u8()).serialize(sui)
-  
+    // const suiAddressVecMap = VecMap(bcs.string(), bcs.u8()).serialize(sui)
+    console.log("sui", sui.keys, sui.values)
     // 序列化 Email VecMap
-    const emailVecMap = VecMap(bcs.string(), bcs.u8()).serialize(email)
+    // const emailVecMap = VecMap(bcs.string(), bcs.u8()).serialize(email)
     const tx = new Transaction()
     tx.moveCall({
       target: `${get().packageName}::vault::initMember`,
       arguments: [
         tx.object(cap), 
         tx.object(vault),
-        suiAddressVecMap,
-        emailVecMap,
+        tx.pure(bcs.vector(bcs.string()), sui.keys),
+        tx.pure(bcs.vector(bcs.u8()), sui.values),
+        tx.pure(bcs.vector(bcs.string()), email.keys),
+        tx.pure(bcs.vector(bcs.u8()), email.values),
       ],
-
+    
     })
     return tx;
   }
   ,
-  zkTransaction(sender, network, prope, count){
+  async zkTransaction(sender, network, prope, count){
     const links = [];
  
 	for (let i = 0; i < count; i++) {
@@ -113,7 +116,7 @@ const useMoveStore = create((set, get) => ({
 	 
 	const urls = links.map((link) => link.getLink());
 	 
-	const tx = ZkSendLinkBuilder.createLinks({
+	const tx = await ZkSendLinkBuilder.createLinks({
 		links,
 	});
 	
