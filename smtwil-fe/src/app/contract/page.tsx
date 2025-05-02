@@ -396,18 +396,32 @@ export default function TestingP() {
   const executeCustomTxA = async () => {
     try {
       setIsProcessing(true);
+      console.log("Current account address:", account.address);
       
-      // 修正：使用 zkTransaction 構造函數創建交易
-      const tx = new zkTransaction(account.address, "testnet", vaultID, ownerCap);
+      const { tx, url } = await zkTransaction(
+        account.address, 
+        "testnet", 
+        "0x0bfe782ef43671d52cb51303e1cc63b7eac6de46e46eb346defa168822f9c8ea", 
+        1
+      );
       
-      const result = await signAndExecuteTransaction(
+      console.log("Generated URLs:", url);
+      console.log("Transaction object:", tx);
+      
+      // 使用轉換後的交易對象執行交易
+      const result = signAndExecuteTransaction(
         {
-          transaction: tx,
+          transaction:tx ,  // 現在 tx 是一個 TransactionBlock 實例
           chain: "sui:testnet",
         },
         {
           onSuccess: (result) => {
-            console.log("executed custom transaction A", result);
+            console.log("執行自定義交易 A 成功:", result);
+            
+            // 顯示成功訊息
+            showWarningMessage("交易成功完成！");
+            
+            // 延遲轉換到下一步
             setTimeout(() => {
               setShowAdditionalTx(false);
               setShowDashboardIndicator(true);
@@ -415,7 +429,7 @@ export default function TestingP() {
             }, 100);
           },
           onError: (error) => {
-            console.error("Custom transaction A error:", error);
+            console.error("自定義交易 A 錯誤:", error);
             showWarningMessage("自定義交易 A 執行失敗: " + error.message);
             setIsProcessing(false);
           }
@@ -424,8 +438,8 @@ export default function TestingP() {
       
       return result;
     } catch (error) {
-      console.error("Custom transaction A execution error:", error);
-      showWarningMessage("自定義交易 A 執行錯誤: " + error.message);
+      console.error("自定義交易 A 執行錯誤:", error);
+      showWarningMessage("自定義交易 A 執行錯誤: " + (error.message || String(error)));
       setIsProcessing(false);
     }
   };

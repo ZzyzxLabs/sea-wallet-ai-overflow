@@ -53,49 +53,63 @@ module smartwill::vault {
         transfer::share_object(vault);
         transfer::public_transfer(ownerCap, tx_context::sender(ctx));
     }
+    
+    public fun initMember(
+        _cap: &OwnerCap,
+        vault: &mut Vault,
+        addr_keys: vector<address>,
+        addr_values: vector<u8>,
+        email_keys: vector<String>,
+        email_values: vector<u8>,
+        ctx: &mut TxContext
+        ): VecMap<String, MemberCap> {
+            let mut x = 0;
+            let mut emailCapMap = vec_map::empty<String, MemberCap>();
 
-    public fun initMember(_cap: &OwnerCap, vault: &mut Vault, addrPer: VecMap<address, u8>, emailPer: VecMap<String, u8>, ctx: &mut TxContext): VecMap<String, MemberCap> {
-        let mut x = 0;
-        let mut emailCapMap = vec_map::empty<String, MemberCap>();
-        
-        // Handle emails
-        let emails = vec_map::keys(&emailPer);
-        let mut i = 0;
-        while (i < vector::length(&emails)) {
-            let email = *vector::borrow(&emails, i);
-            let percentage = *vec_map::get(&emailPer, &email);
-            let memberCap = MemberCap {
-                id: object::new(ctx),
-                vault_id: object::id(vault),
-                capid: x
+    // 組裝 VecMap
+            let addrPer = vec_map::from_keys_values<address, u8>(addr_keys, addr_values);
+            let emailPer = vec_map::from_keys_values<String, u8>(email_keys, email_values);
+
+
+    // Handle emails
+            let emails = vec_map::keys(&emailPer);
+            let mut i = 0;
+            while (i < vector::length(&emails)) {
+                let email = *vector::borrow(&emails, i);
+                let percentage = *vec_map::get(&emailPer, &email);
+                let memberCap = MemberCap {
+                    id: object::new(ctx),
+                    vault_id: object::id(vault),
+                    capid: x
+                };
+                vec_map::insert(&mut vault.capercentage, x, percentage);
+                vec_map::insert(&mut vault.capbool, x, true);
+                vec_map::insert(&mut emailCapMap, email, memberCap);
+                x = x + 1;
+                i = i + 1;
             };
-            vec_map::insert(&mut vault.capercentage, x, percentage);
-            vec_map::insert(&mut vault.capbool, x, true);
-            vec_map::insert(&mut emailCapMap, email, memberCap);
-            x = x + 1;
-            i = i + 1;
+
+    // Handle addresses
+    let addresses = vec_map::keys(&addrPer);
+    let mut j = 0;
+    while (j < vector::length(&addresses)) {
+        let addr = *vector::borrow(&addresses, j);
+        let percentage = *vec_map::get(&addrPer, &addr);
+        let memberCap = MemberCap {
+            id: object::new(ctx),
+            vault_id: object::id(vault),
+            capid: x
         };
-        
-        // Handle addresses
-        let addresses = vec_map::keys(&addrPer);
-        let mut j = 0;
-        while (j < vector::length(&addresses)) {
-            let addr = *vector::borrow(&addresses, j);
-            let percentage = *vec_map::get(&addrPer, &addr);
-            let memberCap = MemberCap {
-                id: object::new(ctx),
-                vault_id: object::id(vault),
-                capid: x
-            };
-            vec_map::insert(&mut vault.capercentage, x, percentage);
-            vec_map::insert(&mut vault.capbool, x, true);
-            transfer::public_transfer(memberCap, addr);
-            x = x + 1;
-            j = j + 1;
-        };
-        
-        emailCapMap
-    }
+        vec_map::insert(&mut vault.capercentage, x, percentage);
+        vec_map::insert(&mut vault.capbool, x, true);
+        transfer::public_transfer(memberCap, addr);
+        x = x + 1;
+        j = j + 1;
+    };
+
+    emailCapMap
+}
+
 
     public fun addMemberByAddress(_cap: &OwnerCap, vault: &mut Vault, member: address, percentage: u8, ctx: &mut TxContext) {
         let x = (vec_map::size(&vault.capercentage) as u8);
