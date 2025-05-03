@@ -50,6 +50,11 @@ dependencies = [
   { id = "MoveStdlib", name = "MoveStdlib" },
 ]
 
+[move.toolchain-version]
+compiler-version = "1.44.2"
+edition = "2024.beta"
+flavor = "sui"
+
 [env]
 
 [[move.package]]
