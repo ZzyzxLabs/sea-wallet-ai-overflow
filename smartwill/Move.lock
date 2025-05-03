@@ -2,15 +2,45 @@
 
 [move]
 version = 3
-manifest_digest = "B56DBA4817E962DA275A0B32851CEA3ADC5E51015ED44D8249FEEF6BE4C476B4"
-deps_digest = "F8BBB0CCB2491CA29A3DF03D6F92277A4F3574266507ACD77214D37ECA3F3082"
+manifest_digest = "3D846BEA0D8CAF4A040EF3D5882CCB5A9D33AA6EEB6B0C47184BD5367C90E681"
+deps_digest = "3C4103934B1E040BB6B23F1D610B4EF9F2F1166A50A104EADCF77467C004C600"
+dependencies = [
+  { id = "ScallopProtocol", name = "ScallopProtocol" },
+  { id = "Sui", name = "Sui" },
+]
+
+[[move.package]]
+id = "CoinDecimalsRegistry"
+source = { git = "https://github.com/scallop-io/sui-lending-protocol.git", rev = "mainnet", subdir = "contracts/libs/coin_decimals_registry" }
+
+dependencies = [
+  { id = "Sui", name = "Sui" },
+]
+
+[[move.package]]
+id = "Math"
+source = { git = "https://github.com/scallop-io/sui-lending-protocol.git", rev = "mainnet", subdir = "contracts/libs/math" }
+
 dependencies = [
   { id = "Sui", name = "Sui" },
 ]
 
 [[move.package]]
 id = "MoveStdlib"
-source = { git = "https://github.com/MystenLabs/sui.git", rev = "framework/testnet", subdir = "crates\\sui-framework\\packages\\move-stdlib" }
+source = { git = "https://github.com/MystenLabs/sui.git", rev = "framework/testnet", subdir = "crates/sui-framework/packages/move-stdlib" }
+
+[[move.package]]
+id = "ScallopProtocol"
+source = { git = "https://github.com/scallop-io/sui-lending-protocol.git", rev = "mainnet", subdir = "contracts/protocol" }
+
+dependencies = [
+  { id = "CoinDecimalsRegistry", name = "CoinDecimalsRegistry" },
+  { id = "Math", name = "Math" },
+  { id = "Sui", name = "Sui" },
+  { id = "Whitelist", name = "Whitelist" },
+  { id = "X", name = "X" },
+  { id = "XOracle", name = "XOracle" },
+]
 
 [[move.package]]
 id = "Sui"
@@ -20,15 +50,39 @@ dependencies = [
   { id = "MoveStdlib", name = "MoveStdlib" },
 ]
 
-[move.toolchain-version]
-compiler-version = "1.44.2"
-edition = "2024.beta"
-flavor = "sui"
-
 [env]
+
+[[move.package]]
+id = "Whitelist"
+source = { git = "https://github.com/scallop-io/sui-lending-protocol.git", rev = "mainnet", subdir = "contracts/libs/whitelist" }
+
+dependencies = [
+  { id = "Sui", name = "Sui" },
+]
 
 [env.testnet]
 chain-id = "4c78adac"
 original-published-id = "0xbb4e6631f81e79d76c47d4acc6193c4fee55c48fc0854e4fd15f5564ca4a3584"
 latest-published-id = "0xbb4e6631f81e79d76c47d4acc6193c4fee55c48fc0854e4fd15f5564ca4a3584"
 published-version = "1"
+
+[[move.package]]
+id = "X"
+source = { git = "https://github.com/scallop-io/sui-lending-protocol.git", rev = "mainnet", subdir = "contracts/libs/x" }
+
+dependencies = [
+  { id = "Sui", name = "Sui" },
+]
+
+[[move.package]]
+id = "XOracle"
+source = { git = "https://github.com/scallop-io/sui-lending-protocol.git", rev = "mainnet", subdir = "contracts/sui_x_oracle/x_oracle" }
+
+dependencies = [
+  { id = "Sui", name = "Sui" },
+]
+
+[move.toolchain-version]
+compiler-version = "1.47.0"
+edition = "2024.beta"
+flavor = "sui"
