@@ -158,7 +158,7 @@ export default function TestingP() {
     showWarningMessage,
   } = useHeirStore();
   
-  const { createVaultTx, setCreateVaultTx, zkTransaction, mintCap } = useMoveStore();
+  const { createVaultTx, zkTransaction, mintCap } = useMoveStore();
   
   // 處理連接按鈕點擊
   const handleConnect = () => {
@@ -174,48 +174,7 @@ export default function TestingP() {
       }, 100);
     }
   }, [account, isConnecting]);
-
-  // 初始化 createVaultTx 函數
-  useEffect(() => {
-    const newCreateVaultTx = () => {
-      // 序列化繼承人資料
-      const { raw, serialized } = serializeHeirsToVecMaps(heirs);
-      
-      // 在控制台輸出 VecMap 數據（用於調試）
-      console.log("=== 繼承人 VecMap 數據 ===");
-      console.log("Sui 繼承人名稱-比例映射:", raw.suiNameRatio);
-      console.log("Sui 繼承人地址-比例映射:", raw.suiAddressRatio);
-      console.log("Email 繼承人名稱-比例映射:", raw.emailNameRatio);
-      console.log("Email 繼承人地址-比例映射:", raw.emailAddressRatio);
-      
-      // 構建交易物件
-      return {
-        kind: "moveCall",
-        data: {
-          packageObjectId: "0x123...", // 需要替換為真實的合約包 ID
-          module: "smartwill",
-          function: "create_will", 
-          typeArguments: [],
-          arguments: [
-            // 區塊鏈地址繼承人數據
-            serialized.suiNameRatio,
-            serialized.suiAddressRatio,
-            
-            // 電子郵件繼承人數據
-            serialized.emailNameRatio,
-            serialized.emailAddressRatio
-          ]
-        }
-      };
-    };
-    
-    // 更新 store 中的函數
-    if (setCreateVaultTx) {
-      setCreateVaultTx(newCreateVaultTx);
-    }
-  }, [heirs, setCreateVaultTx]);
-
-  // 監控帳戶狀態變化，控制動畫順序
+    // 監控帳戶狀態變化，控制動畫順序
   useEffect(() => {
     if (account && isConnecting) {
       const timerShowWelcome = setTimeout(() => {
@@ -398,14 +357,14 @@ export default function TestingP() {
       setIsProcessing(true);
       console.log("Current account address:", account.address);
       
-      const { tx, url } = await zkTransaction(
+      const { tx, urls } = await zkTransaction(
         account.address, 
         "testnet", 
         "0x0bfe782ef43671d52cb51303e1cc63b7eac6de46e46eb346defa168822f9c8ea", 
         1
       );
       
-      console.log("Generated URLs:", url);
+      console.log("Generated URLs:", urls);
       console.log("Transaction object:", tx);
       
       // 使用轉換後的交易對象執行交易
