@@ -18,7 +18,7 @@ interface MoveStore {
   packageName: string;
   createVaultTx: () => Transaction;
   fuseTxFunctions: (capId: string, vaultId: string, coinIds: string[], amount: number, name: number, coinType: string) => Transaction;
-  coinSpTester: () => Transaction;
+  // coinSpTester: () => Transaction;
   mintCap: (cap: string, vault: string, sui: {keys: string[], values: number[]}, email: {keys: string[], values: number[]}) => Promise<Transaction>;
   zkTransaction: (sender: string, network: "mainnet" | "testnet", prope: string, count: number) => Promise<{urls: string[], tx: any}>;
   resetState: () => void;
@@ -72,54 +72,40 @@ const useMoveStore = create<MoveStore>((set, get) => ({
     return tx;
   },
   
-  coinSpTester() {
-    const tx = new Transaction();
-    const [coin] = tx.splitCoins(
-      tx.object("0xdb48537af69fb165da9576ad65e55c80fc65034343fc1f737d44f2083f5db1fb"),
-      [100000]
-    );
-    return tx;
-  },
-  
+  // coinSpTester() {
+  //   const tx = new Transaction();
+  //   const [coin] = tx.splitCoins(
+  //     tx.object("0xdb48537af69fb165da9576ad65e55c80fc65034343fc1f737d44f2083f5db1fb"),
+  //     [100000]
+  //   );
+  //   return tx;
+  // },
   async mintCap(cap, vault, sui, email) {
-    const tx = new Transaction();
     const Address = bcs.bytes(32).transform({
       // To change the input type, you need to provide a type definition for the input
       input: (val: string) => fromHex(val),
       output: (val) => toHex(val),
-    });
-    // Transform sui.keys with Address.serialize
-    const transformedSuiKeys = sui.keys.map(key => 
-      Address.serialize(key).toBytes()
-    );
-
-    const suimap = VecMap(bcs.bytes(32), bcs.u8())
-      .serialize({
-        keys: transformedSuiKeys,
-        values: sui.values,
-      })
-      .toBytes();
-  const emap=VecMap(bcs.string(), bcs.u8())
-	.serialize({
-		keys: email.keys,
-		values: email.values,
-	})
-	.toBytes();
-    console.log("sui", suimap, "email", emap);
-    const parsed = Address.parse(suimap);
-    console.log("parsed", parsed);
+    })
+    const suiRework = {
+      keys: sui.keys.map(key => Address.serialize(key).toBytes()),
+      values: sui.values
+    };
+    const suiMap = VecMap(bcs.bytes(32), bcs.u8()).serialize(suiRework).toBytes();
+    const emailMap = VecMap(bcs.string(), bcs.u8()).serialize(email).toBytes();
+    const tx = new Transaction();
     tx.moveCall({
       target: `${get().packageName}::vault::initMember`,
       arguments: [
-        tx.object(cap), 
+        tx.object(cap),
         tx.object(vault),
-        tx.pure(suimap),
-        tx.pure(emap),
-      ],
+        tx.pure(suiMap),
+        tx.pure(emailMap)
+      ]
     });
-    
+    console.log("tx", tx);
     return tx;
   },
+  
   
   async zkTransaction(sender, network, prope, count) {
     const links = [];

@@ -478,7 +478,7 @@ export default function TestingP() {
       console.log("Email 地址 VecMap:", emailVecMap);
       
       // 使用 SUI SDK 的 Transaction Builder 格式
-      const tx = mintCap(ownerCap, vaultID, suiVecMap, emailVecMap);
+      const tx = await mintCap(ownerCap, vaultID, suiVecMap, emailVecMap);
       const result = await signAndExecuteTransaction(
         {
           transaction: tx,
