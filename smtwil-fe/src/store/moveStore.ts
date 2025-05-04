@@ -1,9 +1,10 @@
 import { Transaction } from '@mysten/sui/transactions';
 import { create } from 'zustand';
 import { ZkSendLinkBuilder } from "@mysten/zksend";
-import { bcs, BcsType, fromHex, toHex } from "@mysten/bcs";
-
+import { BcsType, fromHex, toHex } from "@mysten/bcs";
+import { bcs } from '@mysten/sui/bcs';
 function VecMap<K extends BcsType<any>, V extends BcsType<any>>(K: K, V: V) {
+
     return bcs.struct(
         `VecMap<${K.name}, ${V.name}>`,
         {
@@ -81,7 +82,7 @@ const useMoveStore = create<MoveStore>((set, get) => ({
   //   return tx;
   // },
   async mintCap(cap, vault, sui, email) {
-    const Address = bcs.bytes(32).transform({
+    const Address = bcs.Address.transform({
       // To change the input type, you need to provide a type definition for the input
       input: (val: string) => fromHex(val),
       output: (val) => toHex(val),
@@ -90,8 +91,16 @@ const useMoveStore = create<MoveStore>((set, get) => ({
       keys: sui.keys.map(key => Address.serialize(key).toBytes()),
       values: sui.values
     };
-    const suiMap = VecMap(bcs.bytes(32), bcs.u8()).serialize(suiRework).toBytes();
-    const emailMap = VecMap(bcs.string(), bcs.u8()).serialize(email).toBytes();
+    const suiMap = VecMap(bcs.Address, bcs.U8).serialize({
+      keys: sui.keys,      // array of hex strings, e.g. ["0x123...", "0x456..."]
+      values: sui.values,  // array of numbers (u8)
+  });
+
+  // Prepare VecMap<string, u8>
+  const emailMap = VecMap(bcs.String, bcs.U8).serialize({
+      keys: email.keys,    // array of strings, e.g. ["alice@example.com", ...]
+      values: email.values // array of numbers (u8)
+  });
     const tx = new Transaction();
     tx.moveCall({
       target: `${get().packageName}::vault::initMember`,
