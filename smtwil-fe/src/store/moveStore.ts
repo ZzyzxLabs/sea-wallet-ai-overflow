@@ -89,6 +89,7 @@ const useMoveStore = create<MoveStore>((set, get) => ({
     // CRITICAL FIX: Create proper object references for all IDs
     const coinObjects = coinIds.map(id => tx.object(id));
     console.log("coinObjects", coinObjects);
+    
     // Step 1: merge coins if needed
     if (coinIds.length > 1) {
       tx.mergeCoins(coinObjects[0], coinObjects.slice(1));

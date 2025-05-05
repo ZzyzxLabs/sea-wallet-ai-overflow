@@ -11,7 +11,7 @@ import { useRouter } from "next/navigation";
 import useMoveStore from "../../store/moveStore";
 import { bcs, BcsType } from '@mysten/bcs';
 
-// VecMap 函數，用於序列化鍵值對
+// VecMap function for serializing key-value pairs
 function VecMap<K extends BcsType<any>, V extends BcsType<any>>(K: K, V: V) {
   return bcs.struct(
     `VecMap<${K.name}, ${V.name}>`,
@@ -22,7 +22,7 @@ function VecMap<K extends BcsType<any>, V extends BcsType<any>>(K: K, V: V) {
   );
 }
 
-// 將繼承人分成兩組：使用 Sui 區塊鏈地址和使用電子郵件地址的
+// Separate heirs into two groups: those using Sui blockchain addresses and those using email addresses
 function separateHeirsByAddressType(heirs) {
   const suiAddressHeirs = [];
   const emailHeirs = [];
@@ -41,7 +41,7 @@ function separateHeirsByAddressType(heirs) {
   };
 }
 
-// 準備繼承人資料為 VecMap 格式
+// Prepare heirs data for VecMap format
 function prepareHeirsForVecMap(heirs, keyField, valueField) {
   return {
     keys: heirs.map(heir => heir[keyField]),
@@ -49,12 +49,12 @@ function prepareHeirsForVecMap(heirs, keyField, valueField) {
   };
 }
 
-// 序列化繼承人資料為 VecMap
+// Serialize heirs data into VecMap
 function serializeHeirsToVecMaps(heirs) {
-  // 分離繼承人
+  // Separate heirs
   const { suiAddressHeirs, emailHeirs } = separateHeirsByAddressType(heirs);
   
-  // 準備 Sui 地址繼承人的 VecMap 數據
+  // Prepare VecMap data for Sui address heirs
   const suiNameRatioMap = {
     keys: suiAddressHeirs.map(heir => heir.name),
     values: suiAddressHeirs.map(heir => heir.ratio)
@@ -65,7 +65,7 @@ function serializeHeirsToVecMaps(heirs) {
     values: suiAddressHeirs.map(heir => heir.ratio)
   };
   
-  // 準備電子郵件繼承人的 VecMap 數據
+  // Prepare VecMap data for email heirs
   const emailNameRatioMap = {
     keys: emailHeirs.map(heir => heir.name),
     values: emailHeirs.map(heir => heir.ratio)
@@ -76,7 +76,7 @@ function serializeHeirsToVecMaps(heirs) {
     values: emailHeirs.map(heir => heir.ratio)
   };
   
-  // 為了便於調試，創建原始數據版本（不序列化）
+  // For debugging, create a raw data version (not serialized)
   const rawData = {
     suiNameRatio: suiNameRatioMap,
     suiAddressRatio: suiAddressRatioMap,
@@ -84,7 +84,7 @@ function serializeHeirsToVecMaps(heirs) {
     emailAddressRatio: emailAddressRatioMap
   };
   
-  // 序列化數據
+  // Serialized data
   const serializedData = {
     suiNameRatio: VecMap(bcs.string(), bcs.string())
       .serialize(suiNameRatioMap)
@@ -125,18 +125,18 @@ export default function TestingP() {
       }),
   });
   
-  // 用於儲存前一次繼承人數量和動畫狀態的參考
+  // For storing previous heirs count and animation state
   const prevHeirsCountRef = useRef(0);
   const animationInProgressRef = useRef(false);
   const cardRef = useRef(null);
   
-  // 狀態管理
+  // State management
   const [showAdditionalTx, setShowAdditionalTx] = useState(false);
   const [vaultID, setVaultID] = useState("");
   const [ownerCap, setOwnerCap] = useState("");
   const [isProcessing, setIsProcessing] = useState(false);
 
-  // 從 Zustand store 獲取狀態和方法
+  // Get state and methods from Zustand store
   const {
     isConnecting,
     showWelcome,
@@ -160,12 +160,12 @@ export default function TestingP() {
   
   const { createVaultTx, zkTransaction, mintCap } = useMoveStore();
   
-  // 處理連接按鈕點擊
+  // Handle connect button click
   const handleConnect = () => {
     setIsConnecting(true);
   };
   
-  // 自動檢查帳戶連接狀態
+  // Auto check account connection status
   useEffect(() => {
     if (account && account.address && !isConnecting) {
       console.log("Account already connected:", account.address);
@@ -174,7 +174,7 @@ export default function TestingP() {
       }, 100);
     }
   }, [account, isConnecting]);
-    // 監控帳戶狀態變化，控制動畫順序
+    // Monitor account status changes, control animation sequence
   useEffect(() => {
     if (account && isConnecting) {
       const timerShowWelcome = setTimeout(() => {
@@ -195,7 +195,7 @@ export default function TestingP() {
     }
   }, [account, isConnecting, setShowWelcome, setShowNextCard]);
 
-  // 處理儀表板重定向
+  // Handle dashboard redirect
   useEffect(() => {
     if (showDashboardIndicator) {
       const timer = setTimeout(() => {
@@ -205,7 +205,7 @@ export default function TestingP() {
     }
   }, [showDashboardIndicator, router]);
 
-  // 監控繼承人數量變化，控制卡片動畫
+  // Monitor heirs count change, control card animation
   useEffect(() => {
     if (heirs.length !== prevHeirsCountRef.current && !animationInProgressRef.current) {
       animationInProgressRef.current = true;
@@ -213,23 +213,23 @@ export default function TestingP() {
       requestAnimationFrame(() => {
         if (heirs.length > prevHeirsCountRef.current) {
           if (cardRef.current) {
-            // 卡片擴展動畫
+            // Card expand animation
             cardRef.current.style.transition = 'max-height 0.3s ease-out';
             cardRef.current.style.maxHeight = `${cardRef.current.scrollHeight + 80}px`;
             
-            // 找到最新添加的繼承人欄位
+            // Find the newly added heir field
             const newHeirElements = document.querySelectorAll('[data-heir-id]');
             const newHeirElement = newHeirElements[newHeirElements.length - 1];
             
             if (newHeirElement) {
-              // 設置動畫初始狀態
+              // Set animation initial state
               newHeirElement.style.opacity = '0';
               newHeirElement.style.transform = 'translateY(15px)';
               
-              // 強制瀏覽器重繪
+              // Force browser reflow
               void newHeirElement.offsetWidth;
               
-              // 開始元素動畫
+              // Start element animation
               setTimeout(() => {
                 newHeirElement.style.transition = 'opacity 0.35s ease-out, transform 0.35s ease-out';
                 newHeirElement.style.opacity = '1';
@@ -242,7 +242,7 @@ export default function TestingP() {
             }, 400);
           }
         } else {
-          // 刪除繼承人的收縮動畫
+          // Shrink animation for removing heir
           if (cardRef.current) {
             cardRef.current.style.transition = 'max-height 0.3s ease-out';
             cardRef.current.style.maxHeight = `${cardRef.current.scrollHeight}px`;
@@ -255,42 +255,42 @@ export default function TestingP() {
           }
         }
         
-        // 更新繼承人數量
+        // Update heirs count
         prevHeirsCountRef.current = heirs.length;
       });
     }
   }, [heirs.length]);
 
-  // 處理添加繼承人
+  // Handle add heir
   const handleAddHeir = () => {
     if (animationInProgressRef.current) return;
     addHeir();
   };
 
-  // 格式化地址顯示
+  // Format address display
   const formatAddress = (address) => {
     if (!address) return "User";
     return `${address.slice(0, 5)}...${address.slice(-5)}`;
   };
 
-  // 創建並執行第一個交易
+  // Create and execute the first transaction
   const executeTransaction = async () => {
-    // 表單驗證
+    // Form validation
     if (handleVerify()) {
       try {
         setIsProcessing(true);
         
-        // 輸出數據到控制台
+        // Output data to console
         const { raw } = serializeHeirsToVecMaps(heirs);
-        console.log("=== 執行交易時的 VecMap 數據 ===");
-        console.log("Sui 繼承人:");
+        console.log("=== VecMap data at transaction execution ===");
+        console.log("Sui heirs:");
         console.table(raw.suiNameRatio);
         console.table(raw.suiAddressRatio);
-        console.log("Email 繼承人:");
+        console.log("Email heirs:");
         console.table(raw.emailNameRatio);
         console.table(raw.emailAddressRatio);
         
-        // 執行交易
+        // Execute transaction
         const transactionResult = await signAndExecuteTransaction(
           {
             transaction: createVaultTx(),
@@ -300,7 +300,7 @@ export default function TestingP() {
             onSuccess: (result) => {
               console.log("executed transaction", result);
               
-              // 從交易結果中提取 vaultID 和 ownerCap
+              // Extract vaultID and ownerCap from transaction result
               const vaultObject = result.objectChanges.find(
                 (obj) =>
                   obj.type === "created" &&
@@ -320,14 +320,14 @@ export default function TestingP() {
                 console.log("Vault ID:", vaultIDFromTx);
                 console.log("Owner Cap:", ownerCapFromTx);
 
-                // 儲存值以便後續使用
+                // Save values for later use
                 setVaultID(vaultIDFromTx);
                 setOwnerCap(ownerCapFromTx);
               } else {
                 console.error("Failed to retrieve Vault ID or Owner Cap from the result.");
               }
               
-              // 交易成功後，顯示額外交易卡片
+              // After transaction success, show additional transaction card
               setTimeout(() => {
                 setShowNextCard(false);
                 setShowAdditionalTx(true);
@@ -336,7 +336,7 @@ export default function TestingP() {
             },
             onError: (error) => {
               console.error("Transaction error:", error);
-              showWarningMessage("交易執行失敗: " + error.message);
+              showWarningMessage("Transaction failed: " + error.message);
               setIsProcessing(false);
             }
           }
@@ -345,13 +345,13 @@ export default function TestingP() {
         return transactionResult;
       } catch (error) {
         console.error("Transaction execution error:", error);
-        showWarningMessage("交易執行錯誤: " + error.message);
+        showWarningMessage("Transaction execution error: " + error.message);
         setIsProcessing(false);
       }
     }
   };
 
-  // 在組件頂部調用 useSuiClientQuery，並將結果傳遞給需要的函數
+  // Call useSuiClientQuery at the top of the component and pass the result to needed functions
   const ownedObjectsQuery = useSuiClientQuery('getOwnedObjects', {
     owner: account?.address,
     filter: {
@@ -362,42 +362,102 @@ export default function TestingP() {
     },
   });
   if(!ownedObjectsQuery.isPending) {console.log("Owned objects query result:", ownedObjectsQuery.data);}
-  // 將所有 OwnerCap objectId 放入一個列表
+  // Put all OwnerCap objectIds into a list
   let ownerCapObjectIds: string[] = [];
   if (!ownedObjectsQuery.isPending && ownedObjectsQuery.data && Array.isArray(ownedObjectsQuery.data.data)) {
     ownerCapObjectIds = ownedObjectsQuery.data.data.map((item) => item.data.objectId);
     console.log("OwnerCap object IDs:", ownerCapObjectIds);
   }
-  // 創建自定義交易A - 發送能力給繼承人
-  const executeCustomTxA = async () => {
-    try {
-      setIsProcessing(true);
-      console.log("Current account address:", account.address);
-      // 可以在這裡使用 ownedObjectsQuery.data, ownedObjectsQuery.isLoading, etc.
+  // Create custom transaction A - send capability to heirs
+const executeCustomTxA = async () => {
+  try {
+    setIsProcessing(true);
+    console.log("Current account address:", account.address);
+    
+    const { tx, urls } = await zkTransaction(
+      account.address, 
+      "testnet", 
+      ownerCapObjectIds,
+    );
+    
+    console.log("Generated URLs:", urls);
+    console.log("Transaction object:", tx);
+    
+    // Check if tx is an array
+    if (Array.isArray(tx)) {
+      console.log(`Need to process ${tx.length} transactions`);
       
-      const { tx, urls } = await zkTransaction(
-        account.address, 
-        "testnet", 
-        ownerCapObjectIds,
-      );
+      // Counter for completed transactions
+      let completedTxCount = 0;
       
-      console.log("Generated URLs:", urls);
-      console.log("Transaction object:", tx);
+      // Show progress info to user
+      showWarningMessage(`Starting to process ${tx.length} transactions...`);
       
-      // 使用轉換後的交易對象執行交易
-      const result = signAndExecuteTransaction(
+      // Process each transaction in order
+      for (let i = 0; i < tx.length; i++) {
+        const currentTx = tx[i];
+        
+        try {
+          // Update processing status message
+          showWarningMessage(`Processing transaction ${i + 1}/${tx.length}...`);
+          
+          // Execute current transaction
+          await signAndExecuteTransaction(
+            {
+              transaction: currentTx,
+              chain: "sui:testnet",
+            },
+            {
+              onSuccess: (result) => {
+                console.log(`Transaction ${i + 1}/${tx.length} executed successfully:`, result);
+                
+                // Increase completed transaction count
+                completedTxCount++;
+                
+                // If all transactions are done, go to next step
+                if (completedTxCount === tx.length) {
+                  // Show success message
+                  showWarningMessage("All transactions completed successfully!");
+                  
+                  // Delay transition to next step
+                  setTimeout(() => {
+                    setShowAdditionalTx(false);
+                    setShowDashboardIndicator(true);
+                    setIsProcessing(false);
+                  }, 100);
+                }
+              },
+              onError: (error) => {
+                console.error(`Transaction ${i + 1}/${tx.length} execution error:`, error);
+                showWarningMessage(`Transaction ${i + 1}/${tx.length} failed: ${error.message}`);
+                setIsProcessing(false);
+                // Stop further transactions on failure
+                return;
+              }
+            }
+          );
+        } catch (error) {
+          console.error(`Transaction ${i + 1}/${tx.length} processing error:`, error);
+          showWarningMessage(`Transaction ${i + 1}/${tx.length} processing error: ${error.message || String(error)}`);
+          setIsProcessing(false);
+          break; // Stop loop on failure
+        }
+      }
+    } else {
+      // If tx is not an array, treat as single transaction
+      await signAndExecuteTransaction(
         {
-          transaction:tx ,  // 現在 tx 是一個 TransactionBlock 實例
+          transaction: tx,
           chain: "sui:testnet",
         },
         {
           onSuccess: (result) => {
-            console.log("執行自定義交易 A 成功:", result);
+            console.log("Custom transaction executed successfully:", result);
             
-            // 顯示成功訊息
-            showWarningMessage("交易成功完成！");
+            // Show success message
+            showWarningMessage("Transaction completed successfully!");
             
-            // 延遲轉換到下一步
+            // Delay transition to next step
             setTimeout(() => {
               setShowAdditionalTx(false);
               setShowDashboardIndicator(true);
@@ -405,22 +465,21 @@ export default function TestingP() {
             }, 100);
           },
           onError: (error) => {
-            console.error("自定義交易 A 錯誤:", error);
-            showWarningMessage("自定義交易 A 執行失敗: " + error.message);
+            console.error("Custom transaction error:", error);
+            showWarningMessage("Custom transaction failed: " + error.message);
             setIsProcessing(false);
           }
         }
       );
-      
-      return result;
-    } catch (error) {
-      console.error("自定義交易 A 執行錯誤:", error);
-      showWarningMessage("自定義交易 A 執行錯誤: " + (error.message || String(error)));
-      setIsProcessing(false);
     }
-  };
+  } catch (error) {
+    console.error("Custom transaction execution error:", error);
+    showWarningMessage("Custom transaction execution error: " + (error.message || String(error)));
+    setIsProcessing(false);
+  }
+};
 
-  // 創建自定義交易B - 啟用自動分配功能
+  // Create custom transaction B - enable auto distribution feature
   const executeCustomTxB = async () => {
     try {
       setIsProcessing(true);
@@ -428,7 +487,7 @@ export default function TestingP() {
       const customTransaction = {
         kind: "moveCall",
         data: {
-          packageObjectId: "0x123...", // 需替換為實際合約包ID
+          packageObjectId: "0x123...", // Replace with actual contract package ID
           module: "smartwill",
           function: "add_different_feature", 
           typeArguments: [],
@@ -455,7 +514,7 @@ export default function TestingP() {
           },
           onError: (error) => {
             console.error("Custom transaction B error:", error);
-            showWarningMessage("自定義交易 B 執行失敗: " + error.message);
+            showWarningMessage("Custom transaction B failed: " + error.message);
             setIsProcessing(false);
           }
         }
@@ -464,37 +523,37 @@ export default function TestingP() {
       return result;
     } catch (error) {
       console.error("Custom transaction B execution error:", error);
-      showWarningMessage("自定義交易 B 執行錯誤: " + error.message);
+      showWarningMessage("Custom transaction B execution error: " + error.message);
       setIsProcessing(false);
     }
   };
 
-  // 鑄造能力 (Mint Caps) 函數
+  // Mint Capabilities (Mint Caps) function
   const mintCaps = async () => {
     try {
       setIsProcessing(true);
       
-      // 正確分類繼承人並準備 VecMap 數據格式
+      // Correctly classify heirs and prepare VecMap data format
       const { suiAddressHeirs, emailHeirs } = separateHeirsByAddressType(heirs);
       
-      // 準備 Sui 地址繼承人的 VecMap (按照建議的格式)
+      // Prepare VecMap for Sui address heirs (as suggested format)
       const suiVecMap = {
         keys: suiAddressHeirs.map(heir => heir.address),
         values: suiAddressHeirs.map(heir => parseInt(heir.ratio))
       };
       
-      // 準備電子郵件繼承人的 VecMap (按照建議的格式)
+      // Prepare VecMap for email heirs (as suggested format)
       const emailVecMap = {
         keys: emailHeirs.map(heir => heir.address),
         values: emailHeirs.map(heir => parseInt(heir.ratio))
       };
       
-      // 輸出格式化後的 VecMap 數據用於調試
-      console.log("鑄造能力交易使用的 VecMap 數據:");
-      console.log("Sui 地址 VecMap:", suiVecMap);
-      console.log("Email 地址 VecMap:", emailVecMap);
+      // Output formatted VecMap data for debugging
+      console.log("VecMap data used for minting caps:");
+      console.log("Sui address VecMap:", suiVecMap);
+      console.log("Email address VecMap:", emailVecMap);
       
-      // 使用 SUI SDK 的 Transaction Builder 格式
+      // Use SUI SDK's Transaction Builder format
       const tx = await mintCap(ownerCap, vaultID, suiVecMap, emailVecMap);
       const result = await signAndExecuteTransaction(
         {
@@ -503,13 +562,13 @@ export default function TestingP() {
         },
         {
           onSuccess: (result) => {
-            console.log("成功鑄造能力並初始化成員", result);
-            showWarningMessage("成功鑄造繼承人權限！");
+            console.log("Successfully minted capabilities and initialized members", result);
+            showWarningMessage("Successfully minted heir capabilities!");
             setIsProcessing(false);
           },
           onError: (error) => {
-            console.error("鑄造能力錯誤:", error);
-            showWarningMessage("鑄造繼承人權限失敗: " + error.message);
+            console.error("Minting capabilities error:", error);
+            showWarningMessage("Minting heir capabilities failed: " + error.message);
             setIsProcessing(false);
           }
         }
@@ -517,13 +576,13 @@ export default function TestingP() {
       
       return result;
     } catch (error) {
-      console.error("鑄造能力處理錯誤:", error);
-      showWarningMessage("鑄造繼承人權限錯誤: " + error.message);
+      console.error("Minting capabilities processing error:", error);
+      showWarningMessage("Minting heir capabilities error: " + error.message);
       setIsProcessing(false);
     }
   };
 
-  // 檢查地址類型
+  // Check address type
   const getAddressType = (address) => {
     if (address && address.startsWith("0x") && !address.includes("@")) {
       return "sui";
@@ -535,7 +594,7 @@ export default function TestingP() {
 
   return (
     <div className="flex flex-col items-center justify-center min-h-screen bg-gray-100 overflow-hidden relative">
-      {/* 連接卡片 - 未連接狀態 */}
+      {/* Connect card - not connected state */}
       <div
         className={`bg-primary p-8 rounded-lg shadow-none hover:shadow-lg transition-all duration-500 ease-in-out transform absolute
                     ${
@@ -553,7 +612,7 @@ export default function TestingP() {
         </div>
       </div>
 
-      {/* 歡迎卡片 - 已連接狀態 */}
+      {/* Welcome card - connected state */}
       <div
         className={`bg-primary p-8 rounded-lg shadow-lg transition-all duration-500 ease-in-out transform absolute
                     ${
@@ -565,10 +624,10 @@ export default function TestingP() {
         <h1 className="text-4xl text-black font-bold mb-8">
           Welcome, {formatAddress(account?.address)}
         </h1>
-        <p className="text-xl text-gray-700 mb-4">Let&apos;s get started.</p>
+        <p className="text-xl text-gray-700 mb-4">Let's get started.</p>
       </div>
 
-      {/* 第三張卡片 - 設置繼承人 */}
+      {/* Third card - set heirs */}
       <div
         ref={cardRef}
         className={`bg-primary p-8 rounded-lg shadow-lg transition-all duration-500 ease-in-out transform absolute w-full max-w-3xl overflow-hidden
@@ -577,7 +636,7 @@ export default function TestingP() {
                         ? "opacity-100 translate-y-0"
                         : "opacity-0 translate-y-20 pointer-events-none"
                     }`}
-        style={{ maxHeight: '2000px' }} // 初始設置一個較大的最大高度
+        style={{ maxHeight: '2000px' }} // Initially set a large max height
       >
         <h2 className="text-2xl font-bold mb-4">Tell us about your plan</h2>
 
@@ -637,7 +696,7 @@ export default function TestingP() {
                     value={heir.ratio}
                     onChange={(e) => updateHeir(heir.id, "ratio", e.target.value)}
                     onKeyDown={(e) => {
-                      // 防止輸入負號
+                      // Prevent entering minus sign
                       if (e.key === "-") {
                         e.preventDefault();
                       }
@@ -671,7 +730,7 @@ export default function TestingP() {
             {isProcessing ? (
               <>
                 <span className="inline-block animate-spin mr-2">⟳</span>
-                處理中...
+                Processing...
               </>
             ) : (
               "Verify"
@@ -679,29 +738,29 @@ export default function TestingP() {
           </button>
         </div>
 
-        {/* 顯示目前總比例 */}
+        {/* Show current total ratio */}
         <div className="mt-4">
           <p className="text-gray-700">
             Current total ratio: {getTotalRatio()}%
           </p>
         </div>
         
-        {/* 繼承人類型統計 */}
+        {/* Heir type statistics */}
         <div className="mt-2 text-sm text-gray-500">
           {(() => {
             const { suiAddressHeirs, emailHeirs } = separateHeirsByAddressType(heirs);
             return (
               <>
-                <span>Sui 地址繼承人: {suiAddressHeirs.length}</span>
+                <span>Sui address heirs: {suiAddressHeirs.length}</span>
                 <span className="mx-2">|</span>
-                <span>電子郵件繼承人: {emailHeirs.length}</span>
+                <span>Email heirs: {emailHeirs.length}</span>
               </>
             );
           })()}
         </div>
       </div>
 
-      {/* 額外交易卡片 */}
+      {/* Additional transaction card */}
       <div
         className={`bg-primary p-8 rounded-lg shadow-lg transition-all duration-500 ease-in-out transform absolute w-full max-w-3xl
                     ${
@@ -712,10 +771,10 @@ export default function TestingP() {
       >
         <h2 className="text-2xl font-bold mb-4">Send Capabilities to heirs.</h2>
         <p className="mb-6 text-gray-700">
-          Your WiLL has been established. Now to notify and send Capability to the heirs.
+          Your Will has been established. Now to notify and send Capability to the heirs.
         </p>
         
-        {/* 交易 ID 資訊 */}
+        {/* Transaction ID info */}
         <div className="mb-6 p-4 bg-gray-100 rounded-lg flex flex-row justify-between items-center">
           <div>
             <p className="text-gray-700"><strong>Vault ID:</strong> {vaultID ? formatAddress(vaultID) : "Not available"}</p>
@@ -729,7 +788,7 @@ export default function TestingP() {
             {isProcessing ? (
               <>
                 <span className="inline-block animate-spin mr-2">⟳</span>
-                處理中...
+                Processing...
               </>
             ) : (
               "Mint Caps"
@@ -738,12 +797,12 @@ export default function TestingP() {
         </div>
         
         <div className="flex flex-col md:flex-row justify-between items-center space-y-4 md:space-y-0 md:space-x-4">
-          {/* 左側按鈕 */}
+          {/* Left button */}
           <div className="w-full md:w-1/2">
             <div className="p-4 border border-blue-200 rounded-lg bg-blue-50 h-full">
               <h3 className="font-bold text-lg mb-2 text-blue-800">Send Caps with Email</h3>
               <p className="text-gray-700 mb-4">
-                透過加密郵件將繼承人權限安全發送到對應的電子郵件地址。
+                Securely send heir capabilities to the corresponding email addresses via encrypted email.
               </p>
               <button
                 onClick={executeCustomTxA}
@@ -753,7 +812,7 @@ export default function TestingP() {
                 {isProcessing ? (
                   <>
                     <span className="inline-block animate-spin mr-2">⟳</span>
-                    處理中...
+                    Processing...
                   </>
                 ) : (
                   "Send Via zksend"
@@ -762,13 +821,13 @@ export default function TestingP() {
             </div>
           </div>
           
-          {/* 右側按鈕 */}
+          {/* Right button */}
           <div className="w-full md:w-1/2">
             <div className="p-4 border border-purple-200 rounded-lg bg-purple-50 h-full">
-              <h3 className="font-bold text-lg mb-2 text-purple-800">啟用自動分配</h3>
+              <h3 className="font-bold text-lg mb-2 text-purple-800">Enable Auto Distribution</h3>
               <p className="text-gray-700 mb-4">
-                為您的智能遺囑啟用自動資產分配功能。
-                這將允許您的資產根據預定義規則自動分配。
+                Enable automatic asset distribution for your smart will.
+                This will allow your assets to be distributed automatically according to predefined rules.
               </p>
               <button
                 onClick={executeCustomTxB}
@@ -778,10 +837,10 @@ export default function TestingP() {
                 {isProcessing ? (
                   <>
                     <span className="inline-block animate-spin mr-2">⟳</span>
-                    處理中...
+                    Processing...
                   </>
                 ) : (
-                  "啟用自動分配"
+                  "Enable Auto Distribution"
                 )}
               </button>
             </div>
@@ -789,7 +848,7 @@ export default function TestingP() {
         </div>
       </div>
 
-      {/* 下一頁指示器 - 在驗證成功後顯示 */}
+      {/* Next page indicator - shown after successful verification */}
       <div
         className={`bg-primary p-8 rounded-lg shadow-lg transition-all duration-500 ease-in-out transform absolute
                     ${
@@ -802,29 +861,28 @@ export default function TestingP() {
           Your Will has been established.
         </h1>
         <p className="text-xl text-gray-700 mb-4">Launching Dashboard.</p>
-        {/* 進度指示器 */}
+        {/* Progress indicator */}
         <div className="flex justify-center mt-6">
           <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-green-500"></div>
         </div>
       </div>
-
-      {/* 警告視窗 */}
-      {showWarning && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white p-6 rounded-lg shadow-xl max-w-md w-full">
-            <h3 className="text-xl font-bold text-red-600 mb-4">警告</h3>
-            <p className="text-gray-800 mb-6">{warningMessage}</p>
-            <div className="flex justify-end">
-              <button
-                className="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600 transition"
-                onClick={closeWarning}
-              >
-                關閉
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Warning/message dialog - updated to neutral style */}
+{showWarning && (
+  <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
+    <div className="bg-white p-6 rounded-lg shadow-xl max-w-md w-full">
+      <h3 className="text-xl font-bold text-gray-800 mb-4">Message</h3>
+      <p className="text-gray-700 mb-6">{warningMessage}</p>
+      <div className="flex justify-end">
+        <button
+          className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition"
+          onClick={closeWarning}
+        >
+          OK
+        </button>
+      </div>
+    </div>
+  </div>
+)}
     </div>
   );
 }

@@ -138,7 +138,7 @@ module smartwill::vault {
         transfer::public_transfer(asset, tx_context::sender(ctx));
     }
 
-    public fun organize_trust_asset<Asset: key + store>(cap: &OwnerCap, vault: &mut Vault, asset_name: vector<u8>, asset: Coin<Asset>, ctx: &mut TxContext) {
+    public fun organize_trust_asset<Asset>(cap: &OwnerCap, vault: &mut Vault, asset_name: vector<u8>, asset: Coin<Asset>, ctx: &mut TxContext) {
         let coin_from_vault = dof::borrow_mut<vector<u8>, Coin<Asset>>(&mut vault.id, asset_name);
         let amount = coin::value<Asset>(coin_from_vault); // Fixed: removed the extra &
         let amount_mut = table::borrow_mut<vector<u8>, u64>(&mut vault.withdraw_table, asset_name);
