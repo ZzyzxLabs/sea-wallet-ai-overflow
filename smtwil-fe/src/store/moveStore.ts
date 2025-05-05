@@ -13,7 +13,10 @@ function VecMap<K extends BcsType<any>, V extends BcsType<any>>(K: K, V: V) {
         }
     )
 }
-
+function stringToUint8Array(str) {
+  const encoder = new TextEncoder();
+  return encoder.encode(str);
+}
 // Define a TypeScript interface for your store state
 interface MoveStore {
   packageName: string;
@@ -38,9 +41,9 @@ const useMoveStore = create<MoveStore>((set, get) => ({
     });
     return vaultTx;
   },
+
   alterTx:(capId, vaultId, coinIds, amount, name, coinType) => {
     const tx = new Transaction();
-    
     // Basic validation
     if (!Array.isArray(coinIds) || coinIds.length === 0) {
       throw new Error("coinIds must be a non-empty array of object IDs");
@@ -58,21 +61,23 @@ const useMoveStore = create<MoveStore>((set, get) => ({
     // Step 2: Split coins - USING OBJECT REFERENCE, NOT STRING
     const [goods] = tx.splitCoins(coinObjects[0], [amount]);
     
+    // const nameBC = bcs.vector(bcs.U8).serialize(stringToUint8Array(name.toString()));
+    const nameBC = stringToUint8Array(name.toString())
     // Step 3: use goods as asset input into addToVault
     tx.moveCall({
       target: `${get().packageName}::vault::organize_trust_asset`,
       arguments: [
         tx.object(capId), 
         tx.object(vaultId), 
-        tx.pure.u8(name),
+        tx.pure(nameBC),
         goods
       ],
       typeArguments: [coinType],
     });
     
     return tx;
-  }
-  ,
+  },
+  
   fuseTxFunctions: (capId, vaultId, coinIds, amount, name, coinType) => {
     const tx = new Transaction();
     
@@ -91,7 +96,7 @@ const useMoveStore = create<MoveStore>((set, get) => ({
     
     // Step 2: Split coins - USING OBJECT REFERENCE, NOT STRING
     const [goods] = tx.splitCoins(coinObjects[0], [amount]);
-    
+    const nameBC = bcs.vector(bcs.U8).serialize(stringToUint8Array(name.toString()));
     // Step 3: use goods as asset input into addToVault
     tx.moveCall({
       target: `${get().packageName}::vault::add_trust_asset_coin`,
@@ -99,7 +104,7 @@ const useMoveStore = create<MoveStore>((set, get) => ({
         tx.object(capId), 
         tx.object(vaultId), 
         goods, 
-        tx.pure.u8(name)
+        tx.pure(nameBC)
       ],
       typeArguments: [coinType || 'unknown_coin_type'],
     });

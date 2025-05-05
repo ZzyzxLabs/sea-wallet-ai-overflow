@@ -8,7 +8,7 @@ import {
   useSuiClient,
 } from "@mysten/dapp-kit";
 import useMoveStore from "../store/moveStore"; // Ensure correct path to your store
-
+import useHeirStore from '../store/heirStore'
 // Format address function to prevent overflow
 const formatAddress = (address) => {
   if (!address) return "";
@@ -35,6 +35,9 @@ const ButtonInContractAlter = () => {
   });
   // Get fuseTxFunctions from store
   const fuseTxFunctions = useMoveStore((state) => state.fuseTxFunctions);
+  const alterTx = useMoveStore((state) => state.alterTx);
+  const VaultNames = useHeirStore((state) => state.VaultNames);
+  const packageName = useMoveStore((state) => state.packageName);
   // Get the Sui client for advanced transaction options
   const suiClient = useSuiClient();
   const [showModal, setShowModal] = useState(false);
@@ -110,13 +113,15 @@ const ButtonInContractAlter = () => {
     let ownerCapObjects = null;
     let vaultID = null;
     if (vaultAndCap.data) {
+      console.log("Vault and Cap Data:", vaultAndCap.data.data);
+      console.log(packageName + "::vault::OwnerCap")
       // Search for smart will owner cap in the data
       ownerCapObjects = vaultAndCap.data.data.filter((obj) =>
-        obj.data?.type?.includes("::vault::OwnerCap")
+        obj.data?.type?.includes(packageName + "::vault::OwnerCap")
       );
-      vaultID = ownerCapObjects[0]?.data?.content?.fields?.vault_id;
+      vaultID = ownerCapObjects[0]?.data?.content?.fields?.vaultID;
     }
-
+    console.log("Owner Cap Objects:", ownerCapObjects, vaultID);
     return { ownerCapObjects, vaultID };
   }, [vaultAndCap.data]);
 
@@ -275,16 +280,30 @@ const ButtonInContractAlter = () => {
         name: selectedCoin[0], // Using the coin name (first element in selectedCoin array)
         coinType: finalCoinType
       });
-      
+      let tx
+      // if(!VaultNames.includes(selectedCoin[0])){
+        tx = fuseTxFunctions(
+          ownerCapObjects[0].data.objectId,
+          vault.objectId, 
+          coinObjectIds,
+          amountInSmallestUnit,
+          selectedCoin[0], // Using the coin name (first element in selectedCoin array)
+          finalCoinType
+        );
+      // // }else{
+        // tx = alterTx(
+        //   ownerCapObjects[0].data.objectId,
+        //   vault.objectId,
+        //   coinObjectIds,
+        //   amountInSmallestUnit,
+        //   selectedCoin[0], // Using the coin name (first element in selectedCoin array)
+        //   finalCoinType
+        // )
+      // }
+
+
       // Create transaction without gas handling
-      let tx = fuseTxFunctions(
-        ownerCapObjects[0].data.objectId,
-        vault.objectId, 
-        coinObjectIds,
-        amountInSmallestUnit,
-        0,
-        finalCoinType
-      );
+
       
       console.log("Executing transaction...");
       setErrorr("Executing transaction...");
