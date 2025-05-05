@@ -7,28 +7,7 @@ import {
   useAutoConnectWallet,
   useSuiClient,
 } from "@mysten/dapp-kit";
-// Popular Sui network coins for reference
-const popularCoins = [
-  ["SUI", "0x2::sui::SUI"],
-  [
-    "USDC",
-    "0x5d4b302506645c37ff133b98c4b50a5ae14841659738d6d733d59d0d217a93bf::coin::COIN",
-  ],
-  [
-    "WETH",
-    "0x27792d9fed7f9844eb4839566001bb6f6cb4804f66aa2da6fe1ee242d896881::coin::COIN",
-  ],
-  [
-    "BTC",
-    "0xc44f8d1a9d1048bdd3777fe4a1bf74c3f4e97f234ce9e68608d8a3a2743eda8b::coin::COIN",
-  ],
-  [
-    "CETUS",
-    "0x06864a6f921804860930db6ddbe2e16acdf8504495ea7481637a1c8b9a8fe54b::cetus::CETUS",
-  ],
-];
 import useMoveStore from "../store/moveStore"; // Ensure correct path to your store
-import { sign } from "crypto";
 
 // Format address function to prevent overflow
 const formatAddress = (address) => {

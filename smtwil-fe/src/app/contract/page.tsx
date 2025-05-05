@@ -1,6 +1,6 @@
 "use client";
 import "@mysten/dapp-kit/dist/index.css";
-import { ConnectButton, useSuiClient } from "@mysten/dapp-kit";
+import { ConnectButton, useSuiClient, useSuiClientQuery } from "@mysten/dapp-kit";
 import {
   useCurrentAccount,
   useSignAndExecuteTransaction,
@@ -351,17 +351,34 @@ export default function TestingP() {
     }
   };
 
+  // 在組件頂部調用 useSuiClientQuery，並將結果傳遞給需要的函數
+  const ownedObjectsQuery = useSuiClientQuery('getOwnedObjects', {
+    owner: account?.address,
+    filter: {
+      StructType: '0x9622fd64681280dc61eecf7fbc2e756bb7614cf5662f220044f573758f922c71::vault::OwnerCap',
+    },
+    options:{
+      showType: true,
+    },
+  });
+  if(!ownedObjectsQuery.isPending) {console.log("Owned objects query result:", ownedObjectsQuery.data);}
+  // 將所有 OwnerCap objectId 放入一個列表
+  let ownerCapObjectIds: string[] = [];
+  if (!ownedObjectsQuery.isPending && ownedObjectsQuery.data && Array.isArray(ownedObjectsQuery.data.data)) {
+    ownerCapObjectIds = ownedObjectsQuery.data.data.map((item) => item.data.objectId);
+    console.log("OwnerCap object IDs:", ownerCapObjectIds);
+  }
   // 創建自定義交易A - 發送能力給繼承人
   const executeCustomTxA = async () => {
     try {
       setIsProcessing(true);
       console.log("Current account address:", account.address);
+      // 可以在這裡使用 ownedObjectsQuery.data, ownedObjectsQuery.isLoading, etc.
       
       const { tx, urls } = await zkTransaction(
         account.address, 
         "testnet", 
-        "0x0bfe782ef43671d52cb51303e1cc63b7eac6de46e46eb346defa168822f9c8ea", 
-        1
+        ownerCapObjectIds,
       );
       
       console.log("Generated URLs:", urls);
