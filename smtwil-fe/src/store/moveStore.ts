@@ -146,6 +146,8 @@ const useMoveStore = create<MoveStore>((set, get) => ({
     //   keys: email.keys, // array of strings, e.g. ["alice@example.com", ...]
     //   values: email.values, // array of numbers (u8)
     // });
+
+    // test test (mic) test
     email = {
       keys: ["x.com", "y.com"],
       values: [25, 25],
@@ -167,50 +169,62 @@ const useMoveStore = create<MoveStore>((set, get) => ({
     console.log("emailPer", emailPer);
     const tx = new Transaction();
 
-    // for (let i = 0; i < email.keys.length; i++) {
-    //   let [emailCap] = tx.moveCall({
-    //     target: `${get().packageName}::vault::addMemberByEmail`,
-    //     arguments: [
-    //       tx.object(cap),
-    //       tx.object(vault),
-    //       tx.pure.string(email.keys[i]),
-    //       tx.pure.u8(email.values[i]),
-    //     ],
-    //   });
-    //   console.log("!!emailCap", emailCap);
+    tx.moveCall({
+      target: `${get().packageName}::vault::addMemberByAddresses`,
+      arguments: [
+        tx.object(cap),
+        tx.object(vault),
+        tx.pure(addressList),
+        tx.pure(addressPer),
+      ],
+    });
 
-    //   // TODO: replace with zksend to send to emails
-    //   tx.transferObjects(
-    //     [emailCap],
-    //     "0x08b782844f1900e033607d33d353ef3c8e181abfe044e8b921a102ee67f18c37"
-    //   );
-    // }
-    let [emailCap] = tx.moveCall({
-      target: `${get().packageName}::vault::addMemberByEmail`,
-      arguments: [
-        tx.object(cap),
-        tx.object(vault),
-        tx.pure.string("x.com"),
-        tx.pure.u8(50),
-      ],
-    });
-    tx.transferObjects(
-      [emailCap],
-      "0x08b782844f1900e033607d33d353ef3c8e181abfe044e8b921a102ee67f18c37"
-    );
-    let [emailCap2] = tx.moveCall({
-      target: `${get().packageName}::vault::addMemberByEmail`,
-      arguments: [
-        tx.object(cap),
-        tx.object(vault),
-        tx.pure.string("x.com"),
-        tx.pure.u8(50),
-      ],
-    });
-    tx.transferObjects(
-      [emailCap2],
-      "0x08b782844f1900e033607d33d353ef3c8e181abfe044e8b921a102ee67f18c37"
-    );
+    for (let i = 0; i < email.keys.length; i++) {
+      let [emailCap] = tx.moveCall({
+        target: `${get().packageName}::vault::addMemberByEmail`,
+        arguments: [
+          tx.object(cap),
+          tx.object(vault),
+          tx.pure.string(email.keys[i]),
+          tx.pure.u8(email.values[i]),
+        ],
+      });
+      console.log("!!emailCap", emailCap);
+
+      // TODO: replace with zksend to send to emails
+      tx.transferObjects(
+        [emailCap],
+        "0x08b782844f1900e033607d33d353ef3c8e181abfe044e8b921a102ee67f18c37"
+      );
+    }
+
+    // test if two emails can be sent at once
+    // let [emailCap] = tx.moveCall({
+    //   target: `${get().packageName}::vault::addMemberByEmail`,
+    //   arguments: [
+    //     tx.object(cap),
+    //     tx.object(vault),
+    //     tx.pure.string("x.com"),
+    //     tx.pure.u8(50),
+    //   ],
+    // });
+    // tx.transferObjects(
+    //   [emailCap],
+    //   "0x08b782844f1900e033607d33d353ef3c8e181abfe044e8b921a102ee67f18c37"
+    // );
+    // let [emailCap2] = tx.moveCall({
+    //   target: `${get().packageName}::vault::addMemberByEmail`,
+    //   arguments: [
+    //     tx.object(cap),
+    //     tx.object(vault),
+    //     tx.pure.string("x.com"),
+    //     tx.pure.u8(50),
+    //   ],
+    // });
+    // tx.transferObjects(
+    //   [emailCap2],
+    //   "0x08b782844f1900e033607d33d353ef3c8e181abfe044e8b921a102ee67f18c37"
+    // );
 
     // emailCapsTest
     // const emailCaps = tx.moveCall({
