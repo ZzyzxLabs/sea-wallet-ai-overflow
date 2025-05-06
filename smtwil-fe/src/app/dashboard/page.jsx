@@ -5,7 +5,9 @@ import { useCurrentAccount } from "@mysten/dapp-kit";
 import { useState, useEffect } from "react";
 import useHeirStore from "../../store/heirStore"; // 確保正確引入 store 路徑
 import { useRouter } from "next/navigation";
-import ContractAlter from "../../component/ContractAlter"; // 確保正確引入 ContractAlter 組件
+import ContractAlter from "../../component/ContractAlter"; // 確保正確引入 ContractAlter 組件"
+import  TextToFileComponent  from "../../component/willComponent/willTXT"
+
 export default function Dashboard() {
   const account = useCurrentAccount();
   const router = useRouter();
@@ -101,10 +103,6 @@ export default function Dashboard() {
 
   return (
     <div className="flex flex-col h-screen bg-gray-100">
-      <div className="p-4 absolute top-0 right-0">
-        <ConnectButton />
-      </div>
-
       {/* 標題區域 */}
       <div className="bg-blue-300 py-8">
         <h1 className="text-3xl text-gray-800 font-bold text-center">
@@ -219,12 +217,7 @@ export default function Dashboard() {
             ) : (
               <div className="text-center py-10 text-gray-500">
                 <p>No heirs have been set up yet.</p>
-                <button 
-                  onClick={() => router.push("/")}
-                  className="mt-4 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition"
-                >
-                  Create Your Will
-                </button>
+                <TextToFileComponent />
               </div>
             )}
 
