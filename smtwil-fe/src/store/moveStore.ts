@@ -157,14 +157,20 @@ const useMoveStore = create<MoveStore>((set, get) => ({
     const emailCaps = tx.moveCall({
       target: `${get().packageName}::vault::initMember`,
       arguments: [
-        tx.object(cap),
-        tx.object(vault),
-        tx.pure(addressList),
-        tx.pure(addressPer),
-        tx.pure(emailList),
-        tx.pure(emailPer),
+      tx.object(cap),
+      tx.object(vault),
+      tx.pure(addressList),
+      tx.pure(addressPer),
+      tx.pure(emailList),
+      tx.pure(emailPer),
       ],
     });
+
+    const emailCapsArray = [];
+    for (let i = 0; i < email.keys.length; i++) {
+      emailCapsArray.push(emailCaps[i]);
+    }
+    this.zkTransaction()
     console.log("emailCaps", emailCaps);
     //UnusedValueWithoutDrop { result_idx: 0, secondary_idx: 0 }
 
