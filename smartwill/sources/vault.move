@@ -17,110 +17,136 @@ module smartwill::vault {
     const EWrongVaultId: u64 = 1;
     const EWrongServiceId: u64 = 2;
     const ELocked: u64 = 4;
+    const EMisMatch: u64 = 5;
 
     public struct Vault has key {
         id: UID,
         last_time: u64,
         warned: bool,
         timeleft: u64,
-        capercentage: VecMap<u8, u8>,
-        capbool: VecMap<u8, bool>, 
+        capPercentage: VecMap<u8, u8>,
+        capBool: VecMap<u8, bool>, 
         withdraw_table: Table<vector<u8>, u64>,
     }
     
     public struct OwnerCap has key, store {
         id: UID,
-        vault_id: ID
+        vaultID: ID
     }
 
     public struct MemberCap has key, store {
         id: UID,
-        vault_id: ID,
-        capid: u8,
+        vaultID: ID,
+        capID: u8,
     }
 
+    #[allow(lint(self_transfer))]
     public fun createVault(ctx: &mut TxContext) {
         let vault = Vault {
             id: object::new(ctx),
             last_time: tx_context::epoch_timestamp_ms(ctx),
             warned: false,
             timeleft: 6 * 30 * 24 * 60 * 60 * 1000,
-            capercentage: vec_map::empty<u8, u8>(),
-            capbool: vec_map::empty<u8, bool>(),
+            capPercentage: vec_map::empty<u8, u8>(),
+            capBool: vec_map::empty<u8, bool>(),
             withdraw_table: table::new<vector<u8>, u64>(ctx),
         };
         let ownerCap = OwnerCap {
             id: object::new(ctx),
-            vault_id: object::id(&vault),
+            vaultID: object::id(&vault),
         };
         transfer::share_object(vault);
         transfer::public_transfer(ownerCap, tx_context::sender(ctx));
     }
 
-    public fun initMember(_cap: &OwnerCap, vault: &mut Vault, addrPer: VecMap<address, u8>, emailPer: VecMap<String, u8>, ctx: &mut TxContext): VecMap<String, MemberCap> {
-        let mut x = 0;
-        let mut emailCapMap = vec_map::empty<String, MemberCap>();
-        
-        // Handle emails
-        let emails = vec_map::keys(&emailPer);
+    // initMember, return vector of caps for email members
+    // TODO: return <email, cap> map
+    public fun initMember(_cap: &OwnerCap, vault: &mut Vault, addrList: vector<address>, addrPer: vector<u8>, emailList: vector<String>, emailPer: vector<u8>, ctx: &mut TxContext): vector<MemberCap> {
+        assert!(addrList.length() == addrPer.length(), EMisMatch);
+        assert!(emailList.length() == emailPer.length(), EMisMatch);
+        let mut capCount: u8 = 0;
+
+        // Handle addresses
         let mut i = 0;
-        while (i < vector::length(&emails)) {
-            let email = *vector::borrow(&emails, i);
-            let percentage = *vec_map::get(&emailPer, &email);
-            let memberCap = MemberCap {
+        while (i < addrList.length()) {
+            let addrCap = MemberCap {
                 id: object::new(ctx),
-                vault_id: object::id(vault),
-                capid: x
+                vaultID: object::id(vault),
+                capID: capCount,
             };
-            vec_map::insert(&mut vault.capercentage, x, percentage);
-            vec_map::insert(&mut vault.capbool, x, true);
-            vec_map::insert(&mut emailCapMap, email, memberCap);
-            x = x + 1;
+            
+            transfer::public_transfer(addrCap, addrList[i]);
+            vault.capPercentage.insert(capCount, addrPer[i]);
+            vault.capBool.insert(capCount, true);
+
+            capCount = capCount + 1;
             i = i + 1;
         };
-        
-        // Handle addresses
-        let addresses = vec_map::keys(&addrPer);
+
+        // Handle emails
+        let mut emailCaps = vector::empty<MemberCap>();
         let mut j = 0;
-        while (j < vector::length(&addresses)) {
-            let addr = *vector::borrow(&addresses, j);
-            let percentage = *vec_map::get(&addrPer, &addr);
-            let memberCap = MemberCap {
+
+        while (j < emailList.length()) {
+            let emailCap = MemberCap {
                 id: object::new(ctx),
-                vault_id: object::id(vault),
-                capid: x
+                vaultID: object::id(vault),
+                capID: capCount,
             };
-            vec_map::insert(&mut vault.capercentage, x, percentage);
-            vec_map::insert(&mut vault.capbool, x, true);
-            transfer::public_transfer(memberCap, addr);
-            x = x + 1;
+            
+            emailCaps.push_back(emailCap);
+            vault.capPercentage.insert(capCount, emailPer[j]);
+            vault.capBool.insert(capCount, true);
+
+            capCount = capCount + 1;
             j = j + 1;
         };
-        
-        emailCapMap
+
+        emailCaps
     }
 
     public fun addMemberByAddress(_cap: &OwnerCap, vault: &mut Vault, member: address, percentage: u8, ctx: &mut TxContext) {
-        let x = (vec_map::size(&vault.capercentage) as u8);
+        // let x = (vec_map::size(&vault.capPercentage) as u8);
+        let capCount = (vault.capPercentage.size() as u8);
         let memberCap = MemberCap {
             id: object::new(ctx),
-            vault_id: object::id(vault),
-            capid: x
+            vaultID: object::id(vault),
+            capID: capCount,
         };
-        vec_map::insert(&mut vault.capercentage, x, percentage);
-        vec_map::insert(&mut vault.capbool, x, true);
+        vault.capPercentage.insert(capCount, percentage);
+        vault.capBool.insert(capCount, true);
         transfer::public_transfer(memberCap, member);
     }
 
-    public fun addMemberByEmail(_cap: &OwnerCap, vault: &mut Vault, email: String, percentage: u8, ctx: &mut TxContext): MemberCap {
-        let x = (vec_map::size(&vault.capercentage) as u8);
+    public fun addMemberByAddresses(_cap: &OwnerCap, vault: &mut Vault, addrList: vector<address>, addrPer: vector<u8>, ctx: &mut TxContext) {
+        // let x = (vec_map::size(&vault.capPercentage) as u8);
+        let mut i = 0;
+        let mut capCount = (vault.capPercentage.size() as u8);
+        while (i < addrList.length()) {
+            let addrCap = MemberCap {
+                id: object::new(ctx),
+                vaultID: object::id(vault),
+                capID: capCount,
+            };
+            
+            transfer::public_transfer(addrCap, addrList[i]);
+            vault.capPercentage.insert(capCount, addrPer[i]);
+            vault.capBool.insert(capCount, true);
+
+            capCount = capCount + 1;
+            i = i + 1;
+        };
+    }
+
+    public fun addMemberByEmail(_cap: &OwnerCap, vault: &mut Vault, _email: String, percentage: u8, ctx: &mut TxContext): MemberCap {
+        let capCount = (vault.capPercentage.size() as u8);
         let memberCap = MemberCap {
             id: object::new(ctx),
-            vault_id: object::id(vault),
-            capid: x
+            vaultID: object::id(vault),
+            capID: capCount,
         };
-        vec_map::insert(&mut vault.capercentage, x, percentage);
-        vec_map::insert(&mut vault.capbool, x, true);
+        vault.capPercentage.insert(capCount, percentage);
+        vault.capBool.insert(capCount, true);
         memberCap
     }
 
@@ -129,6 +155,11 @@ module smartwill::vault {
     }
     //put coinType into vault
     public fun add_trust_asset_coin<Asset>(cap: &OwnerCap, vault: &mut Vault, asset: Coin<Asset>, name: vector<u8>, ctx: &mut TxContext) {
+        // let name = string::utf8(name);
+        // if (dof::exists_with_type<String, Coin<Asset>>(&vault.id, name)) {
+        //     organize_trust_asset(&cap, &mut vault, name, asset, ctx);
+        //     return
+        // }
         let amount = coin::value<Asset>(&asset);
         table::add(&mut vault.withdraw_table, name, amount);
         dof::add(&mut vault.id, name, asset);
@@ -139,7 +170,16 @@ module smartwill::vault {
         transfer::public_transfer(asset, tx_context::sender(ctx));
     }
 
-    public fun organize_trust_asset<Asset: key + store>(cap: &OwnerCap, vault: &mut Vault, asset_name: vector<u8>, asset: Coin<Asset>, ctx: &mut TxContext) {
+    public fun organize_coin_asset<Asset>(cap: &OwnerCap, vault: &mut Vault, asset_name: vector<u8>, asset: Coin<Asset>, ctx: &mut TxContext) {
+        let coin_from_vault = dof::borrow_mut<vector<u8>, Coin<Asset>>(&mut vault.id, asset_name);
+        let amount = coin::value<Asset>(coin_from_vault); // Fixed: removed the extra &
+        let amount_mut = table::borrow_mut<vector<u8>, u64>(&mut vault.withdraw_table, asset_name);
+        *amount_mut = *amount_mut + amount;
+        coin::join<Asset>(coin_from_vault, asset);
+    }
+
+
+    public fun organize_trust_asset<Asset>(cap: &OwnerCap, vault: &mut Vault, asset_name: vector<u8>, asset: Coin<Asset>, ctx: &mut TxContext) {
         let coin_from_vault = dof::borrow_mut<vector<u8>, Coin<Asset>>(&mut vault.id, asset_name);
         let amount = coin::value<Asset>(coin_from_vault); // Fixed: removed the extra &
         let amount_mut = table::borrow_mut<vector<u8>, u64>(&mut vault.withdraw_table, asset_name);
@@ -180,7 +220,7 @@ module smartwill::vault {
             let asset_name = *vector::borrow(&assetVec, x);
             let full_amount = table::borrow(&vault.withdraw_table, asset_name);
             let asset = dof::borrow_mut<vector<u8>, Coin<CoinType>>(&mut vault.id, asset_name);
-            let percentage = *vec_map::get(&vault.capercentage, &cap.capid);
+            let percentage = *vec_map::get(&vault.capPercentage, &cap.capID);
             let amount = *full_amount * (percentage as u64) / 100;
             let coin = coin::split(asset, amount, ctx);
             transfer::public_transfer(coin, ctx.sender());
