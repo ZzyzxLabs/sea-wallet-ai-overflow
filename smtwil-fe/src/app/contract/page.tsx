@@ -10,6 +10,7 @@ import useHeirStore from "../../store/heirStore";
 import { useRouter } from "next/navigation";
 import useMoveStore from "../../store/moveStore";
 import { bcs, BcsType } from '@mysten/bcs';
+import HeirCard from "../../component/HeirCard";
 
 // VecMap function for serializing key-value pairs
 function VecMap<K extends BcsType<any>, V extends BcsType<any>>(K: K, V: V) {
@@ -628,137 +629,17 @@ const executeCustomTxA = async () => {
       </div>
 
       {/* Third card - set heirs */}
-      <div
-        ref={cardRef}
-        className={`bg-primary p-8 rounded-lg shadow-lg transition-all duration-500 ease-in-out transform absolute w-full max-w-3xl overflow-hidden
-                    ${
-                      showNextCard
-                        ? "opacity-100 translate-y-0"
-                        : "opacity-0 translate-y-20 pointer-events-none"
-                    }`}
-        style={{ maxHeight: '2000px' }} // Initially set a large max height
-      >
-        <h2 className="text-2xl font-bold mb-4">Tell us about your plan</h2>
-
-        <div className="space-y-4">
-          {heirs.map((heir, index) => {
-            const addressType = getAddressType(heir.address);
-            
-            return (
-              <div 
-                key={heir.id} 
-                className="grid grid-cols-3 gap-4 items-center"
-                data-heir-id={heir.id}
-                style={{
-                  opacity: index < prevHeirsCountRef.current ? 1 : 0,
-                  transform: index < prevHeirsCountRef.current ? 'translateY(0)' : 'translateY(15px)',
-                  transition: 'opacity 0.35s ease-out, transform 0.35s ease-out'
-                }}
-              >
-                <input
-                  type="text"
-                  className="p-2 border rounded required"
-                  placeholder="Heir Name"
-                  value={heir.name}
-                  onChange={(e) => updateHeir(heir.id, "name", e.target.value)}
-                />
-                <div className="flex items-center space-x-2">
-                  <div className="mr-2 transition-all duration-300">
-                    <img
-                      src={
-                        heir.address && heir.address.startsWith("0x") && !heir.address.includes("@") 
-                          ? "./sui.svg"
-                          : "./mail-142.svg"
-                      }
-                      alt={
-                        heir.address && heir.address.startsWith("0x") && !heir.address.includes("@")
-                          ? "Sui Address"
-                          : "Email Address"
-                      }
-                      className="w-4 h-4 transition-opacity duration-300"
-                    />
-                  </div>
-                  <input
-                    type="text"
-                    className="p-2 border rounded required transition-colors duration-300"
-                    placeholder="Address"
-                    value={heir.address}
-                    onChange={(e) =>
-                      updateHeir(heir.id, "address", e.target.value)
-                    }
-                  />
-                </div>
-                <div className="flex items-center space-x-2">
-                  <input
-                    type="text"
-                    className="p-2 border rounded flex-grow required"
-                    placeholder="Property Ratio"
-                    value={heir.ratio}
-                    onChange={(e) => updateHeir(heir.id, "ratio", e.target.value)}
-                    onKeyDown={(e) => {
-                      // Prevent entering minus sign
-                      if (e.key === "-") {
-                        e.preventDefault();
-                      }
-                    }}
-                  />
-                  <button
-                    onClick={() => removeHeir(heir.id)}
-                    className="p-2 text-red-500"
-                    disabled={heirs.length <= 1}
-                  >
-                    ✕
-                  </button>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-
-        <div className="mt-4 flex flex-wrap gap-2">
-          <button
-            onClick={handleAddHeir}
-            className="p-2 bg-secondary text-slate-800 rounded hover:bg-secondary-dark transition"
-          >
-            Add heir
-          </button>
-          <button
-            className={`p-2 bg-green-500 text-white rounded hover:bg-green-600 transition ${isProcessing ? 'opacity-50 cursor-not-allowed' : ''}`}
-            onClick={executeTransaction}
-            disabled={isProcessing}
-          >
-            {isProcessing ? (
-              <>
-                <span className="inline-block animate-spin mr-2">⟳</span>
-                Processing...
-              </>
-            ) : (
-              "Verify"
-            )}
-          </button>
-        </div>
-
-        {/* Show current total ratio */}
-        <div className="mt-4">
-          <p className="text-gray-700">
-            Current total ratio: {getTotalRatio()}%
-          </p>
-        </div>
-        
-        {/* Heir type statistics */}
-        <div className="mt-2 text-sm text-gray-500">
-          {(() => {
-            const { suiAddressHeirs, emailHeirs } = separateHeirsByAddressType(heirs);
-            return (
-              <>
-                <span>Sui address heirs: {suiAddressHeirs.length}</span>
-                <span className="mx-2">|</span>
-                <span>Email heirs: {emailHeirs.length}</span>
-              </>
-            );
-          })()}
-        </div>
-      </div>
+      {showNextCard && (
+  <HeirCard
+    heirs={heirs}
+    addHeir={addHeir}
+    removeHeir={removeHeir}
+    updateHeir={updateHeir}
+    getTotalRatio={getTotalRatio}
+    handleVerify={executeTransaction}
+    isProcessing={isProcessing}
+  />
+)}
 
       {/* Additional transaction card */}
       <div
