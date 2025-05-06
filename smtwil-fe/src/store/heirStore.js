@@ -14,7 +14,8 @@ const useHeirStore = create((set, get) => ({
   addressContent: true,
   // 繼承人資料
   heirs: [{ id: Date.now(), name: "", address: "", ratio: "" }],
-  
+  //Vault
+  VaultName: [],
   setHeirs: (newHeirs) => set({ heirs: newHeirs }),
 
   // 設置連接狀態
