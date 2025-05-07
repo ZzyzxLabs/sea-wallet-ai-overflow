@@ -1,0 +1,95 @@
+.container {
+    position: relative;
+    min-height: 100vh;
+    width: 100%;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    background-color: white;
+  }
+  
+  .backgroundGif {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-image: url('/oceanew.gif');
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    z-index: 0;
+      /* 添加模糊效果 */
+    filter: blur(3px); /* 可以調整這個數值，數值越大越模糊 */
+    transform: scale(1.05);
+    will-change: filter;  
+    /* 防止模糊效果溢出到容器外 */
+    overflow: hidden;
+  }
+  .backgroundGif::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(169, 168, 167, 0.1); /* 黑色半透明遮罩 */
+    z-index: 1;
+  }
+  
+  .header {
+    width: 100%;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px;
+    position: relative;
+    z-index: 2;
+  }
+    
+  
+  .main {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    max-width: 600px;
+    padding: 20px;
+    position: relative;
+    z-index: 2;
+  }
+  
+  .iconContainer {
+    margin-bottom: 1px;
+  }
+  
+  .logo {
+    width: 240px;
+    height: 240px;
+    object-fit: contain;
+  }
+  
+  .title {
+    margin-bottom: 30px;
+    font-size: 60px;
+    font-weight: bold;
+    font-family: var(--font-inter);
+  }
+  
+  .connectButton {
+    background-color: #2c77ef;
+    color: white;
+    border: none;
+    border-radius: 25px;
+    padding: 12px 30px;
+    font-size: 16px;
+    font-weight: bold;
+    cursor: pointer;
+    margin-bottom: 30px;
+    width: 100%;
+    max-width: 300px;
+    text-align: center;
+  }

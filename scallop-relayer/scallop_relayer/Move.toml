@@ -1,0 +1,40 @@
+[package]
+name = "scallop_relayer"
+edition = "2024.beta" # edition = "legacy" to use legacy (pre-2024) Move
+# license = "MIT"
+# authors = ["Fu (fuchun.hsieh@outlook.com)"]
+
+[dependencies]
+
+
+
+[dependencies.ScallopProtocol]
+git = "https://github.com/scallop-io/sui-lending-protocol.git"
+subdir = "contracts/protocol"
+rev = "mainnet"
+
+# For local dependencies use `local = path`. Path is relative to the package root
+# Local = { local = "../path/to" }
+# [dependencies.ScallopProtocol]
+# local = "../protocol/mint"
+
+[addresses]
+scallop_relayer = "0x0"
+ScallopProtocol = "0x83bbe0b3985c5e3857803e2678899b03f3c4a31be75006ab03faf268c014ce41"
+SCALLOP_VERSION_OBJECT =  "0x07871c4b3c847a0f674510d4978d5cf6f960452795e8ff6f189fd2088a3f6ac7"
+# protocol = "0xefe8b36d5b2e43728cc323298626b83177803521d195cfb11e15b910e892fddf"
+
+# Named addresses will be accessible in Move as `@name`. They're also exported:
+# for example, `std = "0x1"` is exported by the Standard Library.
+# alice = "0xA11CE"
+
+[dev-dependencies]
+# The dev-dependencies section allows overriding dependencies for `--test` and
+# `--dev` modes. You can introduce test-only dependencies here.
+# Local = { local = "../path/to/dev-build" }
+
+[dev-addresses]
+# The dev-addresses section allows overwriting named addresses for the `--test`
+# and `--dev` modes.
+# alice = "0xB0B"
+

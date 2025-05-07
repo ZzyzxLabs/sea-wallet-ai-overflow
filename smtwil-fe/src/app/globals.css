@@ -5,3 +5,25 @@
   --color-secondary: #e1bc9f;
   --color-secondary-dark: #d0ab8e;
 }
+
+.scrollbar-hidden::-webkit-scrollbar {
+  display: none;
+}
+
+.scrollbar-hidden {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+@keyframes wave {
+  0% {
+    background-position: 0 0;
+  }
+  100% {
+    background-position: 100% 0;
+  }
+}
+
+.animate-wave {
+  animation: wave 15s linear infinite;
+}

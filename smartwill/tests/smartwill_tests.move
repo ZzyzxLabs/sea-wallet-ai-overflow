@@ -19,13 +19,13 @@ const CHARLIE: address = @0xC;
 const DAVE: address = @0xD;
 const Error: u64 = 444;
 const FRED: address = @0xF;
-
 #[test_only]
 fun test_coin(ts: &mut Scenario): Coin<SUI> {
     coin::mint_for_testing(42, ts.ctx())
 }
 
 #[test]
+
 fun test_init_member() {
    let mut scenario = ts::begin(@0x0);
     {
@@ -204,5 +204,3 @@ fun test_add_member_by_email() {
 
 //     ts::end(scenario);
 // }
-
-

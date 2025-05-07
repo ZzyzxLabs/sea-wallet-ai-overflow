@@ -1,0 +1,314 @@
+/* 更新 ChatSupport.module.css */
+.chatSupportContainer {
+    position: fixed;
+    bottom: 30px;
+    right: 30px;
+    z-index: 1000;
+    font-family: var(--font-inter);
+  }
+  
+  .chatButton {
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    background-color: #2c77ef;
+    color: white;
+    font-size: 24px;
+    border: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    transition: transform 0.3s ease;
+  }
+  
+  .chatButton:hover {
+    transform: scale(1.05);
+  }
+  
+  .chatBox {
+    position: absolute;
+    bottom: 80px;
+    right: 0;
+    width: 350px;
+    height: 500px; /* 稍微增加高度以容納模式指示器 */
+    background-color: white;
+    border-radius: 12px;
+    box-shadow: 0 5px 25px rgba(0, 0, 0, 0.2);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+  
+  .chatHeader {
+    padding: 15px 20px;
+    color: white;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    transition: background-color 0.3s ease;
+  }
+  
+  .customerHeader {
+    background-color: #f07c00; /* 客服模式使用橙色 */
+  }
+  
+  .aiHeader {
+    background-color: #2c77ef; /* AI模式使用藍色 */
+  }
+  
+  .headerContent {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  
+  .modeIndicator {
+    font-size: 18px;
+  }
+  
+  .chatHeader h3 {
+    margin: 0;
+    font-size: 16px;
+  }
+  
+  .closeButton {
+    background: none;
+    border: none;
+    color: white;
+    cursor: pointer;
+    font-size: 18px;
+  }
+  
+  .messagesContainer {
+    flex: 1;
+    padding: 15px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    background-color: #f5f7fa;
+  }
+  
+  .message {
+    padding: 10px 15px;
+    border-radius: 18px;
+    max-width: 80%;
+    word-wrap: break-word;
+    position: relative;
+  }
+  
+  .messageBadge {
+    position: absolute;
+    top: -10px;
+    left: 10px;
+    font-size: 14px;
+    background-color: white;
+    border-radius: 50%;
+    width: 22px;
+    height: 22px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  }
+  
+  .aiMessage {
+    align-self: flex-start;
+    background-color: #e5e8ed;
+    color: #333;
+    margin-top: 10px; /* 為徽章留出空間 */
+  }
+  
+  .userMessage {
+    align-self: flex-end;
+    background-color: #2c77ef;
+    color: white;
+  }
+  
+  .systemMessage {
+    align-self: center;
+    background-color: rgba(0, 0, 0, 0.05);
+    color: #666;
+    font-size: 12px;
+    padding: 5px 10px;
+    border-radius: 10px;
+    max-width: 90%;
+    margin: 5px 0;
+  }
+  
+  .inputContainer {
+    padding: 12px;
+    display: flex;
+    gap: 10px;
+    border-top: 1px solid #eaeaea;
+    background-color: white;
+  }
+  
+  /* 更新 ChatSupport.module.css 中的 messageInput 相關樣式 */
+.messageInput {
+    flex: 1;
+    padding: 10px 12px;
+    border: 1px solid #aaa; /* 更深的邊框顏色 */
+    border-radius: 20px;
+    outline: none;
+    font-size: 15px; /* 增加字體大小 */
+    color: #333; /* 更深的文字顏色 */
+    background-color: #fff; /* 確保背景是純白色 */
+    box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.1); /* 添加內陰影增強可見度 */
+    font-weight: 500; /* 稍微加粗字體 */
+  }
+  
+  .messageInput::placeholder {
+    color: #999; /* 更深的佔位符文字顏色 */
+    opacity: 1; /* 確保佔位符文字完全顯示 */
+  }
+  
+  .messageInput:focus {
+    border-color: #2c77ef;
+    box-shadow: 0 0 0 2px rgba(44, 119, 239, 0.2); /* 聚焦時添加藍色光暈 */
+  }
+  
+  /* 添加這個樣式確保文字輸入時對比度足夠 */
+  .messageInput:not(:placeholder-shown) {
+    color: #000; /* 用戶開始輸入後的文字顏色加深 */
+  }
+  
+  .sendButton {
+    background-color: #2c77ef;
+    color: white;
+    border: none;
+    border-radius: 20px;
+    padding: 0 15px;
+    cursor: pointer;
+    font-weight: bold;
+    font-size: 14px;
+  }
+  
+  .sendButton:disabled {
+    background-color: #c1d3f3;
+    cursor: not-allowed;
+  }
+  
+  .optionsContainer {
+    display: flex;
+    padding: 8px;
+    gap: 8px;
+    border-top: 1px solid #eaeaea;
+  }
+  
+  .optionButton {
+    flex: 1;
+    padding: 8px 0;
+    background-color: #f0f4ff;
+    color: #555;
+    border: 1px solid #e0e0e0;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: bold;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+  }
+  
+  .optionIcon {
+    font-size: 14px;
+  }
+  
+  .activeMode {
+    background-color: #2c77ef;
+    color: white;
+    border-color: #2c77ef;
+    transform: translateY(-2px);
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+  }
+  
+  .modeIndicatorBar {
+    padding: 8px;
+    background-color: #f7f7f7;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    height: 30px;
+    border-top: 1px solid #eaeaea;
+  }
+  
+  .indicatorSlider {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 50%;
+    height: 3px;
+    background-color: #2c77ef;
+    transition: transform 0.3s ease;
+  }
+  
+  .modeLabel {
+    font-size: 12px;
+    color: #666;
+    font-weight: 500;
+  }
+
+  .loadingMessage {
+    background-color: #e5e8ed !important;
+  }
+  
+  .loadingDots {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    height: 20px;
+  }
+  
+  .loadingDots span {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background-color: #aaa;
+    animation: bounce 1.5s infinite ease-in-out;
+  }
+  
+  .loadingDots span:nth-child(1) {
+    animation-delay: 0s;
+  }
+  
+  .loadingDots span:nth-child(2) {
+    animation-delay: 0.2s;
+  }
+  
+  .loadingDots span:nth-child(3) {
+    animation-delay: 0.4s;
+  }
+  
+  @keyframes bounce {
+    0%, 80%, 100% { 
+      transform: scale(0);
+      opacity: 0.5;
+    }
+    40% { 
+      transform: scale(1);
+      opacity: 1;
+    }
+  }
+
+  .cursor {
+    display: inline-block;
+    width: 7px;
+    height: 15px;
+    background-color: #333;
+    margin-left: 2px;
+    animation: blink 1s infinite;
+    vertical-align: middle;
+  }
+  
+  @keyframes blink {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0; }
+  }
