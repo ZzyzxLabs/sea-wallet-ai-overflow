@@ -228,7 +228,7 @@ module smartwill::vault {
         }
     }
 
-        public struct DeductCap has key, store {
+    public struct DeductCap has key, store {
         id: UID,
         serviceID: ID,
         deductDate: u64,
