@@ -21,7 +21,7 @@ export default function DashboardFooter() {
   }, []);
   
   return (
-    <footer className="relative overflow-hidden">
+    <footer className="relative pl-15 z-10">
       {/* 波浪動畫背景 */}
       <div className="absolute inset-0 opacity-10">
         <div className="absolute inset-0 bg-gradient-to-r from-blue-400 to-cyan-300"></div>

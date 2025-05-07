@@ -10,11 +10,6 @@ const ContractAlter = () => {
   const [isLoading, setIsLoading] = useState(true);
   const packageName = useMoveStore((state) => state.packageName);
   
-  // 存儲幣種小數位數的狀態
-  const [coinDecimals, setCoinDecimals] = useState({});
-  // 跟踪當前正在查詢的幣種類型
-  const [currentCoinType, setCurrentCoinType] = useState(null);
-  
   // Query vault and owner cap
   const vaultAndCap = useSuiClientQuery(
     "getOwnedObjects",
@@ -76,18 +71,7 @@ const ContractAlter = () => {
   );
   console.log("coinData", coinData.data);
   
-  // 獲取幣種小數位數
-  const coinMetadataQuery = useSuiClientQuery(
-    "getCoinMetadata",
-    { coinType: currentCoinType || "" },
-    { 
-      enabled: !!currentCoinType,
-      staleTime: 300000,
-    }
-  );
-  console.log("coinMetadataQuery", coinMetadataQuery.data);
-  
-  // 處理代幣數據並提取需要查詢的幣種類型
+  // 處理代幣數據
   useEffect(() => {
     if (!coinData.data) return;
 
@@ -119,12 +103,7 @@ const ContractAlter = () => {
           const coinSymbol = fullCoinType.split("::").pop() || "Unknown";
           const amount = coinObj.data?.content?.fields?.balance || "0";
 
-          // 檢查是否需要獲取該幣種的小數位數
-          if (fullCoinType !== "Unknown" && !coinDecimals[fullCoinType] && !currentCoinType) {
-            setCurrentCoinType(fullCoinType);
-          }
-
-          return [coinSymbol, formattedCoinType, amount, fullCoinType];
+          return [coinSymbol, formattedCoinType, amount];
         })
         .filter((coin) => coin !== null);
 
@@ -134,20 +113,7 @@ const ContractAlter = () => {
       console.error("Error processing token data:", error);
       setIsLoading(false);
     }
-  }, [coinData.data, coinDecimals, currentCoinType]);
-  
-  // 查詢下一個幣種的元數據
-  useEffect(() => {
-    if (!currentCoinType && coinsInVault.length > 0) {
-      const nextCoinToFetch = coinsInVault.find(
-        coin => coin[3] && !coinDecimals[coin[3]]
-      );
-      
-      if (nextCoinToFetch) {
-        setCurrentCoinType(nextCoinToFetch[3]);
-      }
-    }
-  }, [coinsInVault, coinDecimals, currentCoinType]);
+  }, [coinData.data]);
 
   // 簡化 loading 邏輯
   useEffect(() => {
@@ -180,8 +146,7 @@ const ContractAlter = () => {
                   <span className="text-xs text-gray-500">{coin[1]}</span>
                 </div>
                 <div className="py-2 border-t text-black dark:border-gray-700">
-                  
-                   {(coin[2] / Math.pow(10, coinDecimals[index]))}
+                  {coin[2]}
                 </div>
               </React.Fragment>
             ))
