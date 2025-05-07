@@ -1,17 +1,20 @@
 "use client";
-import React, { useEffect, useState } from "react";
-import {
-  useCurrentAccount,
-  useSuiClientQueries,
-  useSuiClientQuery,
-} from "@mysten/dapp-kit";
+import React, { useEffect, useState, useCallback } from "react";
+import { useCurrentAccount, useSuiClientQuery } from "@mysten/dapp-kit";
 import ButtonInContractAlter from "./ButtonInContractAlter";
 import useMoveStore from "../store/moveStore";
+
 const ContractAlter = () => {
   const account = useCurrentAccount();
   const [coinsInVault, setCoinsInVault] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const packageName = useMoveStore((state) => state.packageName);
+  
+  // 新增：存儲幣種小數位數的狀態
+  const [coinDecimals, setCoinDecimals] = useState({});
+  // 跟踪當前正在查詢的幣種類型
+  const [currentCoinType, setCurrentCoinType] = useState(null);
+  
   // Query vault and owner cap
   const vaultAndCap = useSuiClientQuery(
     "getOwnedObjects",
@@ -20,45 +23,46 @@ const ContractAlter = () => {
       options: { showType: true, showContent: true },
     },
     {
-      enabled: !!account,
+      enabled: !!account?.address,
+      staleTime: 30000,
     }
   );
-  console.log("vaultAndCap", vaultAndCap.data);
-  // Extract vault ID from the result
-  const { ownerCapObjects, vaultID } = React.useMemo(() => {
+  
+  // Extract vault ID
+  const getVaultAndCap = useCallback(() => {
     let ownerCapObjects = null;
     let vaultID = null;
     if (vaultAndCap.data) {
-      console.log("Vault and Cap Data:", vaultAndCap.data.data);
-      console.log(packageName + "::vault::OwnerCap");
-      // Search for smart will owner cap in the data
       ownerCapObjects = vaultAndCap.data.data.filter((obj) =>
         obj.data?.type?.includes(packageName + "::vault::OwnerCap")
       );
       vaultID = ownerCapObjects[0]?.data?.content?.fields?.vaultID;
     }
-    console.log("Owner Cap Objects:", ownerCapObjects, vaultID);
     return { ownerCapObjects, vaultID };
-  }, [vaultAndCap.data]);
-
-  // Query dynamic fields in the vault
+  }, [vaultAndCap.data, packageName]);
+  
+  const { vaultID } = getVaultAndCap();
+  
+  // Query dynamic fields
   const vaultList = useSuiClientQuery(
     "getDynamicFields",
-    {
-      parentId: vaultID,
-    },
+    { parentId: vaultID },
     {
       enabled: !!vaultID,
+      staleTime: 30000,
     }
   );
   console.log("vaultList", vaultList.data);
-  // Get objectId list from vaultList
-  const objectIds = React.useMemo(() => {
+  
+  // Get objectIds
+  const getObjectIds = useCallback(() => {
     if (!vaultList?.data?.data) return [];
     return vaultList.data.data.map((item) => item.objectId);
   }, [vaultList?.data]);
-
-  // Use multiGetObjects to fetch all token objects
+  
+  const objectIds = getObjectIds();
+  
+  // Query coin data
   const coinData = useSuiClientQuery(
     "multiGetObjects",
     {
@@ -67,45 +71,51 @@ const ContractAlter = () => {
     },
     {
       enabled: objectIds.length > 0,
+      staleTime: 30000,
     }
   );
   console.log("coinData", coinData.data);
-  const coinList = () => {
-    if (coinData.data) {
-      return coinData.data
-        .map((coinObj) => coinObj?.data?.type)
-        .filter(Boolean);
+  
+  // 正確使用 Hook 獲取幣種小數位數
+  const coinMetadataQuery = useSuiClientQuery(
+    "getCoinMetadata",
+    { coinType: currentCoinType || "" },
+    { 
+      enabled: !!currentCoinType,
+      staleTime: 300000, // 元數據不常變化，可以緩存更長時間
+      // 當成功獲取後更新狀態
+      onSuccess: (data) => {
+        if (data && currentCoinType) {
+          setCoinDecimals(prev => ({
+            ...prev,
+            [currentCoinType]: data.decimals || 0
+          }));
+          setCurrentCoinType(null); // 重置當前查詢，準備下一個
+        }
+      }
     }
-    else return [];
-  };
-  console.log("coinList", coinList());
-
-  if (!coinMetas.isPending) console.log("coinMetas", coinMetas.data);
-  // Process data when token data is loaded
+  );
+  console.log("coinMetadataQuery", coinMetadataQuery.data);
+  // 處理代幣數據並提取需要查詢的幣種類型
   useEffect(() => {
-    if (!coinData.data) {
-      return;
-    }
+    if (!coinData.data) return;
 
     try {
       const processedCoins = coinData.data
         .map((coinObj) => {
           if (!coinObj?.data?.content) return null;
 
-          // Parse token type
           const type = coinObj.data.type || "";
           const typeMatch = type.match(/<(.+)>/);
           const fullCoinType = typeMatch ? typeMatch[1] : "Unknown";
 
-          // Format token address (0x12345...67890::remaining part)
           let formattedCoinType = "Unknown";
           if (fullCoinType !== "Unknown") {
             const parts = fullCoinType.split("::");
             if (parts.length > 0) {
               const address = parts[0];
-              // If the address is long enough, take the first 5 and last 5 characters
               if (address.length > 10) {
-                const prefix = address.substring(0, 7); // 0x + first 5 characters
+                const prefix = address.substring(0, 7);
                 const suffix = address.substring(address.length - 5);
                 const remainingParts = parts.slice(1).join("::");
                 formattedCoinType = `${prefix}...${suffix}::${remainingParts}`;
@@ -115,13 +125,18 @@ const ContractAlter = () => {
             }
           }
 
-          // Get token symbol (usually the last part)
           const coinSymbol = fullCoinType.split("::").pop() || "Unknown";
-
-          // Get token amount
           const amount = coinObj.data?.content?.fields?.balance || "0";
 
-          return [coinSymbol, formattedCoinType, amount];
+          // 檢查是否需要獲取該幣種的小數位數
+          if (fullCoinType !== "Unknown" && !coinDecimals[fullCoinType]) {
+            // 將該幣種添加到待查詢列表
+            if (!currentCoinType) {
+              setCurrentCoinType(fullCoinType);
+            }
+          }
+
+          return [coinSymbol, formattedCoinType, amount, fullCoinType];  // 增加完整幣種類型
         })
         .filter((coin) => coin !== null);
 
@@ -131,12 +146,40 @@ const ContractAlter = () => {
       console.error("Error processing token data:", error);
       setIsLoading(false);
     }
-  }, [coinData.data]);
-
-  // Set loading state
+  }, [coinData.data, coinDecimals, currentCoinType]);
+  
+  // 查詢下一個幣種的元數據
   useEffect(() => {
-    setIsLoading(!coinData.data && objectIds.length > 0);
-  }, [coinData.data, objectIds]);
+    if (!currentCoinType && coinsInVault.length > 0) {
+      // 查找尚未獲取小數位數的幣種
+      const nextCoinToFetch = coinsInVault.find(
+        coin => coin[3] && !coinDecimals[coin[3]]
+      );
+      
+      if (nextCoinToFetch) {
+        setCurrentCoinType(nextCoinToFetch[3]);
+      }
+    }
+  }, [coinsInVault, coinDecimals, currentCoinType]);
+
+  // 簡化 loading 邏輯
+  useEffect(() => {
+    const isDataLoading = !coinData.data && objectIds.length > 0;
+    if (isLoading !== isDataLoading) {
+      setIsLoading(isDataLoading);
+    }
+  }, [coinData.data, objectIds, isLoading]);
+
+  // 處理金額顯示的輔助函數
+  const formatAmount = (amount, coinType) => {
+    // 從完整幣種類型獲取小數位數
+    let decimals = 0;
+    if (coinType && coinDecimals[coinType]) {
+      decimals = coinDecimals[coinType];
+    }
+    // 轉換金額
+    return Number(amount) / Math.pow(10, decimals);
+  };
 
   return (
     <div className="flex justify-center items-center w-full h-fit bg-white">
@@ -160,7 +203,7 @@ const ContractAlter = () => {
                   <span className="text-xs text-gray-500">{coin[1]}</span>
                 </div>
                 <div className="py-2 border-t text-black dark:border-gray-700">
-                  {coin[2]}
+                  {formatAmount(coin[2], coin[3])}{" "}
                 </div>
               </React.Fragment>
             ))
