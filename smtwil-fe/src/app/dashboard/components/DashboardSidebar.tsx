@@ -10,27 +10,27 @@ import Image from 'next/image';
 const sidebarItems = [
   { 
     icon: '/icons/dashboard.svg', 
-    label: '儀表板首頁', 
+    label: 'Wallet Overview', 
     href: '/dashboard' 
   },
   { 
     icon: '/iconSidebar/smartWill.svg', 
     label: 'SmartWill', 
-    href: '/dashboard/analytics' 
+    href: '/dashboard/SmartWill' 
   },
   { 
     icon: '/icons/market.svg', 
-    label: 'NFT 市場', 
-    href: '/dashboard/market' 
+    label: 'Subscriptions', 
+    href: '/dashboard/Subscriptions' 
   },
   { 
-    icon: '/icons/collections.svg', 
-    label: '我的收藏', 
-    href: '/dashboard/collections' 
+    icon: '/icons/Defi.svg', 
+    label: 'Defi', 
+    href: '/dashboard/Defi' 
   },
   { 
     icon: '/icons/settings.svg', 
-    label: '設定', 
+    label: 'Settings', 
     href: '/dashboard/settings' 
   },
 ];
