@@ -1,4 +1,3 @@
-// app/dashboard/components/DashboardSidebar.tsx
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -35,114 +34,146 @@ const sidebarItems = [
   },
 ];
 
-// 亂碼生成函數
-const generateScrambledText = (text: string): string => {
-  const chars = '!@#$%^&*()_+{}:"<>?|[];,./';
-  return Array.from({ length: text.length })
-    .map(() => chars[Math.floor(Math.random() * chars.length)])
-    .join('');
+// 水波紋動畫效果文字
+const generateWaveText = (text: string, progress: number): string => {
+  // 將字符轉換為有波浪效果的動畫
+  const waveChars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+  const result = Array.from(text).map((char, i) => {
+    // 根據進度和字符位置計算是否顯示原字符或動畫字符
+    const threshold = progress - (i * 0.1);
+    if (threshold < 0) return waveChars[Math.floor(Math.random() * waveChars.length)];
+    if (threshold > 1) return char;
+    return Math.random() > threshold ? waveChars[Math.floor(Math.random() * waveChars.length)] : char;
+  }).join('');
+  
+  return result;
 };
 
 export default function DashboardSidebar() {
   const [expanded, setExpanded] = useState(false);
-  const [textState, setTextState] = useState<'hidden' | 'scrambled' | 'visible'>('hidden');
-  const [scrambledLabels, setScrambledLabels] = useState<string[]>([]);
+  const [textProgress, setTextProgress] = useState(0);
+  const [animatedLabels, setAnimatedLabels] = useState<string[]>([]);
   const pathname = usePathname();
 
   // 處理側邊欄展開/收縮
   useEffect(() => {
     if (expanded) {
-      // 先顯示亂碼
-      setTextState('scrambled');
-      const initialScrambled = sidebarItems.map(item => generateScrambledText(item.label));
-      setScrambledLabels(initialScrambled);
+      // 重置進度
+      setTextProgress(0);
       
-      // 設置延遲顯示真實文字
-      const timer = setTimeout(() => {
-        setTextState('visible');
-      }, 300);
+      // 啟動動畫
+      const animation = setInterval(() => {
+        setTextProgress(prev => {
+          const newProgress = prev + 0.05;
+          if (newProgress >= 1.5) {
+            clearInterval(animation);
+            return 1.5;
+          }
+          return newProgress;
+        });
+      }, 16);
       
-      return () => clearTimeout(timer);
+      return () => clearInterval(animation);
     } else {
-      setTextState('hidden');
+      setTextProgress(0);
     }
   }, [expanded]);
 
-  // 生成亂碼動畫效果
+  // 生成動畫效果
   useEffect(() => {
-    if (textState === 'scrambled') {
-      const interval = setInterval(() => {
-        const newScrambled = sidebarItems.map(item => generateScrambledText(item.label));
-        setScrambledLabels(newScrambled);
-      }, 50);
-      
-      return () => clearInterval(interval);
+    if (expanded && textProgress < 1.5) {
+      setAnimatedLabels(sidebarItems.map(item => generateWaveText(item.label, textProgress)));
     }
-  }, [textState]);
+  }, [expanded, textProgress]);
 
-  // 確定要顯示的文本
+  // 獲取要顯示的文本
   const getDisplayText = (index: number, originalText: string) => {
-    if (textState === 'hidden') return '';
-    if (textState === 'scrambled') return scrambledLabels[index] || generateScrambledText(originalText);
-    return originalText;
+    if (!expanded) return '';
+    if (textProgress >= 1.5) return originalText;
+    return animatedLabels[index] || generateWaveText(originalText, textProgress);
   };
 
   return (
     <div 
-      className={`bg-gray-900 text-white transition-all duration-300 flex flex-col ${expanded ? 'w-64' : 'w-16'}`}
+      className={`fixed left-0 top-0 h-full z-20 transition-all duration-300 ${expanded ? 'w-64' : 'w-16'}`}
+      style={{
+        background: 'linear-gradient(135deg, #0f2027 0%, #203a43 50%, #2c5364 100%)',
+        boxShadow: expanded ? '0 0 20px rgba(0, 150, 255, 0.3)' : 'none'
+      }}
       onMouseEnter={() => setExpanded(true)}
       onMouseLeave={() => setExpanded(false)}
     >
-      {/* Logo 區域 - 不使用亂碼效果 */}
-      <div className="p-4 flex items-center justify-center h-16">
+      {/* Logo 區域 - 海洋主題 */}
+      <div className="p-4 flex items-center justify-center h-16 border-b border-opacity-20 border-blue-200">
         <div className="w-8 h-8 relative">
           <Image
             src="/RMBGlogo.png"
             alt="SeaWallet Logo"
             fill
             className="object-contain"
+            style={{ filter: 'drop-shadow(0 0 2px rgba(0, 150, 255, 0.8))' }}
           />
         </div>
-        <div className="ml-2 font-bold whitespace-nowrap overflow-hidden" 
-             style={{ opacity: expanded ? 1 : 0, transition: 'opacity 0.3s' }}>
+        <div className="ml-2 font-bold whitespace-nowrap overflow-hidden text-transparent bg-clip-text" 
+             style={{ 
+               opacity: expanded ? 1 : 0, 
+               transition: 'opacity 0.3s',
+               backgroundImage: 'linear-gradient(45deg, #00d2ff, #3a7bd5)',
+             }}>
           {expanded && 'SeaWallet'}
         </div>
       </div>
 
-      {/* 導航項目 - 使用亂碼效果 */}
-      <nav className="flex-1">
+      {/* 導航項目 - 水波紋動畫效果 */}
+      <nav className="flex-1 mt-4 overflow-y-auto scrollbar-hidden" style={{ maxHeight: 'calc(100vh - 150px)' }}>
         <ul>
-          {sidebarItems.map((item, index) => (
-            <li key={item.href}>
-              <Link 
-                href={item.href}
-                className={`flex items-center p-4 hover:bg-gray-800 ${
-                  pathname === item.href ? 'bg-blue-600' : ''
-                }`}
-              >
-                <div className="w-6 h-6 relative">
-                  <Image
-                    src={item.icon}
-                    alt={`${item.label} 圖標`}
-                    fill
-                    className="object-contain"
-                  />
-                </div>
-                <div className="ml-4 whitespace-nowrap overflow-hidden"
-                     style={{ opacity: expanded ? 1 : 0, transition: 'opacity 0.3s' }}>
-                  {expanded && getDisplayText(index, item.label)}
-                </div>
-              </Link>
-            </li>
-          ))}
+          {sidebarItems.map((item, index) => {
+            const isActive = pathname === item.href;
+            return (
+              <li key={item.href} className="mb-2 px-2">
+                <Link 
+                  href={item.href}
+                  className={`flex items-center p-3 rounded-lg transition-all duration-300 ${
+                    isActive 
+                      ? 'bg-gradient-to-r from-blue-700 to-cyan-600 text-white shadow-lg' 
+                      : 'text-blue-100 hover:bg-blue-800/30'
+                  }`}
+                  style={{
+                    boxShadow: isActive ? '0 4px 10px rgba(0, 150, 255, 0.3)' : 'none'
+                  }}
+                >
+                  <div className="w-6 h-6 relative">
+                    <Image
+                      src={item.icon}
+                      alt={`${item.label} 圖標`}
+                      fill
+                      className="object-contain"
+                      style={{ 
+                        filter: isActive 
+                          ? 'brightness(1.2) drop-shadow(0 0 2px rgba(255, 255, 255, 0.5))' 
+                          : 'brightness(1)'
+                      }}
+                    />
+                  </div>
+                  <div className="ml-4 whitespace-nowrap overflow-hidden text-sm font-medium"
+                       style={{ 
+                         opacity: expanded ? 1 : 0, 
+                         transition: 'opacity 0.3s',
+                       }}>
+                    {expanded && getDisplayText(index, item.label)}
+                  </div>
+                </Link>
+              </li>
+            );
+          })}
         </ul>
       </nav>
 
-      {/* 底部項目 - 使用亂碼效果 */}
-      <div className="p-4 border-t border-gray-800">
+      {/* 底部項目 */}
+      <div className="p-4 border-t border-opacity-20 border-blue-200 absolute bottom-0 left-0 right-0">
         <Link 
           href="/dashboard/help"
-          className="flex items-center hover:text-blue-400"
+          className="flex items-center text-blue-100 hover:text-cyan-300 transition-colors duration-200"
         >
           <div className="w-6 h-6 relative">
             <Image
@@ -152,12 +183,22 @@ export default function DashboardSidebar() {
               className="object-contain"
             />
           </div>
-          <div className="ml-4 whitespace-nowrap overflow-hidden"
+          <div className="ml-4 whitespace-nowrap overflow-hidden text-sm"
                style={{ opacity: expanded ? 1 : 0, transition: 'opacity 0.3s' }}>
-            {expanded && (textState === 'visible' ? '幫助' : generateScrambledText('幫助'))}
+            {expanded && (textProgress >= 1.5 ? '幫助' : generateWaveText('幫助', textProgress))}
           </div>
         </Link>
       </div>
+      
+      {/* 展開按鈕標記 */}
+      {expanded && (
+        <div 
+          className="absolute right-2 top-1/2 transform -translate-y-1/2 w-6 h-12 flex items-center justify-center opacity-30 hover:opacity-100 transition-opacity duration-200 cursor-pointer"
+          onClick={() => setExpanded(false)}
+        >
+          <div className="w-2 h-2 border-l-2 border-b-2 border-blue-300 transform -rotate-45"></div>
+        </div>
+      )}
     </div>
   );
 }
