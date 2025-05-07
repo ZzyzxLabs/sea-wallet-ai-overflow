@@ -32,6 +32,9 @@ importers:
       '@tanstack/react-query':
         specifier: ^5.72.2
         version: 5.72.2(react@19.1.0)
+      axios:
+        specifier: ^1.9.0
+        version: 1.9.0
       next:
         specifier: 15.3.0
         version: 15.3.0(react-dom@19.1.0(react@19.1.0))(react@19.1.0)
