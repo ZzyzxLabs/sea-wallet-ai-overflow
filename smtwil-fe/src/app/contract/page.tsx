@@ -11,6 +11,7 @@ import { useRouter } from "next/navigation";
 import useMoveStore from "../../store/moveStore";
 import { bcs, BcsType } from '@mysten/bcs';
 import HeirCard from "../../component/HeirCard";
+import axios from 'axios';
 
 // VecMap function for serializing key-value pairs
 function VecMap<K extends BcsType<any>, V extends BcsType<any>>(K: K, V: V) {
@@ -22,7 +23,20 @@ function VecMap<K extends BcsType<any>, V extends BcsType<any>>(K: K, V: V) {
     }
   );
 }
-
+const sendWillNotification = async (recipientEmail, secureLink) => {
+  try {
+    const response = await axios.post('/api/mailService', {
+      to: recipientEmail,
+      url: secureLink
+    });
+    
+    console.log('Email sent successfully:', response.data);
+    return response.data;
+  } catch (error) {
+    console.error('Failed to send email:', error);
+    throw error;
+  }
+};
 // Separate heirs into two groups: those using Sui blockchain addresses and those using email addresses
 function separateHeirsByAddressType(heirs) {
   const suiAddressHeirs = [];
@@ -370,115 +384,138 @@ export default function TestingP() {
     console.log("OwnerCap object IDs:", ownerCapObjectIds);
   }
   // Create custom transaction A - send capability to heirs
-const executeCustomTxA = async () => {
-  try {
-    setIsProcessing(true);
-    console.log("Current account address:", account.address);
-    
-    const { tx, urls } = await zkTransaction(
-      account.address, 
-      "testnet", 
-      ownerCapObjectIds,
-    );
-    
-    console.log("Generated URLs:", urls);
-    console.log("Transaction object:", tx);
-    
-    // Check if tx is an array
-    if (Array.isArray(tx)) {
-      console.log(`Need to process ${tx.length} transactions`);
+  const executeCustomTxA = async () => {
+    try {
+      setIsProcessing(true);
+      console.log("Current account address:", account.address);
       
-      // Counter for completed transactions
-      let completedTxCount = 0;
+      // 在此獲取郵件繼承人列表
+      const { emailHeirs } = separateHeirsByAddressType(heirs);
       
-      // Show progress info to user
-      showWarningMessage(`Starting to process ${tx.length} transactions...`);
+      const { tx, urls } = await zkTransaction(
+        account.address, 
+        "testnet", 
+        ownerCapObjectIds,
+      );
       
-      // Process each transaction in order
-      for (let i = 0; i < tx.length; i++) {
-        const currentTx = tx[i];
+      console.log("Generated URLs:", urls);
+      console.log("Transaction object:", tx);
+      
+      // 檢查tx是否為陣列
+      if (Array.isArray(tx)) {
+        console.log(`Need to process ${tx.length} transactions`);
         
-        try {
-          // Update processing status message
-          showWarningMessage(`Processing transaction ${i + 1}/${tx.length}...`);
+        // 完成交易的計數器
+        let completedTxCount = 0;
+        
+        // 向用戶顯示進度信息
+        showWarningMessage(`Starting to process ${tx.length} transactions...`);
+        
+        // 按順序處理每個交易
+        for (let i = 0; i < tx.length; i++) {
+          const currentTx = tx[i];
           
-          // Execute current transaction
-          await signAndExecuteTransaction(
-            {
-              transaction: currentTx,
-              chain: "sui:testnet",
-            },
-            {
-              onSuccess: (result) => {
-                console.log(`Transaction ${i + 1}/${tx.length} executed successfully:`, result);
-                
-                // Increase completed transaction count
-                completedTxCount++;
-                
-                // If all transactions are done, go to next step
-                if (completedTxCount === tx.length) {
-                  // Show success message
-                  showWarningMessage("All transactions completed successfully!");
-                  
-                  // Delay transition to next step
-                  setTimeout(() => {
-                    setShowAdditionalTx(false);
-                    setShowDashboardIndicator(true);
-                    setIsProcessing(false);
-                  }, 100);
-                }
+          try {
+            // 更新處理狀態消息
+            showWarningMessage(`Processing transaction ${i + 1}/${tx.length}...`);
+            
+            // 執行當前交易
+            await signAndExecuteTransaction(
+              {
+                transaction: currentTx,
+                chain: "sui:testnet",
               },
-              onError: (error) => {
-                console.error(`Transaction ${i + 1}/${tx.length} execution error:`, error);
-                showWarningMessage(`Transaction ${i + 1}/${tx.length} failed: ${error.message}`);
-                setIsProcessing(false);
-                // Stop further transactions on failure
-                return;
+              {
+                onSuccess: (result) => {
+                  console.log(`Transaction ${i + 1}/${tx.length} executed successfully:`, result);
+                  
+                  // 增加已完成交易數量
+                  completedTxCount++;
+                  
+                  // 如果所有交易都完成，進入下一步
+                  if (completedTxCount === tx.length) {
+                    // 顯示成功消息
+                    showWarningMessage("All transactions completed successfully!");
+                    
+                    // 向郵件繼承人發送通知
+                    emailHeirs.forEach(async (heir) => {
+                      try {
+                        const result = await sendWillNotification(heir.address, `https://yourdomain.com/claim/vault/${vaultID}`);
+                        console.log(`Email notification sent to ${heir.address}`);
+                      } catch (err) {
+                        console.error(`Failed to notify heir ${heir.address}:`, err);
+                      }
+                    });
+                    
+                    // 延遲過渡到下一步
+                    setTimeout(() => {
+                      setShowAdditionalTx(false);
+                      setShowDashboardIndicator(true);
+                      setIsProcessing(false);
+                    }, 100);
+                  }
+                },
+                onError: (error) => {
+                  console.error(`Transaction ${i + 1}/${tx.length} execution error:`, error);
+                  showWarningMessage(`Transaction ${i + 1}/${tx.length} failed: ${error.message}`);
+                  setIsProcessing(false);
+                  // 失敗時停止進一步交易
+                  return;
+                }
               }
-            }
-          );
-        } catch (error) {
-          console.error(`Transaction ${i + 1}/${tx.length} processing error:`, error);
-          showWarningMessage(`Transaction ${i + 1}/${tx.length} processing error: ${error.message || String(error)}`);
-          setIsProcessing(false);
-          break; // Stop loop on failure
-        }
-      }
-    } else {
-      // If tx is not an array, treat as single transaction
-      await signAndExecuteTransaction(
-        {
-          transaction: tx,
-          chain: "sui:testnet",
-        },
-        {
-          onSuccess: (result) => {
-            console.log("Custom transaction executed successfully:", result);
-            
-            // Show success message
-            showWarningMessage("Transaction completed successfully!");
-            
-            // Delay transition to next step
-            setTimeout(() => {
-              setShowAdditionalTx(false);
-              setShowDashboardIndicator(true);
-              setIsProcessing(false);
-            }, 100);
-          },
-          onError: (error) => {
-            console.error("Custom transaction error:", error);
-            showWarningMessage("Custom transaction failed: " + error.message);
+            );
+          } catch (error) {
+            console.error(`Transaction ${i + 1}/${tx.length} processing error:`, error);
+            showWarningMessage(`Transaction ${i + 1}/${tx.length} processing error: ${error.message || String(error)}`);
             setIsProcessing(false);
+            break; // 失敗時停止循環
           }
         }
-      );
+      } else {
+        // 如果tx不是陣列，視為單個交易
+        await signAndExecuteTransaction(
+          {
+            transaction: tx,
+            chain: "sui:testnet",
+          },
+          {
+            onSuccess: (result) => {
+              console.log("Custom transaction executed successfully:", result);
+              
+              // 顯示成功消息
+              showWarningMessage("Transaction completed successfully!");
+              
+              // 向郵件繼承人發送通知
+              emailHeirs.forEach(async (heir) => {
+                try {
+                  const result = await sendWillNotification(heir.address, `https://yourdomain.com/claim/vault/${vaultID}`);
+                  console.log(`Email notification sent to ${heir.address}`);
+                } catch (err) {
+                  console.error(`Failed to notify heir ${heir.address}:`, err);
+                }
+              });
+              
+              // 延遲過渡到下一步
+              setTimeout(() => {
+                setShowAdditionalTx(false);
+                setShowDashboardIndicator(true);
+                setIsProcessing(false);
+              }, 100);
+            },
+            onError: (error) => {
+              console.error("Custom transaction error:", error);
+              showWarningMessage("Custom transaction failed: " + error.message);
+              setIsProcessing(false);
+            }
+          }
+        );
+      }
+    } catch (error) {
+      console.error("Custom transaction execution error:", error);
+      showWarningMessage("Custom transaction execution error: " + (error.message || String(error)));
+      setIsProcessing(false);
     }
-  } catch (error) {
-    console.error("Custom transaction execution error:", error);
-    showWarningMessage("Custom transaction execution error: " + (error.message || String(error)));
-    setIsProcessing(false);
-  }
-};
+  };
 
   // Create custom transaction B - enable auto distribution feature
   const executeCustomTxB = async () => {

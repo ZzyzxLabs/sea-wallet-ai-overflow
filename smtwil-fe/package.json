@@ -17,6 +17,7 @@
     "@radix-ui/themes": "^3.2.1",
     "@sendgrid/mail": "^8.1.5",
     "@tanstack/react-query": "^5.72.2",
+    "axios": "^1.9.0",
     "next": "15.3.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",

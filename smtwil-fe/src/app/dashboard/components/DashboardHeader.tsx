@@ -24,8 +24,8 @@ export default function DashboardHeader() {
     <header 
       className={`sticky top-0 z-10 flex items-center justify-between px-6 py-3 transition-all duration-300 ${
         scrolled 
-          ? 'bg-white/80 backdrop-blur-md shadow-md' 
-          : 'bg-white/50 backdrop-blur-sm'
+          ? 'bg-gray-500 backdrop-blur-md shadow-md' 
+          : 'bg-primary backdrop-blur-sm'
       }`}
       style={{
         borderBottom: scrolled 
@@ -34,7 +34,7 @@ export default function DashboardHeader() {
       }}
     >
       <div className="flex items-center">
-        <div className="relative group">
+        {/* <div className="relative group">
           <input
             type="text"
             placeholder="搜尋服務..."
@@ -44,12 +44,12 @@ export default function DashboardHeader() {
             }}
           />
           <span className="absolute left-3 top-2.5 text-blue-400 transition-all duration-300 group-hover:text-blue-600">🔍</span>
-          
+           */}
           {/* 搜尋框底部的波浪漸層裝飾 */}
-          <div className="absolute -bottom-1 left-0 w-full h-1 overflow-hidden rounded-b-full opacity-80">
+          {/* <div className="absolute -bottom-1 left-0 w-full h-1 overflow-hidden rounded-b-full opacity-80">
             <div className="h-full w-full bg-gradient-to-r from-blue-400 via-cyan-400 to-blue-500 animate-pulse"></div>
           </div>
-        </div>
+        </div> */}
       </div>
       
       <div className="flex items-center space-x-4">
