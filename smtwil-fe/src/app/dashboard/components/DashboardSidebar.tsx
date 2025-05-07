@@ -14,8 +14,8 @@ const sidebarItems = [
     href: '/dashboard' 
   },
   { 
-    icon: '/icons/analytics.svg', 
-    label: '數據分析', 
+    icon: '/iconSidebar/smartWill.svg', 
+    label: 'SmartWill', 
     href: '/dashboard/analytics' 
   },
   { 
