@@ -1,6 +1,6 @@
 "use client";
 import React, { useEffect, useState, useCallback } from "react";
-import { useCurrentAccount, useSuiClientQuery } from "@mysten/dapp-kit";
+import { useCurrentAccount, useSuiClientQueries, useSuiClientQuery } from "@mysten/dapp-kit";
 import ButtonInContractAlter from "./ButtonInContractAlter";
 import useMoveStore from "../store/moveStore";
 
@@ -10,7 +10,7 @@ const ContractAlter = () => {
   const [isLoading, setIsLoading] = useState(true);
   const packageName = useMoveStore((state) => state.packageName);
   
-  // 新增：存儲幣種小數位數的狀態
+  // 存儲幣種小數位數的狀態
   const [coinDecimals, setCoinDecimals] = useState({});
   // 跟踪當前正在查詢的幣種類型
   const [currentCoinType, setCurrentCoinType] = useState(null);
@@ -76,26 +76,17 @@ const ContractAlter = () => {
   );
   console.log("coinData", coinData.data);
   
-  // 正確使用 Hook 獲取幣種小數位數
+  // 獲取幣種小數位數
   const coinMetadataQuery = useSuiClientQuery(
     "getCoinMetadata",
     { coinType: currentCoinType || "" },
     { 
       enabled: !!currentCoinType,
-      staleTime: 300000, // 元數據不常變化，可以緩存更長時間
-      // 當成功獲取後更新狀態
-      onSuccess: (data) => {
-        if (data && currentCoinType) {
-          setCoinDecimals(prev => ({
-            ...prev,
-            [currentCoinType]: data.decimals || 0
-          }));
-          setCurrentCoinType(null); // 重置當前查詢，準備下一個
-        }
-      }
+      staleTime: 300000,
     }
   );
   console.log("coinMetadataQuery", coinMetadataQuery.data);
+  
   // 處理代幣數據並提取需要查詢的幣種類型
   useEffect(() => {
     if (!coinData.data) return;
@@ -129,14 +120,11 @@ const ContractAlter = () => {
           const amount = coinObj.data?.content?.fields?.balance || "0";
 
           // 檢查是否需要獲取該幣種的小數位數
-          if (fullCoinType !== "Unknown" && !coinDecimals[fullCoinType]) {
-            // 將該幣種添加到待查詢列表
-            if (!currentCoinType) {
-              setCurrentCoinType(fullCoinType);
-            }
+          if (fullCoinType !== "Unknown" && !coinDecimals[fullCoinType] && !currentCoinType) {
+            setCurrentCoinType(fullCoinType);
           }
 
-          return [coinSymbol, formattedCoinType, amount, fullCoinType];  // 增加完整幣種類型
+          return [coinSymbol, formattedCoinType, amount, fullCoinType];
         })
         .filter((coin) => coin !== null);
 
@@ -151,7 +139,6 @@ const ContractAlter = () => {
   // 查詢下一個幣種的元數據
   useEffect(() => {
     if (!currentCoinType && coinsInVault.length > 0) {
-      // 查找尚未獲取小數位數的幣種
       const nextCoinToFetch = coinsInVault.find(
         coin => coin[3] && !coinDecimals[coin[3]]
       );
@@ -170,16 +157,6 @@ const ContractAlter = () => {
     }
   }, [coinData.data, objectIds, isLoading]);
 
-  // 處理金額顯示的輔助函數
-  const formatAmount = (amount, coinType) => {
-    // 從完整幣種類型獲取小數位數
-    let decimals = 0;
-    if (coinType && coinDecimals[coinType]) {
-      decimals = coinDecimals[coinType];
-    }
-    // 轉換金額
-    return Number(amount) / Math.pow(10, decimals);
-  };
 
   return (
     <div className="flex justify-center items-center w-full h-fit bg-white">
@@ -203,7 +180,8 @@ const ContractAlter = () => {
                   <span className="text-xs text-gray-500">{coin[1]}</span>
                 </div>
                 <div className="py-2 border-t text-black dark:border-gray-700">
-                  {formatAmount(coin[2], coin[3])}{" "}
+                  
+                   {(coin[2] / Math.pow(10, coinDecimals[index]))}
                 </div>
               </React.Fragment>
             ))
