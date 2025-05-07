@@ -12,7 +12,8 @@ import useHeirStore from '../store/heirStore'
 // Format address function to prevent overflow
 const formatAddress = (address) => {
   if (!address) return "";
-  return `${address.slice(0, 8)}...${address.slice(-6)}`;
+  if(address.length <= 14) return address;
+  return `${address.slice(0, 8)}...${address.slice(-19)}`; 
 };
 
 const ButtonInContractAlter = () => {
@@ -121,7 +122,7 @@ const ButtonInContractAlter = () => {
       );
       vaultID = ownerCapObjects[0]?.data?.content?.fields?.vaultID;
     }
-    console.log("Owner Cap Objects:", ownerCapObjects, vaultID);
+    // console.log("Owner Cap Objects:", ownerCapObjects, vaultID);
     return { ownerCapObjects, vaultID };
   }, [vaultAndCap.data]);
 
