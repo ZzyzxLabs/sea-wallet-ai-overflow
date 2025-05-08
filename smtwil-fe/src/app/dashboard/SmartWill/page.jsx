@@ -230,6 +230,7 @@ export default function Dashboard() {
         </div>
       </div>
       < ContractAlter /> 
+      <div className="p-10"></div>
     </div>
   );
 }

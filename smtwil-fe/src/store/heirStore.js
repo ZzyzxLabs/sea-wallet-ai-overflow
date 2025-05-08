@@ -23,7 +23,7 @@ const useHeirStore = create((set, get) => ({
   setShowWelcome: (value) => set({ showWelcome: value }),
   setShowNextCard: (value) => set({ showNextCard: value }),
   setShowDashboardIndicator: (value) => set({ showDashboardIndicator: value }),
-  
+  setVaultName: (value) => set({ VaultName: value }),
   // 重置所有狀態到初始值
   resetState: () => set({
     isConnecting: false,

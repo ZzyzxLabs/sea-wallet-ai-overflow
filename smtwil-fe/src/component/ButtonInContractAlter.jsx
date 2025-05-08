@@ -282,7 +282,7 @@ const ButtonInContractAlter = () => {
         coinType: finalCoinType
       });
       let tx
-      // if(!VaultNames.includes(selectedCoin[0])){
+      if(!VaultNames.includes(selectedCoin[0])){
         tx = fuseTxFunctions(
           ownerCapObjects[0].data.objectId,
           vault.objectId, 
@@ -291,16 +291,16 @@ const ButtonInContractAlter = () => {
           selectedCoin[0], // Using the coin name (first element in selectedCoin array)
           finalCoinType
         );
-      // // }else{
-        // tx = alterTx(
-        //   ownerCapObjects[0].data.objectId,
-        //   vault.objectId,
-        //   coinObjectIds,
-        //   amountInSmallestUnit,
-        //   selectedCoin[0], // Using the coin name (first element in selectedCoin array)
-        //   finalCoinType
-        // )
-      // }
+      }else{
+        tx = alterTx(
+          ownerCapObjects[0].data.objectId,
+          vault.objectId,
+          coinObjectIds,
+          amountInSmallestUnit,
+          selectedCoin[0], // Using the coin name (first element in selectedCoin array)
+          finalCoinType
+        )
+      }
 
 
       // Create transaction without gas handling
