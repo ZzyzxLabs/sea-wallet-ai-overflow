@@ -44,7 +44,6 @@ const useMoveStore = create<MoveStore>((set, get) => ({
   // main
   packageName:
     "0xfa7f043a4fb3399ba9668d311bdbb0fe728d6f0ed6c53675a66170a0f801b7da",
-
   createVaultTx: () => {
     const vaultTx = new Transaction();
     vaultTx.moveCall({
@@ -127,27 +126,6 @@ const useMoveStore = create<MoveStore>((set, get) => ({
   // },
   async mintCapTest(cap, vault, sui, email) {},
   async mintCap(cap, vault, sui, email) {
-    // const Address = bcs.Address.transform({
-    //   // To change the input type, you need to provide a type definition for the input
-    //   input: (val: string) => fromHex(val),
-    //   output: (val) => toHex(val),
-    // });
-    // const suiRework = {
-    //   keys: sui.keys.map((key) => Address.serialize(key).toBytes()),
-    //   values: sui.values,
-    // };
-    // const suiMap = VecMap(bcs.Address, bcs.U8).serialize({
-    //   keys: sui.keys, // array of hex strings, e.g. ["0x123...", "0x456..."]
-    //   values: sui.values, // array of numbers (u8)
-    // });
-
-    // Prepare VecMap<string, u8>
-    // const emailMap = VecMap(bcs.String, bcs.U8).serialize({
-    //   keys: email.keys, // array of strings, e.g. ["alice@example.com", ...]
-    //   values: email.values, // array of numbers (u8)
-    // });
-
-    // test test (mic) test
     email = {
       keys: ["x.com", "y.com"],
       values: [25, 25],
@@ -169,6 +147,7 @@ const useMoveStore = create<MoveStore>((set, get) => ({
     console.log("emailPer", emailPer);
     const tx = new Transaction();
 
+    // handle addresses
     tx.moveCall({
       target: `${get().packageName}::vault::addMemberByAddresses`,
       arguments: [
@@ -179,8 +158,21 @@ const useMoveStore = create<MoveStore>((set, get) => ({
       ],
     });
 
+    // handle emails
+    // const link = new ZkSendLinkBuilder({
+    //   sender:
+    //     "0x9fcc44605f6b702244d32ff43852eb1a13938f9afbc5f5329e87709c52cfbf75",
+    //   network: "testnet",
+    // });
+    const links = [];
     for (let i = 0; i < email.keys.length; i++) {
-      let [emailCap] = tx.moveCall({
+      const link = new ZkSendLinkBuilder({
+        sender:
+          "0x9fcc44605f6b702244d32ff43852eb1a13938f9afbc5f5329e87709c52cfbf75",
+        network: "testnet",
+      });
+
+      let emailCap = tx.moveCall({
         target: `${get().packageName}::vault::addMemberByEmail`,
         arguments: [
           tx.object(cap),
@@ -189,17 +181,26 @@ const useMoveStore = create<MoveStore>((set, get) => ({
           tx.pure.u8(email.values[i]),
         ],
       });
-      console.log("!!emailCap", emailCap);
-
+      // console.log("!!emailCap", emailCap);
       // TODO: replace with zksend to send to emails
-      tx.transferObjects(
-        [emailCap],
-        "0x08b782844f1900e033607d33d353ef3c8e181abfe044e8b921a102ee67f18c37"
-      );
-    }
 
-    // test if two emails can be sent at once
-    // let [emailCap] = tx.moveCall({
+      link.addClaimableObjectRef(
+        emailCap,
+        `${get().packageName}::vault::MemberCap`
+      );
+      await link.createSendTransaction({
+        transaction: tx,
+      });
+      links.push(link);
+    }
+    console.log("Your fucking links!!", links);
+    const urls = links.map((link) => link.getLink());
+    console.log("Your fucking urls", urls);
+
+    // console.log("Your fucking links", urls);
+    // test if two emails can be sent at once, no
+
+    // let emailCap = tx.moveCall({
     //   target: `${get().packageName}::vault::addMemberByEmail`,
     //   arguments: [
     //     tx.object(cap),
@@ -208,11 +209,19 @@ const useMoveStore = create<MoveStore>((set, get) => ({
     //     tx.pure.u8(50),
     //   ],
     // });
-    // tx.transferObjects(
-    //   [emailCap],
-    //   "0x08b782844f1900e033607d33d353ef3c8e181abfe044e8b921a102ee67f18c37"
+
+    // // send cap with zksend
+    // link.addClaimableObjectRef(
+    //   emailCap,
+    //   `${get().packageName}::vault::MemberCap`
     // );
-    // let [emailCap2] = tx.moveCall({
+
+    // const txb = await link.createSendTransaction({
+    //   transaction: tx,
+    // });
+    // console.log("Your fucking link", link.getLink());
+
+    // let emailCap2 = tx.moveCall({
     //   target: `${get().packageName}::vault::addMemberByEmail`,
     //   arguments: [
     //     tx.object(cap),
@@ -221,10 +230,16 @@ const useMoveStore = create<MoveStore>((set, get) => ({
     //     tx.pure.u8(50),
     //   ],
     // });
-    // tx.transferObjects(
-    //   [emailCap2],
-    //   "0x08b782844f1900e033607d33d353ef3c8e181abfe044e8b921a102ee67f18c37"
+
+    // link.addClaimableObjectRef(
+    //   emailCap2,
+    //   `${get().packageName}::vault::MemberCap`
     // );
+
+    // const txb2 = await link.createSendTransaction({
+    //   transaction: tx,
+    // });
+    // console.log("Your fucking link2", link.getLink());
 
     // emailCapsTest
     // const emailCaps = tx.moveCall({
@@ -255,7 +270,8 @@ const useMoveStore = create<MoveStore>((set, get) => ({
     //     "0x08b782844f1900e033607d33d353ef3c8e181abfe044e8b921a102ee67f18c37"
     //   );
     // // }
-    console.log("tx", tx);
+    // console.log("tx", tx);
+
     return tx;
   },
 
