@@ -12,7 +12,7 @@
     "@mysten/bcs": "^1.6.0",
     "@mysten/dapp-kit": "^0.15.2",
     "@mysten/mvr-static": "^0.1.8",
-    "@mysten/sui": "^1.26.1",
+    "@mysten/sui": "^1.29.1",
     "@mysten/zksend": "^0.12.28",
     "@radix-ui/themes": "^3.2.1",
     "@sendgrid/mail": "^8.1.5",

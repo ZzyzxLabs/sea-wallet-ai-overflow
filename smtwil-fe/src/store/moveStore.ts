@@ -44,7 +44,6 @@ const useMoveStore = create<MoveStore>((set, get) => ({
   // main
   packageName:
     "0xfa7f043a4fb3399ba9668d311bdbb0fe728d6f0ed6c53675a66170a0f801b7da",
-
   createVaultTx: () => {
     const vaultTx = new Transaction();
     vaultTx.moveCall({
@@ -127,48 +126,29 @@ const useMoveStore = create<MoveStore>((set, get) => ({
   // },
   async mintCapTest(cap, vault, sui, email) {},
   async mintCap(cap, vault, sui, email) {
-    // const Address = bcs.Address.transform({
-    //   // To change the input type, you need to provide a type definition for the input
-    //   input: (val: string) => fromHex(val),
-    //   output: (val) => toHex(val),
-    // });
-    // const suiRework = {
-    //   keys: sui.keys.map((key) => Address.serialize(key).toBytes()),
-    //   values: sui.values,
+    // testing config
+    // email = {
+    //   keys: ["x.com", "y.com"],
+    //   values: [25, 25],
     // };
-    // const suiMap = VecMap(bcs.Address, bcs.U8).serialize({
-    //   keys: sui.keys, // array of hex strings, e.g. ["0x123...", "0x456..."]
-    //   values: sui.values, // array of numbers (u8)
-    // });
-
-    // Prepare VecMap<string, u8>
-    // const emailMap = VecMap(bcs.String, bcs.U8).serialize({
-    //   keys: email.keys, // array of strings, e.g. ["alice@example.com", ...]
-    //   values: email.values, // array of numbers (u8)
-    // });
-
-    // test test (mic) test
-    email = {
-      keys: ["x.com", "y.com"],
-      values: [25, 25],
-    };
-    sui = {
-      keys: [
-        "0x08b782844f1900e033607d33d353ef3c8e181abfe044e8b921a102ee67f18c37",
-        "0x08b782844f1900e033607d33d353ef3c8e181abfe044e8b921a102ee67f18c37",
-      ],
-      values: [25, 25],
-    };
+    // sui = {
+    //   keys: [
+    //     "0x08b782844f1900e033607d33d353ef3c8e181abfe044e8b921a102ee67f18c37",
+    //     "0x08b782844f1900e033607d33d353ef3c8e181abfe044e8b921a102ee67f18c37",
+    //   ],
+    //   values: [25, 25],
+    // };
     const addressList = bcs.vector(bcs.Address).serialize(sui.keys).toBytes();
     const addressPer = bcs.vector(bcs.u8()).serialize(sui.values).toBytes();
     const emailList = bcs.vector(bcs.String).serialize(email.keys).toBytes();
     const emailPer = bcs.vector(bcs.u8()).serialize(email.values).toBytes();
-    console.log("addressList", addressList);
-    console.log("addressPer", addressPer);
-    console.log("emailList", emailList);
-    console.log("emailPer", emailPer);
+    // console.log("addressList", addressList);
+    // console.log("addressPer", addressPer);
+    // console.log("emailList", emailList);
+    // console.log("emailPer", emailPer);
     const tx = new Transaction();
 
+    // handle addresses
     tx.moveCall({
       target: `${get().packageName}::vault::addMemberByAddresses`,
       arguments: [
@@ -179,8 +159,16 @@ const useMoveStore = create<MoveStore>((set, get) => ({
       ],
     });
 
+    // handle emails
+    const links = [];
     for (let i = 0; i < email.keys.length; i++) {
-      let [emailCap] = tx.moveCall({
+      const link = new ZkSendLinkBuilder({
+        sender:
+          "0x9fcc44605f6b702244d32ff43852eb1a13938f9afbc5f5329e87709c52cfbf75",
+        network: "testnet",
+      });
+
+      let emailCap = tx.moveCall({
         target: `${get().packageName}::vault::addMemberByEmail`,
         arguments: [
           tx.object(cap),
@@ -189,97 +177,22 @@ const useMoveStore = create<MoveStore>((set, get) => ({
           tx.pure.u8(email.values[i]),
         ],
       });
-      console.log("!!emailCap", emailCap);
 
-      // TODO: replace with zksend to send to emails
-      tx.transferObjects(
-        [emailCap],
-        "0x08b782844f1900e033607d33d353ef3c8e181abfe044e8b921a102ee67f18c37"
+      link.addClaimableObjectRef(
+        emailCap,
+        `${get().packageName}::vault::MemberCap`
       );
+      await link.createSendTransaction({
+        transaction: tx,
+      });
+      links.push(link);
     }
+    const urls = links.map((link) => link.getLink());
+    console.log("Your fucking urls", urls);
 
-    // test if two emails can be sent at once
-    // let [emailCap] = tx.moveCall({
-    //   target: `${get().packageName}::vault::addMemberByEmail`,
-    //   arguments: [
-    //     tx.object(cap),
-    //     tx.object(vault),
-    //     tx.pure.string("x.com"),
-    //     tx.pure.u8(50),
-    //   ],
-    // });
-    // tx.transferObjects(
-    //   [emailCap],
-    //   "0x08b782844f1900e033607d33d353ef3c8e181abfe044e8b921a102ee67f18c37"
-    // );
-    // let [emailCap2] = tx.moveCall({
-    //   target: `${get().packageName}::vault::addMemberByEmail`,
-    //   arguments: [
-    //     tx.object(cap),
-    //     tx.object(vault),
-    //     tx.pure.string("x.com"),
-    //     tx.pure.u8(50),
-    //   ],
-    // });
-    // tx.transferObjects(
-    //   [emailCap2],
-    //   "0x08b782844f1900e033607d33d353ef3c8e181abfe044e8b921a102ee67f18c37"
-    // );
-
-    // emailCapsTest
-    // const emailCaps = tx.moveCall({
-    //   target: `${get().packageName}::vault::initMember`,
-    //   arguments: [
-    //     tx.object(cap),
-    //     tx.object(vault),
-    //     tx.pure(addressList),
-    //     tx.pure(addressPer),
-    //     tx.pure(emailList),
-    //     tx.pure(emailPer),
-    //   ],
-    // });
-    // tx.transferObjects(
-    //   [emailCaps],
-    //   "0x08b782844f1900e033607d33d353ef3c8e181abfe044e8b921a102ee67f18c37"
-    // );
-    // tx.transferObjects(
-    //   [emailCap1, emailCap2],
-    //   "0x08b782844f1900e033607d33d353ef3c8e181abfe044e8b921a102ee67f18c37"
-    // );
-    // console.log("emailCaps", emailCaps);
-    // for (let i = 0; i < emailCaps.length; i++) {
-    //   const emailCap = emailCaps[i];
-    //   console.log("emailCap", emailCap);
-    //   tx.transferObjects(
-    //     [emailCap],
-    //     "0x08b782844f1900e033607d33d353ef3c8e181abfe044e8b921a102ee67f18c37"
-    //   );
-    // // }
-    console.log("tx", tx);
     return tx;
   },
 
-  // async zkTransaction(sender, network, prope, count) {
-  //   const links = [];
-  //   const mock = ["0x27c1821e8cf4779c6f549cb63a47057a877ad54961a1587212b1e34020d9b56a", "0x383798bfd735b83a136a146dae07d33dad2ea1cd29b2c37283220ba671bcbb7c"]
-  //   for (let i = 0; i < 2/*count*/ ; i++) {
-  //     const link = new ZkSendLinkBuilder({
-  //       sender: sender,
-  //       network: network,
-  //     });
-  //     console.log(/*prope[i]*/mock);
-  //     link.addClaimableObject(/*prope[i]*/mock[i]);
-  //     await links.push(link);
-  //   }
-
-  //   const urls = links.map((link) => link.getLink());
-
-  //   const tx = await ZkSendLinkBuilder.createLinks({
-  //     links,
-  //   });
-
-  //   return { urls, tx };
-  // },
   async zkTransaction(sender, network, prope) {
     const urls: string[] = [];
     const txs: any[] = [];
