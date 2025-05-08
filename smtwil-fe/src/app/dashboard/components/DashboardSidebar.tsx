@@ -8,27 +8,27 @@ import Image from 'next/image';
 // 定義側邊欄項目
 const sidebarItems = [
   { 
-    icon: '/icons/dashboard.svg', 
+    icon: '/iconSidebar/RMBGwalletOverview.png', 
     label: 'Wallet Overview', 
     href: '/dashboard' 
   },
   { 
-    icon: '/iconSidebar/smartWill.svg', 
+    icon: '/iconSidebar/RMBGSmartWillwhite.png', 
     label: 'SmartWill', 
     href: '/dashboard/SmartWill' 
   },
   { 
-    icon: '/icons/market.svg', 
+    icon: '/iconSidebar/RMBGsubscription.png', 
     label: 'Subscriptions', 
     href: '/dashboard/Subscriptions' 
   },
   { 
-    icon: '/icons/Defi.svg', 
+    icon: '/iconSidebar/RMBGdefi.png', 
     label: 'Defi', 
     href: '/dashboard/Defi' 
   },
   { 
-    icon: '/icons/settings.svg', 
+    icon: '/iconSidebar/RMBGsetting.png', 
     label: 'Settings', 
     href: '/dashboard/settings' 
   },
