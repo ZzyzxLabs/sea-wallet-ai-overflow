@@ -68,10 +68,11 @@ const useMoveStore = create<MoveStore>((set, get) => ({
     if (coinIds.length > 1) {
       tx.mergeCoins(coinObjects[0], coinObjects.slice(1));
     }
-
     // Step 2: Split coins - USING OBJECT REFERENCE, NOT STRING
     const [goods] = tx.splitCoins(coinObjects[0], [amount]);
 
+    if(coinType === "0x2::sui::SUI"){
+    }
     // const nameBC = bcs.vector(bcs.U8).serialize(stringToUint8Array(name.toString()));
     const nameBC = stringToUint8Array(name.toString());
     // Step 3: use goods as asset input into addToVault
