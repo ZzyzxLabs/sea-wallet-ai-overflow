@@ -54,7 +54,7 @@ export default function DashboardHeader() {
       
       <div className="flex items-center space-x-4">
         {/* 自定義 ConnectButton 樣式 */}
-        <div className="overflow-hidden rounded-full p-0.5 bg-gradient-to-r from-blue-500 to-cyan-400">
+        <div className="overflow-hidden rounded-full ">
           <ConnectButton />
         </div>
       </div>
