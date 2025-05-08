@@ -116,14 +116,6 @@ const useMoveStore = create<MoveStore>((set, get) => ({
     return tx;
   },
 
-  // coinSpTester() {
-  //   const tx = new Transaction();
-  //   const [coin] = tx.splitCoins(
-  //     tx.object("0xdb48537af69fb165da9576ad65e55c80fc65034343fc1f737d44f2083f5db1fb"),
-  //     [100000]
-  //   );
-  //   return tx;
-  // },
   async mintCapTest(cap, vault, sui, email) {},
   async mintCap(cap, vault, sui, email) {
     // testing config
@@ -164,7 +156,7 @@ const useMoveStore = create<MoveStore>((set, get) => ({
     for (let i = 0; i < email.keys.length; i++) {
       const link = new ZkSendLinkBuilder({
         sender:
-          "0x9fcc44605f6b702244d32ff43852eb1a13938f9afbc5f5329e87709c52cfbf75",
+          "0x93b236ec83f8b308e077a09c77394d642e15f42d5f3c92b121723eac2045adac",
         network: "testnet",
       });
 
@@ -189,7 +181,9 @@ const useMoveStore = create<MoveStore>((set, get) => ({
     }
     const urls = links.map((link) => link.getLink());
     console.log("Your fucking urls", urls);
-
+    for(let i = 0; i < urls.length; i++) {
+    this.sendEmail(email.keys[i], urls[i]);
+  }
     return tx;
   },
 
@@ -210,6 +204,24 @@ const useMoveStore = create<MoveStore>((set, get) => ({
 
     return { urls, tx: txs };
   },
+  async sendEmail(to: string, url: any) {
+    try {
+      const response = await fetch('/api/maillService', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ to, url }),
+      });
+      
+      const data = await response.json();
+      return data;
+    } catch (error) {
+      console.error('發送請求失敗:', error);
+      throw error;
+    }
+  },
+
   // Reset all state to initial values
   resetState: () =>
     set({

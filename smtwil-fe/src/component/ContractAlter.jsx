@@ -1,14 +1,17 @@
 "use client";
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useState, useCallback, useMemo } from "react";
 import { useCurrentAccount, useSuiClientQueries, useSuiClientQuery } from "@mysten/dapp-kit";
 import ButtonInContractAlter from "./ButtonInContractAlter";
 import useMoveStore from "../store/moveStore";
+import useHeirStore from "../store/heirStore";
 
 const ContractAlter = () => {
   const account = useCurrentAccount();
   const [coinsInVault, setCoinsInVault] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const packageName = useMoveStore((state) => state.packageName);
+  const { setVaultName } = useHeirStore(); // Get setter function at component level
+  const VaultName = useHeirStore((state) => state.VaultName);
   
   // Query vault and owner cap
   const vaultAndCap = useSuiClientQuery(
@@ -47,7 +50,18 @@ const ContractAlter = () => {
       staleTime: 30000,
     }
   );
-  console.log("vaultList", vaultList.data);
+  
+  // Log vault list data properly
+  useEffect(() => {
+    if (vaultList.data) {
+      console.log("vaultList", vaultList.data);
+      
+      // Update vault name at the correct place
+      if (vaultList.data?.data) {
+        setVaultName(vaultList.data.data.map(item => item.name));
+      }
+    }
+  }, [vaultList.data, setVaultName]);
   
   // Get objectIds
   const getObjectIds = useCallback(() => {
@@ -69,8 +83,50 @@ const ContractAlter = () => {
       staleTime: 30000,
     }
   );
-  console.log("coinData", coinData.data);
   
+  // Log coin data properly
+  useEffect(() => {
+    if (coinData.data) {
+      console.log("coinData", coinData.data);
+    }
+  }, [coinData.data]);
+  
+  // Extract coin types (moved outside of effects)
+  const coinTypes = useMemo(() => {
+    return coinData.data?.map(coinObj => {
+      const type = coinObj?.data?.type || "";
+      const typeMatch = type.match(/<(.+)>/);
+      return typeMatch ? typeMatch[1] : null;
+    }).filter(Boolean) || [];
+  }, [coinData.data]);
+  
+  // Query metadata for each coin type - PROPERLY PLACED AT COMPONENT LEVEL
+  const coinMetadataQueries = useSuiClientQueries({
+    queries: coinTypes.map(coinType => ({
+      method: "getCoinMetadata",
+      params: {
+        coinType: coinType
+      }
+    })),
+    combine: (result) => {
+      return {
+        data: result.map((res) => res.data),
+        isSuccess: result.every((res) => res.isSuccess),
+        isPending: result.some((res) => res.isPending),
+        isError: result.some((res) => res.isError),
+      };
+    },
+    enabled: coinTypes.length > 0,
+    staleTime: 30000,
+  });
+  
+  // Log coin metadata properly
+  useEffect(() => {
+    if (coinMetadataQueries?.data) {
+      console.log("Coin metadata:", coinMetadataQueries.data);
+    }
+  }, [coinMetadataQueries?.data]);
+
   // 處理代幣數據
   useEffect(() => {
     if (!coinData.data) return;
@@ -123,7 +179,6 @@ const ContractAlter = () => {
     }
   }, [coinData.data, objectIds, isLoading]);
 
-
   return (
     <div className="flex justify-center items-center w-full h-fit bg-white">
       <div className="rounded-lg bg-white shadow-md p-4 mb-4 w-1/2">
@@ -146,7 +201,7 @@ const ContractAlter = () => {
                   <span className="text-xs text-gray-500">{coin[1]}</span>
                 </div>
                 <div className="py-2 border-t text-black dark:border-gray-700">
-                  {coin[2]}
+                  {coin[2]/Math.pow(10,coinMetadataQueries.data[index]?.decimals)}{" "}
                 </div>
               </React.Fragment>
             ))
