@@ -1,5 +1,5 @@
 import ContractAlter from "../../component/ContractAlter";
-
+import ContractAlterScroll from "../../component/VaultScroll"
 export default function Dashboard() {
   return (
     <div className="flex flex-col items-center justify-center h-screen bg-primary">
@@ -7,6 +7,7 @@ export default function Dashboard() {
       <p className="text-lg">Welcome to the Dashboard!</p>
       <p className="text-lg">This is where you can manage your account and settings.</p>
       <ContractAlter />
+      <ContractAlterScroll />
     </div>
   ); 
 }
