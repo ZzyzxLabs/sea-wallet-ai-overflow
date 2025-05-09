@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import Image from 'next/image';
 
-// 定義側邊欄項目
+// 擴展側邊欄項目，為 Subscriptions 添加子選單
 const sidebarItems = [
   { 
     icon: '/iconSidebar/RMBGwalletOverview.png', 
@@ -20,7 +20,11 @@ const sidebarItems = [
   { 
     icon: '/iconSidebar/RMBGsubscription.png', 
     label: 'Subscriptions', 
-    href: '/dashboard/Subscriptions' 
+    href: '/dashboard/Subscriptions',
+    submenu: [
+      { label: 'My Subscriptions', href: '/dashboard/Subscriptions/subscription' },
+      { label: 'My Subscribers', href: '/dashboard/Subscriptions/subscriber' },
+    ]
   },
   { 
     icon: '/iconSidebar/RMBGdefi.png', 
@@ -53,6 +57,7 @@ export default function DashboardSidebar() {
   const [expanded, setExpanded] = useState(false);
   const [textProgress, setTextProgress] = useState(0);
   const [animatedLabels, setAnimatedLabels] = useState<string[]>([]);
+  const [openSubmenu, setOpenSubmenu] = useState<number | null>(null);
   const pathname = usePathname();
 
   // 處理側邊欄展開/收縮
@@ -76,6 +81,7 @@ export default function DashboardSidebar() {
       return () => clearInterval(animation);
     } else {
       setTextProgress(0);
+      setOpenSubmenu(null); // 收縮時關閉所有子選單
     }
   }, [expanded]);
 
@@ -91,6 +97,12 @@ export default function DashboardSidebar() {
     if (!expanded) return '';
     if (textProgress >= 1.5) return originalText;
     return animatedLabels[index] || generateWaveText(originalText, textProgress);
+  };
+
+  // 切換子選單狀態
+  const toggleSubmenu = (index: number, event: React.MouseEvent) => {
+    event.preventDefault(); // 阻止連結的默認行為
+    setOpenSubmenu(openSubmenu === index ? null : index);
   };
 
   return (
@@ -128,41 +140,88 @@ export default function DashboardSidebar() {
       <nav className="flex-1 mt-4 overflow-y-auto scrollbar-hidden" style={{ maxHeight: 'calc(100vh - 150px)' }}>
         <ul>
           {sidebarItems.map((item, index) => {
-            const isActive = pathname === item.href;
+            const isActive = pathname === item.href || (pathname && pathname.startsWith(item.href + '/'));
+            const hasSubmenu = item.submenu && item.submenu.length > 0;
+            const isSubmenuOpen = openSubmenu === index;
+            
             return (
               <li key={item.href} className="mb-2 px-2">
-                <Link 
-                  href={item.href}
-                  className={`flex items-center p-3 rounded-lg transition-all duration-300 ${
-                    isActive 
-                      ? 'bg-gradient-to-r from-blue-700 to-cyan-600 text-white shadow-lg' 
-                      : 'text-blue-100 hover:bg-blue-800/30'
-                  }`}
-                  style={{
-                    boxShadow: isActive ? '0 4px 10px rgba(0, 150, 255, 0.3)' : 'none'
-                  }}
-                >
-                  <div className="w-6 h-6 relative">
-                    <Image
-                      src={item.icon}
-                      alt={`${item.label} 圖標`}
-                      fill
-                      className="object-contain"
+                <div className="relative">
+                  {/* 主選單項目 */}
+                  <div 
+                    onClick={hasSubmenu ? (e) => toggleSubmenu(index, e) : undefined}
+                    className={`flex items-center p-3 rounded-lg transition-all duration-300 ${
+                      isActive 
+                        ? 'bg-gradient-to-r from-blue-700 to-cyan-600 text-white shadow-lg' 
+                        : 'text-blue-100 hover:bg-blue-800/30'
+                    } ${hasSubmenu ? 'cursor-pointer' : ''}`}
+                    style={{
+                      boxShadow: isActive ? '0 4px 10px rgba(0, 150, 255, 0.3)' : 'none'
+                    }}
+                  >
+                    <div className="w-6 h-6 relative">
+                      <Image
+                        src={item.icon}
+                        alt={`${item.label} 圖標`}
+                        fill
+                        className="object-contain"
+                        style={{ 
+                          filter: isActive 
+                            ? 'brightness(1.2) drop-shadow(0 0 2px rgba(255, 255, 255, 0.5))' 
+                            : 'brightness(1)'
+                        }}
+                      />
+                    </div>
+                    <div className="ml-4 whitespace-nowrap overflow-hidden text-sm font-medium flex-grow"
+                         style={{ 
+                           opacity: expanded ? 1 : 0, 
+                           transition: 'opacity 0.3s',
+                         }}>
+                      {expanded && getDisplayText(index, item.label)}
+                    </div>
+                    {/* 下拉箭頭 (只在展開且有子選單時顯示) */}
+                    {expanded && hasSubmenu && (
+                      <div className="ml-2 transition-transform duration-300" style={{ 
+                        transform: isSubmenuOpen ? 'rotate(180deg)' : 'rotate(0deg)'
+                      }}>
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <polyline points="6 9 12 15 18 9"></polyline>
+                        </svg>
+                      </div>
+                    )}
+                  </div>
+                  
+                  {/* 子選單 */}
+                  {hasSubmenu && expanded && (
+                    <div 
+                      className="overflow-hidden transition-all duration-300 pl-6 mt-1"
                       style={{ 
-                        filter: isActive 
-                          ? 'brightness(1.2) drop-shadow(0 0 2px rgba(255, 255, 255, 0.5))' 
-                          : 'brightness(1)'
+                        maxHeight: isSubmenuOpen ? `${item.submenu.length * 2.5}rem` : '0',
+                        opacity: isSubmenuOpen ? 1 : 0,
                       }}
-                    />
-                  </div>
-                  <div className="ml-4 whitespace-nowrap overflow-hidden text-sm font-medium"
-                       style={{ 
-                         opacity: expanded ? 1 : 0, 
-                         transition: 'opacity 0.3s',
-                       }}>
-                    {expanded && getDisplayText(index, item.label)}
-                  </div>
-                </Link>
+                    >
+                      <ul className="space-y-1 py-1">
+                        {item.submenu.map((subItem, subIndex) => {
+                          const isSubActive = pathname === subItem.href;
+                          return (
+                            <li key={subItem.href}>
+                              <Link 
+                                href={subItem.href}
+                                className={`block px-3 py-2 rounded-md text-sm transition-colors duration-200 ${
+                                  isSubActive 
+                                    ? 'bg-blue-600/40 text-white' 
+                                    : 'text-blue-200 hover:bg-blue-700/30'
+                                }`}
+                              >
+                                {textProgress >= 1.5 ? subItem.label : generateWaveText(subItem.label, textProgress)}
+                              </Link>
+                            </li>
+                          );
+                        })}
+                      </ul>
+                    </div>
+                  )}
+                </div>
               </li>
             );
           })}
@@ -190,15 +249,6 @@ export default function DashboardSidebar() {
         </Link>
       </div>
       
-      {/* 展開按鈕標記 */}
-      {expanded && (
-        <div 
-          className="absolute right-2 top-1/2 transform -translate-y-1/2 w-6 h-12 flex items-center justify-center opacity-30 hover:opacity-100 transition-opacity duration-200 cursor-pointer"
-          onClick={() => setExpanded(false)}
-        >
-          <div className="w-2 h-2 border-l-2 border-b-2 border-blue-300 transform -rotate-45"></div>
-        </div>
-      )}
     </div>
   );
 }

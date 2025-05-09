@@ -12,6 +12,7 @@ const ContractAlterScroll = () => {
   const [animating, setAnimating] = useState(false);
   const [coinTypes, setCoinTypes] = useState([]);
   const [formattedAmounts, setFormattedAmounts] = useState([]);
+  const [coinIcon, setCoinIcon] = useState([]);
   const [manualControl, setManualControl] = useState(false);
 
   // 保留所有原始查詢和資料處理邏輯...
@@ -91,14 +92,15 @@ const ContractAlterScroll = () => {
 
   // 保留金額格式化邏輯
   useEffect(() => {
-    if (!coinMetadataQueries?.data || !coinsInVault.length) return;
-
+    if (!coinMetadataQueries?.data || !coinsInVault.length) 
+      return;
     try {
       const formatted = coinsInVault.map((coin, index) => {
         const amount = BigInt(coin[2]);
         const decimals = coinMetadataQueries.data[index]?.decimals || 0;
         const divisor = BigInt(10) ** BigInt(decimals);
         
+
         let formattedAmount;
         if (divisor === BigInt(1)) {
           formattedAmount = amount.toString();
@@ -150,7 +152,6 @@ const ContractAlterScroll = () => {
             }
           }
         }
-
         const coinSymbol = fullCoinType.split("::").pop() || "Unknown";
         const amount = coinObj.data?.content?.fields?.balance || "0";
 
@@ -167,6 +168,8 @@ const ContractAlterScroll = () => {
     }
   }, [coinData.data]);
 
+
+  
   // 簡化 loading 邏輯
   useEffect(() => {
     const isDataLoading = !coinData.data && objectIds.length > 0;
@@ -259,7 +262,7 @@ const ContractAlterScroll = () => {
               <div className="flex items-center justify-between h-full px-6">
                 {/* 左側 - 代幣標誌與名稱 */}
                 <div className="flex items-center space-x-3">
-                  {getTokenIcon(coinsInVault[currentIndex][0])}
+                  <img href= {coinMetadataQueries.data[currentIndex]?.iconUrl}></img>
                   <div>
                     <div className="text-gray-900 font-semibold tracking-tight">
                       {coinsInVault[currentIndex][0]}

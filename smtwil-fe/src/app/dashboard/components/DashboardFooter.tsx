@@ -61,8 +61,8 @@ export default function DashboardFooter() {
       {/* 內容 */}
       <div className="relative py-4 px-6 backdrop-blur-sm bg-gradient-to-b from-blue-50/80 to-white">
         <div className="flex justify-between items-center flex-wrap gap-4 max-w-7xl mx-auto">
-          {/* 左側：連結和 ContractAlterScroll */}
-          <div className="flex items-center space-x-6">
+          {/* 左側：連結、社交媒體、版權和時間 */}
+          <div className="flex items-center space-x-12">
             <div className="flex space-x-6">
               <a
                 href="#"
@@ -77,45 +77,47 @@ export default function DashboardFooter() {
                 Privacy
               </a>
             </div>
-            <ContractAlterScroll />
+            <div className="flex items-center space-x-6">
+              <div className="flex space-x-4">
+                {socialLinks.map((social, index) => (
+                  <a
+                    key={index}
+                    href={social.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="group relative"
+                    aria-label={social.name}
+                    title={social.name}
+                  >
+                    <div
+                      className="absolute -inset-2 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-300 blur-md"
+                      style={{ background: social.color }}
+                    ></div>
+                    <div className="relative flex items-center justify-center w-10 h-10 rounded-full transition-all duration-300 transform backdrop-blur-sm group-hover:scale-110 border border-white border-opacity-30 group-hover:border-opacity-0">
+                      <div className="text-white group-hover:scale-110 transition-transform duration-300">
+                        <img
+                          src={social.icon}
+                          alt={social.name}
+                          className="w-6 h-6"
+                        />
+                      </div>
+                    </div>
+                  </a>
+                ))}
+              </div>
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-cyan-500 font-medium">
+                © {new Date().getFullYear()} SeaWallet{" "}
+                <span className="text-slate-700">Copyright Reserved</span>
+              </span>
+              <div className="text-sm text-blue-600/90 bg-blue-50 px-3 py-1 rounded-full shadow-sm">
+                {currentTime} UTC+8
+              </div>
+            </div>
           </div>
 
-          {/* 右側：社交媒體、版權和時間 */}
-          <div className="flex items-center space-x-4">
-            <div className="flex space-x-4">
-              {socialLinks.map((social, index) => (
-                <a
-                  key={index}
-                  href={social.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="group relative"
-                  aria-label={social.name}
-                  title={social.name}
-                >
-                  <div
-                    className="absolute -inset-2 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-300 blur-md"
-                    style={{ background: social.color }}
-                  ></div>
-                  <div className="relative flex items-center justify-center w-10 h-10 rounded-full transition-all duration-300 transform backdrop-blur-sm group-hover:scale-110 border border-white border-opacity-30 group-hover:border-opacity-0">
-                    <div className="text-white group-hover:scale-110 transition-transform duration-300">
-                      <img
-                        src={social.icon}
-                        alt={social.name}
-                        className="w-6 h-6"
-                      />
-                    </div>
-                  </div>
-                </a>
-              ))}
-            </div>
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-cyan-500 font-medium">
-              © {new Date().getFullYear()} SeaWallet{" "}
-              <span className="text-slate-700">Copyright Reserved</span>
-            </span>
-            <div className="text-sm text-blue-600/90 bg-blue-50 px-3 py-1 rounded-full shadow-sm">
-              {currentTime} UTC+8
-            </div>
+          {/* 右側：ContractAlterScroll */}
+          <div>
+            <ContractAlterScroll />
           </div>
         </div>
       </div>
