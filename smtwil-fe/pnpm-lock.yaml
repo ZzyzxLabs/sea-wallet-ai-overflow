@@ -18,8 +18,8 @@ importers:
         specifier: ^0.1.8
         version: 0.1.8(typescript@5.8.3)
       '@mysten/sui':
-        specifier: ^1.26.1
-        version: 1.26.1(typescript@5.8.3)
+        specifier: ^1.29.1
+        version: 1.29.1(typescript@5.8.3)
       '@mysten/zksend':
         specifier: ^0.12.28
         version: 0.12.28(typescript@5.8.3)
@@ -331,6 +331,9 @@ packages:
   '@mysten/bcs@1.6.0':
     resolution: {integrity: sha512-ydDRYdIkIFCpHCcPvAkMC91fVwumjzbTgjqds0KsphDQI3jUlH3jFG5lfYNTmV6V3pkhOiRk1fupLBcsQsiszg==}
 
+  '@mysten/bcs@1.6.1':
+    resolution: {integrity: sha512-pywsl2+jxbib5CbteAjMpmJpnj1pcUco2ff+lXCK3hfppPbkyWEMbZDQn1jNngV6ADQ3IFIvPs0FaS7fKWPOLA==}
+
   '@mysten/dapp-kit@0.15.2':
     resolution: {integrity: sha512-wlGIeO9yauEZf4KSGj2hvxrNs08wgeDIdzga1NNiugc+mCYxtMV1B99MWeEa5Is4DVjQSVlm57NwGCEbSyQCDA==}
     peerDependencies:
@@ -347,6 +350,10 @@ packages:
 
   '@mysten/sui@1.28.2':
     resolution: {integrity: sha512-d+lSp3rAtuOX0taIiIv0KNILDsbmAB9koNGHBinfREraGnE9tUFW315UByuyvuZ9K53ji4i2risdtwxCQ1a8Zw==}
+    engines: {node: '>=18'}
+
+  '@mysten/sui@1.29.1':
+    resolution: {integrity: sha512-VkmaLIgXpuRMBFe47SC0swHemDx9qfhGQyxybFr2r3dTnh42gTFi0BlyW3aLr0Y2GxWbNlLphB5C3ELR7aqacw==}
     engines: {node: '>=18'}
 
   '@mysten/utils@0.0.0':
@@ -3121,6 +3128,11 @@ snapshots:
     dependencies:
       '@scure/base': 1.2.4
 
+  '@mysten/bcs@1.6.1':
+    dependencies:
+      '@mysten/utils': 0.0.0
+      '@scure/base': 1.2.4
+
   '@mysten/dapp-kit@0.15.2(@tanstack/react-query@5.72.2(react@19.1.0))(@types/react@19.1.0)(react-dom@19.1.0(react@19.1.0))(react@19.1.0)(typescript@5.8.3)':
     dependencies:
       '@mysten/sui': 1.26.1(typescript@5.8.3)
@@ -3180,6 +3192,25 @@ snapshots:
     dependencies:
       '@graphql-typed-document-node/core': 3.2.0(graphql@16.10.0)
       '@mysten/bcs': 1.6.0
+      '@mysten/utils': 0.0.0
+      '@noble/curves': 1.8.1
+      '@noble/hashes': 1.7.1
+      '@scure/base': 1.2.4
+      '@scure/bip32': 1.6.2
+      '@scure/bip39': 1.5.4
+      gql.tada: 1.8.10(graphql@16.10.0)(typescript@5.8.3)
+      graphql: 16.10.0
+      poseidon-lite: 0.2.1
+      valibot: 0.36.0
+    transitivePeerDependencies:
+      - '@gql.tada/svelte-support'
+      - '@gql.tada/vue-support'
+      - typescript
+
+  '@mysten/sui@1.29.1(typescript@5.8.3)':
+    dependencies:
+      '@graphql-typed-document-node/core': 3.2.0(graphql@16.10.0)
+      '@mysten/bcs': 1.6.1
       '@mysten/utils': 0.0.0
       '@noble/curves': 1.8.1
       '@noble/hashes': 1.7.1
