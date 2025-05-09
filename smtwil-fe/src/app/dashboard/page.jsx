@@ -7,7 +7,6 @@ export default function Dashboard() {
       <p className="text-lg">Welcome to the Dashboard!</p>
       <p className="text-lg">This is where you can manage your account and settings.</p>
       <ContractAlter />
-      <ContractAlterScroll />
     </div>
   ); 
 }

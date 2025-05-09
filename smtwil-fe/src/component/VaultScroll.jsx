@@ -1,7 +1,6 @@
 "use client";
 import React, { useEffect, useState, useCallback } from "react";
 import { useCurrentAccount, useSuiClientQueries, useSuiClientQuery } from "@mysten/dapp-kit";
-import ButtonInContractAlter from "./ButtonInContractAlter";
 import useMoveStore from "../store/moveStore";
 
 const ContractAlterScroll = () => {
