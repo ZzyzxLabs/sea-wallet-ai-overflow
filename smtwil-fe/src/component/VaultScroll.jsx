@@ -2,6 +2,7 @@
 import React, { useEffect, useState, useCallback } from "react";
 import { useCurrentAccount, useSuiClientQueries, useSuiClientQuery } from "@mysten/dapp-kit";
 import useMoveStore from "../store/moveStore";
+import { Img } from "react-image";
 
 const ContractAlterScroll = () => {
   const account = useCurrentAccount();
@@ -12,10 +13,9 @@ const ContractAlterScroll = () => {
   const [animating, setAnimating] = useState(false);
   const [coinTypes, setCoinTypes] = useState([]);
   const [formattedAmounts, setFormattedAmounts] = useState([]);
-  const [coinIcon, setCoinIcon] = useState([]);
   const [manualControl, setManualControl] = useState(false);
+  const [coinIcons, setCoinIcons] = useState([]);
 
-  // 保留所有原始查詢和資料處理邏輯...
   const vaultAndCap = useSuiClientQuery(
     "getOwnedObjects",
     {
@@ -27,8 +27,7 @@ const ContractAlterScroll = () => {
       staleTime: 30000,
     }
   );
-  
-  // 保留原始邏輯...
+
   const getVaultAndCap = useCallback(() => {
     let ownerCapObjects = null;
     let vaultID = null;
@@ -40,9 +39,9 @@ const ContractAlterScroll = () => {
     }
     return { ownerCapObjects, vaultID };
   }, [vaultAndCap.data, packageName]);
-  
+
   const { vaultID } = getVaultAndCap();
-  
+
   const vaultList = useSuiClientQuery(
     "getDynamicFields",
     { parentId: vaultID },
@@ -51,14 +50,14 @@ const ContractAlterScroll = () => {
       staleTime: 30000,
     }
   );
-  
+
   const getObjectIds = useCallback(() => {
     if (!vaultList?.data?.data) return [];
     return vaultList.data.data.map((item) => item.objectId);
   }, [vaultList?.data]);
-  
+
   const objectIds = getObjectIds();
-  
+
   const coinData = useSuiClientQuery(
     "multiGetObjects",
     {
@@ -70,118 +69,84 @@ const ContractAlterScroll = () => {
       staleTime: 30000,
     }
   );
-  
+
   const coinMetadataQueries = useSuiClientQueries({
     queries: coinTypes.map(coinType => ({
       method: "getCoinMetadata",
-      params: {
-        coinType: coinType
-      }
+      params: { coinType: coinType }
     })),
-    combine: (result) => {
-      return {
-        data: result.map((res) => res.data),
-        isSuccess: result.every((res) => res.isSuccess),
-        isPending: result.some((res) => res.isPending),
-        isError: result.some((res) => res.isError),
-      };
-    },
+    combine: (result) => ({
+      data: result.map((res) => res.data),
+      isSuccess: result.every((res) => res.isSuccess),
+      isPending: result.some((res) => res.isPending),
+      isError: result.some((res) => res.isError),
+    }),
     enabled: coinTypes.length > 0,
     staleTime: 30000,
   });
 
-  // 保留金額格式化邏輯
   useEffect(() => {
-    if (!coinMetadataQueries?.data || !coinsInVault.length) 
-      return;
-    try {
-      const formatted = coinsInVault.map((coin, index) => {
-        const amount = BigInt(coin[2]);
-        const decimals = coinMetadataQueries.data[index]?.decimals || 0;
-        const divisor = BigInt(10) ** BigInt(decimals);
-        
+    if (!coinMetadataQueries?.data) return;
+    const icons = coinMetadataQueries.data.map(metadata => metadata?.iconUrl || null);
+    setCoinIcons(icons);
+  }, [coinMetadataQueries?.data]);
 
-        let formattedAmount;
-        if (divisor === BigInt(1)) {
-          formattedAmount = amount.toString();
-        } else {
-          const integerPart = amount / divisor;
-          const fractionalPart = amount % divisor;
-          const paddedFractionalPart = fractionalPart.toString().padStart(decimals, '0');
-          
-          formattedAmount = `${integerPart}.${paddedFractionalPart}`;
-          formattedAmount = formattedAmount.replace(/\.?0+$/, '');
-        }
-        
-        return formattedAmount;
-      });
-      
-      setFormattedAmounts(formatted);
-    } catch (error) {
-      console.error("Error formatting amounts:", error);
-    }
+  useEffect(() => {
+    if (!coinMetadataQueries?.data || !coinsInVault.length) return;
+    const formatted = coinsInVault.map((coin, index) => {
+      const amount = BigInt(coin[2]);
+      const decimals = coinMetadataQueries.data[index]?.decimals || 0;
+      const divisor = BigInt(10) ** BigInt(decimals);
+      let formattedAmount;
+      if (divisor === BigInt(1)) {
+        formattedAmount = amount.toString();
+      } else {
+        const integerPart = amount / divisor;
+        const fractionalPart = amount % divisor;
+        const paddedFractionalPart = fractionalPart.toString().padStart(decimals, '0');
+        formattedAmount = `${integerPart}.${paddedFractionalPart}`.replace(/\.?0+$/, '');
+      }
+      return formattedAmount;
+    });
+    setFormattedAmounts(formatted);
   }, [coinMetadataQueries?.data, coinsInVault]);
 
-  // 保留代幣資料處理邏輯
   useEffect(() => {
     if (!coinData.data) return;
-
-    try {
-      const processedCoins = [];
-      const extractedCoinTypes = [];
-
-      coinData.data.forEach((coinObj) => {
-        if (!coinObj?.data?.content) return;
-
-        const type = coinObj.data.type || "";
-        const typeMatch = type.match(/<(.+)>/);
-        const fullCoinType = typeMatch ? typeMatch[1] : "Unknown";
-
-        let formattedCoinType = "Unknown";
-        if (fullCoinType !== "Unknown") {
-          const parts = fullCoinType.split("::");
-          if (parts.length > 0) {
-            const address = parts[0];
-            if (address.length > 10) {
-              const prefix = address.substring(0, 7);
-              const suffix = address.substring(address.length - 5);
-              const remainingParts = parts.slice(1).join("::");
-              formattedCoinType = `${prefix}...${suffix}::${remainingParts}`;
-            } else {
-              formattedCoinType = fullCoinType;
-            }
-          }
+    const processedCoins = [];
+    const extractedCoinTypes = [];
+    coinData.data.forEach((coinObj) => {
+      if (!coinObj?.data?.content) return;
+      const type = coinObj.data.type || "";
+      const typeMatch = type.match(/<(.+)>/);
+      const fullCoinType = typeMatch ? typeMatch[1] : "Unknown";
+      let formattedCoinType = "Unknown";
+      if (fullCoinType !== "Unknown") {
+        const parts = fullCoinType.split("::");
+        if (parts.length > 0) {
+          const address = parts[0];
+          formattedCoinType = address.length > 10
+            ? `${address.substring(0, 7)}...${address.substring(address.length - 5)}::${parts.slice(1).join("::")}`
+            : fullCoinType;
         }
-        const coinSymbol = fullCoinType.split("::").pop() || "Unknown";
-        const amount = coinObj.data?.content?.fields?.balance || "0";
-
-        processedCoins.push([coinSymbol, formattedCoinType, amount, fullCoinType]);
-        extractedCoinTypes.push(fullCoinType);
-      });
-
-      setCoinsInVault(processedCoins);
-      setCoinTypes(extractedCoinTypes);
-      setIsLoading(false);
-    } catch (error) {
-      console.error("Error processing token data:", error);
-      setIsLoading(false);
-    }
+      }
+      const coinSymbol = fullCoinType.split("::").pop() || "Unknown";
+      const amount = coinObj.data?.content?.fields?.balance || "0";
+      processedCoins.push([coinSymbol, formattedCoinType, amount, fullCoinType]);
+      extractedCoinTypes.push(fullCoinType);
+    });
+    setCoinsInVault(processedCoins);
+    setCoinTypes(extractedCoinTypes);
+    setIsLoading(false);
   }, [coinData.data]);
 
-
-  
-  // 簡化 loading 邏輯
   useEffect(() => {
     const isDataLoading = !coinData.data && objectIds.length > 0;
-    if (isLoading !== isDataLoading) {
-      setIsLoading(isDataLoading);
-    }
-  }, [coinData.data, objectIds, isLoading]);
+    setIsLoading(isDataLoading);
+  }, [coinData.data, objectIds]);
 
-  // 優化的自動輪播效果，加入手動控制
   useEffect(() => {
     if (coinsInVault.length <= 1) return;
-    
     let timer;
     if (!manualControl) {
       timer = setInterval(() => {
@@ -189,14 +154,12 @@ const ContractAlterScroll = () => {
         setTimeout(() => {
           setCurrentIndex((prevIndex) => (prevIndex + 1) % coinsInVault.length);
           setAnimating(false);
-        }, 700); // 增加動畫持續時間為更流暢的效果
-      }, 6000); // 增加到6秒切換一次
+        }, 700);
+      }, 6000);
     }
-    
     return () => clearInterval(timer);
   }, [coinsInVault.length, manualControl]);
 
-  // 手動切換到前一個代幣
   const goToPrevious = () => {
     setManualControl(true);
     setAnimating(true);
@@ -204,12 +167,9 @@ const ContractAlterScroll = () => {
       setCurrentIndex((prevIndex) => (prevIndex - 1 + coinsInVault.length) % coinsInVault.length);
       setAnimating(false);
     }, 700);
-    
-    // 6秒後恢復自動輪播
     setTimeout(() => setManualControl(false), 6000);
   };
 
-  // 手動切換到下一個代幣
   const goToNext = () => {
     setManualControl(true);
     setAnimating(true);
@@ -217,30 +177,40 @@ const ContractAlterScroll = () => {
       setCurrentIndex((prevIndex) => (prevIndex + 1) % coinsInVault.length);
       setAnimating(false);
     }, 700);
-    
-    // 6秒後恢復自動輪播
     setTimeout(() => setManualControl(false), 6000);
   };
 
-  // 獲取代幣 ICON，優化使用漸變背景
-  const getTokenIcon = (tokenName) => {
+  const getTokenIcon = (tokenName, iconUrl) => {
+    if (iconUrl) {
+      return (
+        <div className="rounded-full w-8 h-8 flex items-center justify-center shadow-lg relative overflow-hidden">
+          <Img
+            src={iconUrl}
+            alt={`${tokenName} icon`}
+            className="w-full h-full object-cover"
+            loader={
+              <div className="w-full h-full flex items-center justify-center bg-gray-200 animate-pulse">
+                <span className="text-sm font-bold text-gray-500">{tokenName.substring(0, 2).toUpperCase()}</span>
+              </div>
+            }
+            unloader={
+              <div className="w-full h-full flex items-center justify-center bg-gradient-to-r from-gray-300 to-gray-400">
+                <span className="text-sm font-bold text-white">{tokenName.substring(0, 2).toUpperCase()}</span>
+              </div>
+            }
+          />
+        </div>
+      );
+    }
     const initials = tokenName.substring(0, 2).toUpperCase();
-    // 為每個代幣生成獨特顏色 (基於簡單的哈希)
     const hash = tokenName.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
     const hue = hash % 360;
-    
     return (
-      <div 
-        className="rounded-full w-8 h-8 flex items-center justify-center text-white text-sm font-bold shadow-lg relative overflow-hidden"
-        style={{
-          background: `linear-gradient(135deg, hsl(${hue}, 80%, 55%), hsl(${(hue+60) % 360}, 85%, 45%))`,
-          transform: 'translateZ(0)'
-        }}
+      <div
+        className="rounded-full w-8 h-8 flex items-center justify-center shadow-lg"
+        style={{ background: `hsl(${hue}, 70%, 80%)` }}
       >
-        <span className="drop-shadow-md z-10">{initials}</span>
-        <div className="absolute inset-0 bg-white opacity-20 animate-pulse" 
-             style={{animationDuration: '3s'}}></div>
-        <div className="absolute inset-0 bg-gradient-to-tr from-white/0 to-white/20 rounded-full"></div>
+        <span className="text-sm font-bold text-white">{initials}</span>
       </div>
     );
   };
@@ -255,14 +225,14 @@ const ContractAlterScroll = () => {
           </div>
         ) : coinsInVault.length > 0 ? (
           <div className="relative h-full">
-            {/* 主要卡片內容 - 橫向布局 */}
-            <div className={`transition-all duration-700 ease-in-out transform h-full ${
-              animating ? "opacity-0 translate-y-8 scale-98" : "opacity-100 translate-y-0 scale-100"
-            }`}>
+            <div
+              className={`transition-all duration-700 ease-in-out transform h-full ${
+                animating ? "opacity-0 translate-y-8 scale-98" : "opacity-100 translate-y-0 scale-100"
+              }`}
+            >
               <div className="flex items-center justify-between h-full px-6">
-                {/* 左側 - 代幣標誌與名稱 */}
                 <div className="flex items-center space-x-3">
-                  <img href= {coinMetadataQueries.data[currentIndex]?.iconUrl}></img>
+                  {getTokenIcon(coinsInVault[currentIndex][0], coinIcons[currentIndex])}
                   <div>
                     <div className="text-gray-900 font-semibold tracking-tight">
                       {coinsInVault[currentIndex][0]}
@@ -270,8 +240,6 @@ const ContractAlterScroll = () => {
                     <div className="text-xs text-gray-500 font-medium">{coinsInVault[currentIndex][1]}</div>
                   </div>
                 </div>
-                
-                {/* 中間 - 數量 */}
                 <div className="flex-1 max-w-xs mx-6">
                   <div className="bg-gradient-to-r from-gray-50/70 to-white/80 rounded-xl p-2.5 transform transition-all duration-300 hover:scale-102 hover:shadow-sm">
                     <div className="flex justify-between items-center">
@@ -282,17 +250,14 @@ const ContractAlterScroll = () => {
                     </div>
                   </div>
                 </div>
-                
-                {/* 右側 - 估算價值和控制 */}
                 <div className="flex items-center space-x-5">
                   <div className="text-right">
                     <div className="text-gray-800 font-medium text-xs uppercase tracking-wider">估算價值</div>
                     <div className="text-lg font-bold text-gray-900 tracking-tight">-</div>
                   </div>
-                  
                   {coinsInVault.length > 1 && (
                     <div className="flex items-center space-x-2">
-                      <button 
+                      <button
                         onClick={goToPrevious}
                         className="text-gray-700 hover:text-indigo-600 transition-all p-1 rounded-full hover:bg-white/80 active:scale-95"
                         aria-label="前一個資產"
@@ -301,14 +266,13 @@ const ContractAlterScroll = () => {
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15 19l-7-7 7-7" />
                         </svg>
                       </button>
-                      
                       <div className="flex space-x-1">
                         {coinsInVault.map((_, index) => (
-                          <div 
-                            key={index} 
+                          <div
+                            key={index}
                             className={`h-1.5 rounded-full transition-all duration-500 ${
-                              index === currentIndex 
-                                ? "w-4 bg-gradient-to-r from-indigo-400 to-indigo-600 shadow-sm" 
+                              index === currentIndex
+                                ? "w-4 bg-gradient-to-r from-indigo-400 to-indigo-600 shadow-sm"
                                 : "w-1.5 bg-gray-300/70 hover:bg-gray-400/80 cursor-pointer"
                             }`}
                             onClick={() => {
@@ -325,8 +289,7 @@ const ContractAlterScroll = () => {
                           ></div>
                         ))}
                       </div>
-                      
-                      <button 
+                      <button
                         onClick={goToNext}
                         className="text-gray-700 hover:text-indigo-600 transition-all p-1 rounded-full hover:bg-white/80 active:scale-95"
                         aria-label="下一個資產"

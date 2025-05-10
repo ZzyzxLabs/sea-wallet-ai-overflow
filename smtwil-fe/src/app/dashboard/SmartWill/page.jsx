@@ -5,9 +5,7 @@ import { useCurrentAccount } from "@mysten/dapp-kit";
 import { useState, useEffect } from "react";
 import useHeirStore from "../../../store/heirStore"; // 確保正確引入 store 路徑
 import { useRouter } from "next/navigation";
-import ContractAlter from "../../../component/ContractAlter"; // 確保正確引入 ContractAlter 組件"
-import  TextToFileComponent  from "../../../component/willComponent/willTXT"
-
+import  { AllWilllist }  from "../../../component/willComponent/willmain";
 export default function Dashboard() {
   const account = useCurrentAccount();
   const router = useRouter();
@@ -112,7 +110,12 @@ export default function Dashboard() {
           Inspect and Alter your Smart Will
         </p>
       </div>
-      
+      <AllWilllist 
+        width="50%" 
+        height="400px" 
+        maxWidth="600px"
+        style={{ margin: '20px auto' }}
+      />
       <div className="flex flex-col md:flex-row h-content">
         {/* 左側區域 - 100 天倒計時 */}
         <div className="flex-1 bg-secondary p-6">
@@ -217,7 +220,6 @@ export default function Dashboard() {
             ) : (
               <div className="text-center py-10 text-gray-500">
                 <p>No heirs have been set up yet.</p>
-                <TextToFileComponent />
               </div>
             )}
 
@@ -229,7 +231,7 @@ export default function Dashboard() {
           </div>
         </div>
       </div>
-      < ContractAlter /> 
+
       <div className="p-10"></div>
     </div>
   );

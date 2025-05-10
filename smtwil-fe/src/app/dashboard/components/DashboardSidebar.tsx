@@ -139,92 +139,103 @@ export default function DashboardSidebar() {
       {/* 導航項目 - 水波紋動畫效果 */}
       <nav className="flex-1 mt-4 overflow-y-auto scrollbar-hidden" style={{ maxHeight: 'calc(100vh - 150px)' }}>
         <ul>
-          {sidebarItems.map((item, index) => {
-            const isActive = pathname === item.href || (pathname && pathname.startsWith(item.href + '/'));
-            const hasSubmenu = item.submenu && item.submenu.length > 0;
-            const isSubmenuOpen = openSubmenu === index;
-            
-            return (
-              <li key={item.href} className="mb-2 px-2">
-                <div className="relative">
-                  {/* 主選單項目 */}
-                  <div 
-                    onClick={hasSubmenu ? (e) => toggleSubmenu(index, e) : undefined}
-                    className={`flex items-center p-3 rounded-lg transition-all duration-300 ${
-                      isActive 
-                        ? 'bg-gradient-to-r from-blue-700 to-cyan-600 text-white shadow-lg' 
-                        : 'text-blue-100 hover:bg-blue-800/30'
-                    } ${hasSubmenu ? 'cursor-pointer' : ''}`}
-                    style={{
-                      boxShadow: isActive ? '0 4px 10px rgba(0, 150, 255, 0.3)' : 'none'
-                    }}
-                  >
-                    <div className="w-6 h-6 relative">
-                      <Image
-                        src={item.icon}
-                        alt={`${item.label} 圖標`}
-                        fill
-                        className="object-contain"
-                        style={{ 
-                          filter: isActive 
-                            ? 'brightness(1.2) drop-shadow(0 0 2px rgba(255, 255, 255, 0.5))' 
-                            : 'brightness(1)'
-                        }}
-                      />
-                    </div>
-                    <div className="ml-4 whitespace-nowrap overflow-hidden text-sm font-medium flex-grow"
-                         style={{ 
-                           opacity: expanded ? 1 : 0, 
-                           transition: 'opacity 0.3s',
-                         }}>
-                      {expanded && getDisplayText(index, item.label)}
-                    </div>
-                    {/* 下拉箭頭 (只在展開且有子選單時顯示) */}
-                    {expanded && hasSubmenu && (
-                      <div className="ml-2 transition-transform duration-300" style={{ 
-                        transform: isSubmenuOpen ? 'rotate(180deg)' : 'rotate(0deg)'
-                      }}>
-                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                          <polyline points="6 9 12 15 18 9"></polyline>
-                        </svg>
-                      </div>
-                    )}
-                  </div>
-                  
-                  {/* 子選單 */}
-                  {hasSubmenu && expanded && (
-                    <div 
-                      className="overflow-hidden transition-all duration-300 pl-6 mt-1"
-                      style={{ 
-                        maxHeight: isSubmenuOpen ? `${item.submenu.length * 2.5}rem` : '0',
-                        opacity: isSubmenuOpen ? 1 : 0,
-                      }}
-                    >
-                      <ul className="space-y-1 py-1">
-                        {item.submenu.map((subItem, subIndex) => {
-                          const isSubActive = pathname === subItem.href;
-                          return (
-                            <li key={subItem.href}>
-                              <Link 
-                                href={subItem.href}
-                                className={`block px-3 py-2 rounded-md text-sm transition-colors duration-200 ${
-                                  isSubActive 
-                                    ? 'bg-blue-600/40 text-white' 
-                                    : 'text-blue-200 hover:bg-blue-700/30'
-                                }`}
-                              >
-                                {textProgress >= 1.5 ? subItem.label : generateWaveText(subItem.label, textProgress)}
-                              </Link>
-                            </li>
-                          );
-                        })}
-                      </ul>
-                    </div>
-                  )}
+        {sidebarItems.map((item, index) => {
+        const isActive = pathname === item.href || (pathname && pathname.startsWith(item.href + '/'));
+        const hasSubmenu = item.submenu && item.submenu.length > 0;
+        const isSubmenuOpen = openSubmenu === index;
+        
+        const menuContent = (
+          <div className={`flex items-center p-3 rounded-lg transition-all duration-300 ${
+            isActive 
+              ? 'bg-gradient-to-r from-blue-700 to-cyan-600 text-white shadow-lg' 
+              : 'text-blue-100 hover:bg-blue-800/30'
+          }`}
+          style={{
+            boxShadow: isActive ? '0 4px 10px rgba(0, 150, 255, 0.3)' : 'none'
+          }}>
+            <div className="w-6 h-6 relative">
+              <Image
+                src={item.icon}
+                alt={`${item.label} 圖標`}
+                fill
+                className="object-contain"
+                style={{ 
+                  filter: isActive 
+                    ? 'brightness(1.2) drop-shadow(0 0 2px rgba(255, 255, 255, 0.5))' 
+                    : 'brightness(1)'
+                }}
+              />
+            </div>
+            <div className="ml-4 whitespace-nowrap overflow-hidden text-sm font-medium flex-grow"
+                style={{ 
+                  opacity: expanded ? 1 : 0, 
+                  transition: 'opacity 0.3s',
+                }}>
+              {expanded && getDisplayText(index, item.label)}
+            </div>
+            {/* 下拉箭頭 (只在展開且有子選單時顯示) */}
+            {expanded && hasSubmenu && (
+              <div className="ml-2 transition-transform duration-300" style={{ 
+                transform: isSubmenuOpen ? 'rotate(180deg)' : 'rotate(0deg)'
+              }}>
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="6 9 12 15 18 9"></polyline>
+                </svg>
+              </div>
+            )}
+          </div>
+        );
+        
+        return (
+          <li key={item.href} className="mb-2 px-2">
+            <div className="relative">
+              {/* 主選單項目 */}
+              {hasSubmenu ? (
+                // 有子選單的項目保持 div 結構並使用 onClick
+                <div onClick={(e) => toggleSubmenu(index, e)} className="cursor-pointer">
+                  {menuContent}
                 </div>
-              </li>
-            );
-          })}
+              ) : (
+                // 沒有子選單的項目使用 Link 元件
+                <Link href={item.href}>
+                  {menuContent}
+                </Link>
+              )}
+              
+              {/* 子選單 */}
+              {hasSubmenu && expanded && (
+                <div 
+                  className="overflow-hidden transition-all duration-300 pl-6 mt-1"
+                  style={{ 
+                    maxHeight: isSubmenuOpen ? `${item.submenu.length * 2.5}rem` : '0',
+                    opacity: isSubmenuOpen ? 1 : 0,
+                  }}
+                >
+                  <ul className="space-y-1 py-1">
+                    {item.submenu.map((subItem, subIndex) => {
+                      const isSubActive = pathname === subItem.href;
+                      return (
+                        <li key={subItem.href}>
+                          <Link 
+                            href={subItem.href}
+                            className={`block px-3 py-2 rounded-md text-sm transition-colors duration-200 ${
+                              isSubActive 
+                                ? 'bg-blue-600/40 text-white' 
+                                : 'text-blue-200 hover:bg-blue-700/30'
+                            }`}
+                          >
+                            {textProgress >= 1.5 ? subItem.label : generateWaveText(subItem.label, textProgress)}
+                          </Link>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                </div>
+              )}
+      </div>
+    </li>
+  );
+})}
         </ul>
       </nav>
 

@@ -1,20 +1,13 @@
 "use client";
 
-import { createNetworkConfig, SuiClientProvider, WalletProvider } from "@mysten/dapp-kit";
-import { getFullnodeUrl } from "@mysten/sui/client";
+import { SuiClientProvider, WalletProvider } from "@mysten/dapp-kit";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import React from "react";
 import { Theme } from "@radix-ui/themes";
 import "@radix-ui/themes/styles.css";
 import "@mysten/dapp-kit/dist/index.css";
 import { ThemeProvider } from "../component/ThemeContext";
-
-// 配置你要連接的網路
-const { networkConfig } = createNetworkConfig({
-  localnet: { url: getFullnodeUrl("localnet") },
-  mainnet: { url: getFullnodeUrl("mainnet") },
-  testnet: { url: getFullnodeUrl("testnet") },
-});
+import { networkConfig } from './networkConfig';
 
 const queryClient = new QueryClient();
 
