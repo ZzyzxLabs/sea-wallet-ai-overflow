@@ -1,14 +1,17 @@
 "use client"
-import { useCurrentAccount, useSignAndExecuteTransaction, useSuiClient } from '@mysten/dapp-kit';
+import { useCurrentAccount, useSignAndExecuteTransaction, useSuiClient, useSignPersonalMessage } from '@mysten/dapp-kit';
 import { Transaction } from '@mysten/sui/transactions';
-import { Button, Card, Flex, Box, Text, Heading, Separator, Tabs, TextArea, Spinner } from '@radix-ui/themes';
+import { Button, Card, Flex, Box, Text, Heading, Separator, Tabs, TextArea, Spinner, Dialog, AlertDialog } from '@radix-ui/themes';
 import { useCallback, useEffect, useState, useRef } from 'react';
-import { X, ArrowLeft, Plus, Upload, FileText, Waves, Anchor, Fish, Droplet } from 'lucide-react';
+import { X, ArrowLeft, Plus, Upload, FileText, Waves, Anchor, Fish, Droplet, Eye } from 'lucide-react';
 import { isValidSuiAddress } from '@mysten/sui/utils';
 import { useNetworkVariable } from '../../app/networkConfig';
 import { getObjectExplorerLink } from '../../store/sealWill/Will_utils';
-import { getAllowlistedKeyServers, SealClient } from '@mysten/seal';
+import { getAllowlistedKeyServers, SealClient, SessionKey, NoAccessError } from '@mysten/seal';
 import { fromHex, toHex } from '@mysten/sui/utils';
+import { downloadAndDecrypt } from './utils_download';
+
+const TTL_MIN = 10;
 
 // 定義型別
 interface Cap {
@@ -23,7 +26,30 @@ interface CardItem {
   name: string;
 }
 
-const OceanCard = ({ item, index }: { item: CardItem; index: number }) => {
+interface FeedData {
+  allowlistId: string;
+  allowlistName: string;
+  blobIds: string[];
+}
+
+function constructMoveCall(packageId: string, allowlistId: string) {
+  return (tx: Transaction, id: string) => {
+    tx.moveCall({
+      target: `${packageId}::will::seal_approve`,
+      arguments: [tx.pure.vector('u8', fromHex(id)), tx.object(allowlistId)],
+    });
+  };
+}
+
+const OceanCard = ({ 
+  item, 
+  index, 
+  onViewDetails 
+}: { 
+  item: CardItem; 
+  index: number;
+  onViewDetails: (willlistId: string) => void;
+}) => {
   // 海洋風格的漸層色
   const gradients = [
     'linear-gradient(135deg, #1e3c72 0%, #2a5298 100%)',
@@ -133,15 +159,9 @@ const OceanCard = ({ item, index }: { item: CardItem; index: number }) => {
               color: 'white',
               border: '1px solid rgba(255, 255, 255, 0.3)',
             }}
-            onClick={() => {
-              const link = getObjectExplorerLink(item.cap_id);
-              if (typeof link === 'string') {
-                window.open(link, '_blank');
-              } else {
-                console.error('Invalid link:', link);
-              }
-            }}
+            onClick={() => onViewDetails(item.willlist_id)}
           >
+            <Eye size={16} style={{ marginRight: '8px' }} />
             查看詳情
           </Button>
         </Flex>
@@ -156,6 +176,22 @@ export const WillListDisplay = () => {
   const packageId = useNetworkVariable('packageId');
   const [cardItems, setCardItems] = useState<CardItem[]>([]);
   const [loading, setLoading] = useState(false);
+  const [selectedWillId, setSelectedWillId] = useState<string | null>(null);
+  const [decryptedTexts, setDecryptedTexts] = useState<string[]>([]);
+  const [error, setError] = useState<string | null>(null);
+  const [currentSessionKey, setCurrentSessionKey] = useState<SessionKey | null>(null);
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [reloadKey, setReloadKey] = useState(0);
+  const [feedData, setFeedData] = useState<FeedData | null>(null);
+  const [decrypting, setDecrypting] = useState(false);
+
+  const { mutate: signPersonalMessage } = useSignPersonalMessage();
+
+  const client = new SealClient({
+    suiClient,
+    serverObjectIds: getAllowlistedKeyServers('testnet'),
+    verifyKeyServers: false,
+  });
 
   const getCapObj = useCallback(async () => {
     if (!currentAccount?.address) return;
@@ -210,6 +246,80 @@ export const WillListDisplay = () => {
     getCapObj();
   }, [getCapObj]);
 
+  const handleViewDetails = async (willlistId: string) => {
+    setSelectedWillId(willlistId);
+    setIsDialogOpen(true);
+    setDecryptedTexts([]);
+    
+    // 獲取加密物件
+    try {
+      const allowlist = await suiClient.getObject({ id: willlistId, options: { showContent: true } });
+      const encryptedObjects = await suiClient.getDynamicFields({ parentId: willlistId }).then(res =>
+        res.data.map(obj => obj.name.value as string)
+      );
+      const fields = (allowlist.data?.content as { fields: any })?.fields || {};
+      
+      const feed = { 
+        allowlistId: willlistId, 
+        allowlistName: fields.name, 
+        blobIds: encryptedObjects 
+      };
+      setFeedData(feed);
+      
+      // 自動開始解密
+      if (encryptedObjects.length > 0) {
+        await onView(encryptedObjects, willlistId);
+      }
+    } catch (error) {
+      console.error('獲取加密資料時發生錯誤:', error);
+      setError('無法獲取加密資料');
+    }
+  };
+
+  const onView = async (blobIds: string[], allowlistId: string) => {
+    setDecrypting(true);
+    
+    // 確保有效的 sessionKey
+    if (currentSessionKey && !currentSessionKey.isExpired() && currentSessionKey.getAddress() === currentAccount?.address) {
+      await handleDecrypt(blobIds, allowlistId, currentSessionKey);
+      return;
+    }
+    
+    setCurrentSessionKey(null);
+    const sessionKey = new SessionKey({ address: currentAccount?.address!, packageId, ttlMin: TTL_MIN });
+    signPersonalMessage(
+      { message: sessionKey.getPersonalMessage() },
+      {
+        onSuccess: async result => {
+          await sessionKey.setPersonalMessageSignature(result.signature);
+          await handleDecrypt(blobIds, allowlistId, sessionKey);
+          setCurrentSessionKey(sessionKey);
+        },
+        onError: () => {
+          setDecrypting(false);
+          setError('簽名失敗');
+        }
+      }
+    );
+  };
+
+  const handleDecrypt = async (blobIds: string[], allowlistId: string, sessionKey: SessionKey) => {
+    const moveCallConstructor = constructMoveCall(packageId, allowlistId);
+    await downloadAndDecrypt(
+      blobIds,
+      sessionKey,
+      suiClient,
+      client,
+      moveCallConstructor,
+      setError,
+      setDecryptedTexts,
+      setIsDialogOpen,
+      setDecryptedTexts,
+      setReloadKey
+    );
+    setDecrypting(false);
+  };
+
   return (
     <Box
       style={{
@@ -250,7 +360,12 @@ export const WillListDisplay = () => {
           }}
         >
           {cardItems.map((item, index) => (
-            <OceanCard key={item.cap_id} item={item} index={index} />
+            <OceanCard 
+              key={item.cap_id} 
+              item={item} 
+              index={index}
+              onViewDetails={handleViewDetails}
+            />
           ))}
         </Box>
       )}
@@ -279,6 +394,119 @@ export const WillListDisplay = () => {
           </Text>
         </Flex>
       )}
+
+      {/* 詳情對話框 */}
+      <Dialog.Root open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+        <Dialog.Content 
+          maxWidth="600px"
+          style={{
+            background: 'linear-gradient(135deg, #ffffff 0%, #e3f2fd 100%)',
+            borderRadius: '16px',
+            boxShadow: '0 24px 48px rgba(0, 0, 0, 0.2)',
+          }}
+        >
+          <Dialog.Title 
+            style={{ 
+              color: '#0d47a1',
+              fontSize: '1.5rem',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '12px'
+            }}
+          >
+            <Anchor size={24} />
+            {feedData?.allowlistName || '遺囑詳情'}
+          </Dialog.Title>
+          
+          <Box mt="4">
+            {decrypting && (
+              <Flex align="center" justify="center" p="4">
+                <Spinner size="3" />
+                <Text ml="3" style={{ color: '#0d47a1' }}>正在解密資料...</Text>
+              </Flex>
+            )}
+            
+            {!decrypting && decryptedTexts.length > 0 && (
+              <Box>
+                <Text size="3" mb="3" style={{ color: '#1565c0' }}>
+                  解密內容：
+                </Text>
+                <Box
+                  style={{
+                    background: 'rgba(13, 71, 161, 0.05)',
+                    borderRadius: '12px',
+                    padding: '16px',
+                    maxHeight: '400px',
+                    overflowY: 'auto',
+                  }}
+                >
+                  {decryptedTexts.map((txt, idx) => (
+                    <Box
+                      key={idx}
+                      style={{
+                        background: 'white',
+                        padding: '12px',
+                        borderRadius: '8px',
+                        marginBottom: idx < decryptedTexts.length - 1 ? '12px' : '0',
+                        border: '1px solid rgba(13, 71, 161, 0.1)',
+                      }}
+                    >
+                      <pre style={{ 
+                        margin: 0, 
+                        whiteSpace: 'pre-wrap',
+                        color: '#333',
+                        fontFamily: 'monospace',
+                        fontSize: '14px',
+                      }}>
+                        {txt}
+                      </pre>
+                    </Box>
+                  ))}
+                </Box>
+              </Box>
+            )}
+            
+            {!decrypting && feedData?.blobIds.length === 0 && (
+              <Text style={{ color: '#757575', textAlign: 'center', padding: '32px' }}>
+                此遺囑沒有加密檔案
+              </Text>
+            )}
+          </Box>
+          
+          <Flex gap="3" mt="4" justify="end">
+            <Dialog.Close>
+              <Button 
+                variant="soft" 
+                color="gray"
+                style={{
+                  background: 'rgba(0, 0, 0, 0.05)',
+                }}
+                onClick={() => {
+                  setDecryptedTexts([]);
+                  setFeedData(null);
+                }}
+              >
+                關閉
+              </Button>
+            </Dialog.Close>
+          </Flex>
+        </Dialog.Content>
+      </Dialog.Root>
+
+      {/* 錯誤對話框 */}
+      <AlertDialog.Root open={!!error} onOpenChange={() => setError(null)}>
+        <AlertDialog.Content maxWidth="450px">
+          <AlertDialog.Title style={{ color: '#d32f2f' }}>錯誤</AlertDialog.Title>
+          <AlertDialog.Description size="2">{error}</AlertDialog.Description>
+          <Flex gap="3" mt="4" justify="end">
+            <AlertDialog.Action>
+              <Button variant="solid" color="red" onClick={() => setError(null)}>
+                關閉
+              </Button>
+            </AlertDialog.Action>
+          </Flex>
+        </AlertDialog.Content>
+      </AlertDialog.Root>
 
       {/* CSS 動畫 */}
       <style jsx>{`
