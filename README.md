@@ -1,1 +1,1 @@
-# Smart-Will
+# SeaWallet.ai
