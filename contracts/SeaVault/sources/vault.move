@@ -344,4 +344,9 @@ module smartwill::vault {
         };
         transfer::public_transfer(subproof, cap.paddr);
     }
+    //getter
+    public fun vaultID(vault: &Vault): ID {
+        let id = object::id(vault);
+        id
+    }
 }
