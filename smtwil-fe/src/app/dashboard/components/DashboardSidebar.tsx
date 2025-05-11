@@ -36,6 +36,14 @@ const sidebarItems = [
     label: 'Settings', 
     href: '/dashboard/settings' 
   },
+  {
+    icon: '/iconSidebar/RMBGhelp.png',
+    label: 'More',
+    href: '/dashboard/more',
+    submenu: [
+      { label: 'legacy', href: '/dashboard/more/legacy' },
+    ]
+  }
 ];
 
 // 水波紋動畫效果文字
@@ -117,7 +125,7 @@ export default function DashboardSidebar() {
     >
       {/* Logo 區域 - 海洋主題 */}
       <div className="p-4 flex items-center justify-center h-16 border-b border-opacity-20 border-blue-200">
-        <div className="w-8 h-8 relative">
+        <div className="w-10 h-10 relative">
           <Image
             src="/RMBGlogo.png"
             alt="SeaWallet Logo"
@@ -140,7 +148,22 @@ export default function DashboardSidebar() {
       <nav className="flex-1 mt-4 overflow-y-auto scrollbar-hidden" style={{ maxHeight: 'calc(100vh - 150px)' }}>
         <ul>
         {sidebarItems.map((item, index) => {
-        const isActive = pathname === item.href || (pathname && pathname.startsWith(item.href + '/'));
+        const isActive = (() => {
+          // 精確匹配當前路徑
+          if (pathname === item.href) return true;
+          
+          // 如果有子選單，檢查是否在子選單路徑上
+          if (item.submenu) {
+            return item.submenu.some(subItem => pathname === subItem.href);
+          }
+          
+          // 對於沒有子選單的項目，檢查是否為其子路徑（但排除 /dashboard 這個特殊情況）
+          if (item.href !== '/dashboard' && pathname && pathname.startsWith(item.href + '/')) {
+            return true;
+          }
+          
+          return false;
+        })();
         const hasSubmenu = item.submenu && item.submenu.length > 0;
         const isSubmenuOpen = openSubmenu === index;
         
@@ -153,12 +176,12 @@ export default function DashboardSidebar() {
           style={{
             boxShadow: isActive ? '0 4px 10px rgba(0, 150, 255, 0.3)' : 'none'
           }}>
-            <div className="w-6 h-6 relative">
+            <div className="w-10 h-8 relative">
               <Image
                 src={item.icon}
                 alt={`${item.label} 圖標`}
                 fill
-                className="object-contain"
+                className="object-contain" // 放大 1.5 倍
                 style={{ 
                   filter: isActive 
                     ? 'brightness(1.2) drop-shadow(0 0 2px rgba(255, 255, 255, 0.5))' 
