@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 const exampleService = [
     {
@@ -31,137 +31,269 @@ const formatAddress = (address) => {
 };
 
 export default function Subscriptions() {
-    // State to track selected subscription
     const [selectedService, setSelectedService] = useState(null);
+    const [selectedProduct, setSelectedProduct] = useState(null);
+    const [filterType, setFilterType] = useState('all'); // 'all', 'deducted', 'notDeducted'
+    const [currentTime, setCurrentTime] = useState(Date.now());
     
-    // Get products for display - either from selected service or all services
-    const getDisplayedProducts = () => {
-        if (selectedService !== null) {
-            return [exampleService[selectedService]];
+    // Update current time every minute
+    useEffect(() => {
+        const interval = setInterval(() => {
+            setCurrentTime(Date.now());
+        }, 60000);
+        
+        return () => clearInterval(interval);
+    }, []);
+    
+    // Calculate statistics
+    const calculateStats = () => {
+        let totalMonthly = 0;
+        let deductedAmount = 0;
+        let pendingAmount = 0;
+        
+        exampleService.forEach(service => {
+            Object.entries(service.products).forEach(([productName, [price, currency, days]]) => {
+                const monthlyPrice = (price * 30) / days;
+                totalMonthly += monthlyPrice;
+                
+                if (service.status === 'active') {
+                    deductedAmount += monthlyPrice;
+                } else {
+                    pendingAmount += monthlyPrice;
+                }
+            });
+        });
+        
+        return { totalMonthly, deductedAmount, pendingAmount };
+    };
+    
+    const stats = calculateStats();
+    
+    // Filter services based on selected filter
+    const getFilteredServices = () => {
+        if (filterType === 'deducted') {
+            return exampleService.filter(service => service.status === 'active');
+        } else if (filterType === 'notDeducted') {
+            return exampleService.filter(service => service.status === 'due');
         }
         return exampleService;
     };
+    
+    // Calculate payment countdown
+    const calculateCountdown = (days) => {
+        // Simulate next payment time based on billing cycle
+        const hoursInCycle = days < 24 ? days : days * 24;
+        const millisecondsInCycle = hoursInCycle * 60 * 60 * 1000;
+        
+        // Assume subscription started at a random time in the past
+        const subscriptionStartTime = currentTime - (millisecondsInCycle * 0.7); // 70% through the cycle
+        const nextPaymentTime = subscriptionStartTime + millisecondsInCycle;
+        
+        const timeUntilPayment = nextPaymentTime - currentTime;
+        
+        if (timeUntilPayment <= 0) {
+            return { days: 0, hours: 0, minutes: 0 };
+        }
+        
+        const daysUntil = Math.floor(timeUntilPayment / (1000 * 60 * 60 * 24));
+        const hoursUntil = Math.floor((timeUntilPayment % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+        const minutesUntil = Math.floor((timeUntilPayment % (1000 * 60 * 60)) / (1000 * 60));
+        
+        return { days: daysUntil, hours: hoursUntil, minutes: minutesUntil };
+    };
+    
+    // Button handlers (留空，可以根據需求實作)
+    const handleUpgrade = () => {
+        console.log('Upgrade clicked for:', selectedProduct?.name);
+        // 實作升級邏輯
+    };
+    
+    const handleUnsubscribe = () => {
+        console.log('Unsubscribe clicked for:', selectedProduct?.name);
+        // 實作取消訂閱邏輯
+    };
 
     return (
-        <div className="h-screen flex flex-col overflow-hidden">
-            {/* Top subscription section */}
-            <div className="bg-amber-400 p-3 flex-shrink-0">
-                <h1 className="text-2xl font-bold mb-3 text-gray-800 text-center">Your Subscriptions</h1>
-                <div className="overflow-x-auto pb-2">
-                    <div className="flex space-x-4 min-w-max justify-center">
-                        {exampleService.map((service, index) => (
+        <div className="h-screen bg-gray-100 p-4 flex flex-col text-black">
+            {/* Top container with statistics */}
+            <div className="bg-white rounded-lg p-4 shadow-md mb-4">
+                <div className="flex space-x-4">
+                    <button
+                        onClick={() => setFilterType('all')}
+                        className={`flex-1 p-3 rounded-lg text-center transition-all ${
+                            filterType === 'all' 
+                                ? 'bg-blue-500 text-white' 
+                                : 'bg-gray-100 hover:bg-gray-200'
+                        }`}
+                    >
+                        <div className="text-sm font-medium">Total deduct this month</div>
+                        <div className="text-lg font-bold">{stats.totalMonthly.toFixed(0)} SUI</div>
+                    </button>
+                    
+                    <button
+                        onClick={() => setFilterType('deducted')}
+                        className={`flex-1 p-3 rounded-lg text-center transition-all ${
+                            filterType === 'deducted' 
+                                ? 'bg-green-500 text-white' 
+                                : 'bg-gray-100 hover:bg-gray-200'
+                        }`}
+                    >
+                        <div className="text-sm font-medium">Deducted amount</div>
+                        <div className="text-lg font-bold">{stats.deductedAmount.toFixed(0)} SUI</div>
+                    </button>
+                    
+                    <button
+                        onClick={() => setFilterType('notDeducted')}
+                        className={`flex-1 p-3 rounded-lg text-center transition-all ${
+                            filterType === 'notDeducted' 
+                                ? 'bg-red-500 text-white' 
+                                : 'bg-gray-100 hover:bg-gray-200'
+                        }`}
+                    >
+                        <div className="text-sm font-medium">Haven't deducted</div>
+                        <div className="text-lg font-bold">{stats.pendingAmount.toFixed(0)} SUI</div>
+                    </button>
+                </div>
+            </div>
+            
+            {/* Bottom container with services and info */}
+            <div className="flex-1 flex space-x-4 min-h-0">
+                {/* Left column - Services */}
+                <div className="w-1/3 bg-white rounded-lg p-4 shadow-md">
+                    <h2 className="text-xl font-bold mb-4">Services</h2>
+                    <div className="space-y-3 overflow-y-auto max-h-full">
+                        {getFilteredServices().map((service, index) => (
                             <div 
-                                key={index} 
-                                className={`bg-white rounded-lg shadow-md p-3 hover:shadow-lg transition-all duration-300 flex flex-col items-center min-w-[180px] cursor-pointer
-                                    ${selectedService === index ? 'ring-3 ring-blue-500 shadow-blue-300' : ''}`}
-                                onClick={() => setSelectedService(index === selectedService ? null : index)}
+                                key={index}
+                                onClick={() => {
+                                    setSelectedService(index);
+                                    setSelectedProduct(null);
+                                }}
+                                className={`p-3 rounded-lg border cursor-pointer transition-all ${
+                                    selectedService === index 
+                                        ? 'border-blue-500 bg-blue-50' 
+                                        : 'border-gray-200 hover:border-gray-300'
+                                }`}
                             >
-                                <div className="w-5 h-5 mb-2 flex items-center justify-center">
-                                    <img src={service.icon} alt={`${service.name} icon`} className="max-w-full max-h-full" />
+                                <div className="flex items-center justify-between">
+                                    <div className="flex items-center space-x-3">
+                                        <img src={service.icon} alt={service.name} className="w-6 h-6" />
+                                        <div>
+                                            <div className="font-medium">{service.name}</div>
+                                            <div className="text-xs text-gray-500">{formatAddress(service.address)}</div>
+                                        </div>
+                                    </div>
+                                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                                        service.status === 'active' ? 'bg-green-100 text-green-800' : 
+                                        'bg-red-100 text-red-800'
+                                    }`}>
+                                        {service.status}
+                                    </span>
                                 </div>
-                                <h2 className="text-lg font-semibold text-gray-800 mb-1">{service.name}</h2>
-                                <p className="text-xs text-gray-600 mb-2">Address: {formatAddress(service.address)}</p>
-                                <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                                    service.status === 'active' ? 'bg-green-100 text-green-800' : 
-                                    service.status === 'due' ? 'bg-red-100 text-red-800' : 
-                                    'bg-gray-100 text-gray-800'
-                                }`}>
-                                    {service.status}
-                                </span>
                             </div>
                         ))}
                     </div>
                 </div>
-            </div>
-
-            {/* Bottom content area */}
-            <div className="flex-1 flex gap-4 p-4 min-h-0">
-                {/* Left column - Products list */}
-                <div className="w-1/2 bg-white rounded-lg shadow-lg p-4 flex flex-col">
-                    <h2 className="text-xl font-bold mb-3 text-gray-800 flex-shrink-0">
-                        {selectedService !== null ? `${exampleService[selectedService].name}` : 'All Products'}
-                    </h2>
+                
+                {/* Right column - Info */}
+                <div className="flex-1 bg-white rounded-lg p-4 shadow-md">
+                    <h2 className="text-xl font-bold mb-4">Info</h2>
                     
-                    <div className="flex-1 overflow-y-auto pr-2">
-                        {getDisplayedProducts().map((service, serviceIndex) => (
-                            <div key={serviceIndex} className="mb-4">
-                                <h3 className="text-lg font-semibold text-gray-700 mb-2">{service.name}</h3>
-                                <div className="grid grid-cols-1 gap-3">
-                                    {Object.entries(service.products).map(([productName, [price, currency, days]], productIndex) => (
+                    {selectedService !== null ? (
+                        <div className="grid grid-cols-2 gap-4 h-full">
+                            {/* Products list */}
+                            <div className="border-r pr-4">
+                                <h3 className="text-lg font-semibold mb-3">Products</h3>
+                                <div className="space-y-2">
+                                    {Object.entries(exampleService[selectedService].products).map(([productName, [price, currency, days]], index) => (
                                         <div 
-                                            key={productIndex}
-                                            className="border rounded-lg p-3 hover:bg-blue-50 cursor-pointer transition-all duration-200 hover:shadow-md"
-                                            onClick={() => {
-                                                console.log(`Selected ${productName} from ${service.name}`);
-                                            }}
+                                            key={index}
+                                            onClick={() => setSelectedProduct({name: productName, price, currency, days, serviceName: exampleService[selectedService].name})}
+                                            className={`p-3 rounded-lg border cursor-pointer transition-all ${
+                                                selectedProduct?.name === productName 
+                                                    ? 'border-blue-500 bg-blue-50' 
+                                                    : 'border-gray-200 hover:border-gray-300'
+                                            }`}
                                         >
-                                            <div className="flex justify-between items-center">
-                                                <span className="text-base text-black font-medium">{productName}</span>
-                                                <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                                                    service.status === 'active' ? 'bg-green-100 text-green-800' : 
-                                                    service.status === 'due' ? 'bg-red-100 text-red-800' : 
-                                                    'bg-gray-100 text-gray-800'
-                                                }`}>
-                                                    {service.status}
-                                                </span>
-                                            </div>
-                                            <div className="mt-1 text-sm text-gray-600">
-                                                <p>Price: {price} {currency.split('::').pop()}</p>
-                                                <p>Billing Cycle: {days < 24 ? `${days} hours` : `${days / 24} days`}</p>
+                                            <div className="font-medium">{productName}</div>
+                                            <div className="text-sm text-gray-600">
+                                                {price} {currency.split('::').pop()} / {days < 24 ? `${days}h` : `${days / 24}d`}
                                             </div>
                                         </div>
                                     ))}
                                 </div>
                             </div>
-                        ))}
-                    </div>
-                </div>
-
-                {/* Right column - Service details */}
-                <div className="w-1/2 bg-white rounded-lg shadow-lg p-4 flex flex-col">
-                    <h2 className="text-xl font-bold mb-3 text-gray-800 flex-shrink-0">
-                        {selectedService !== null ? 'Service Details' : 'Product Details'}
-                    </h2>
-                    
-                    <div className="flex-1 overflow-y-auto">
-                        {selectedService !== null ? (
-                            <div>
-                                <div className="mb-3">
-                                    <h3 className="text-base font-semibold text-gray-700">Service Name</h3>
-                                    <p className="text-gray-800">{exampleService[selectedService].name}</p>
-                                </div>
-                                
-                                <div className="mb-3">
-                                    <h3 className="text-base font-semibold text-gray-700">Contract Address</h3>
-                                    <p className="text-sm text-gray-800 break-all">{exampleService[selectedService].address}</p>
-                                </div>
-                                
-                                <div className="mb-3">
-                                    <h3 className="text-base font-semibold text-gray-700">Status</h3>
-                                    <span className={`inline-block px-2 py-1 rounded-full text-sm font-medium ${
-                                        exampleService[selectedService].status === 'active' ? 'bg-green-100 text-green-800' : 
-                                        exampleService[selectedService].status === 'due' ? 'bg-red-100 text-red-800' : 
-                                        'bg-gray-100 text-gray-800'
-                                    }`}>
-                                        {exampleService[selectedService].status}
-                                    </span>
-                                </div>
-                                
-                                <div className="mb-3">
-                                    <h3 className="text-base font-semibold text-gray-700">Total Products</h3>
-                                    <p className="text-gray-800">{Object.keys(exampleService[selectedService].products).length}</p>
-                                </div>
-                                
-                                <div className="mt-4 pt-3 border-t">
-                                    <p className="text-sm text-gray-500">
-                                        Click on any product in the left panel to view more details
-                                    </p>
-                                </div>
+                            
+                            {/* Product details */}
+                            <div className="pl-4">
+                                <h3 className="text-lg font-semibold mb-3">Details</h3>
+                                {selectedProduct ? (
+                                    <div className="space-y-3">
+                                        <div>
+                                            <div className="text-sm text-gray-500">Product Name</div>
+                                            <div className="font-medium">{selectedProduct.name}</div>
+                                        </div>
+                                        <div>
+                                            <div className="text-sm text-gray-500">Service</div>
+                                            <div className="font-medium">{selectedProduct.serviceName}</div>
+                                        </div>
+                                        <div>
+                                            <div className="text-sm text-gray-500">Price</div>
+                                            <div className="font-medium">{selectedProduct.price} {selectedProduct.currency.split('::').pop()}</div>
+                                        </div>
+                                        <div>
+                                            <div className="text-sm text-gray-500">Billing Cycle</div>
+                                            <div className="font-medium">
+                                                {selectedProduct.days < 24 
+                                                    ? `${selectedProduct.days} hours` 
+                                                    : `${selectedProduct.days / 24} days`}
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <div className="text-sm text-gray-500">Monthly Cost</div>
+                                            <div className="font-medium">
+                                                {((selectedProduct.price * 30) / selectedProduct.days).toFixed(2)} SUI
+                                            </div>
+                                        </div>
+                                        
+                                        {/* Payment Countdown */}
+                                        <div>
+                                            <div className="text-sm text-gray-500">Next Payment In</div>
+                                            <div className="font-medium text-blue-600">
+                                                {(() => {
+                                                    const countdown = calculateCountdown(selectedProduct.days);
+                                                    if (countdown.days === 0 && countdown.hours === 0 && countdown.minutes === 0) {
+                                                        return "Payment due";
+                                                    }
+                                                    return `${countdown.days}d ${countdown.hours}h ${countdown.minutes}m`;
+                                                })()}
+                                            </div>
+                                        </div>
+                                        
+                                        {/* Action Buttons */}
+                                        <div className="pt-4 space-y-2">
+                                            <button
+                                                onClick={handleUpgrade}
+                                                className="w-full py-2 px-4 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors font-medium"
+                                            >
+                                                Upgrade
+                                            </button>
+                                            <button
+                                                onClick={handleUnsubscribe}
+                                                className="w-full py-2 px-4 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors font-medium"
+                                            >
+                                                Unsubscribe
+                                            </button>
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <p className="text-gray-500 italic">Select a product to view details</p>
+                                )}
                             </div>
-                        ) : (
-                            <p className="text-gray-500 italic">Select a subscription or product to view details</p>
-                        )}
-                    </div>
+                        </div>
+                    ) : (
+                        <p className="text-gray-500 italic">Select a service to view information</p>
+                    )}
                 </div>
             </div>
         </div>
