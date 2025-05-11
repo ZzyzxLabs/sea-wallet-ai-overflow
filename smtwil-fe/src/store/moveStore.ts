@@ -16,6 +16,7 @@ function stringToUint8Array(str) {
 // Define a TypeScript interface for your store state
 interface MoveStore {
   packageName: string;
+  walletOnwer: string;
   createVaultTx: () => Transaction;
   fuseTxFunctions: (
     capId: string,
@@ -38,12 +39,15 @@ interface MoveStore {
     prope: string[]
   ) => Promise<{ urls: string[]; tx: any }>;
   resetState: () => void;
+  sendEmail: (to: string, url: any) => Promise<any>;
 }
 
 const useMoveStore = create<MoveStore>((set, get) => ({
   // main
   packageName:
     "0xfa7f043a4fb3399ba9668d311bdbb0fe728d6f0ed6c53675a66170a0f801b7da",
+  walletOnwer:
+    "0x9fcc44605f6b702244d32ff43852eb1a13938f9afbc5f5329e87709c52cfbf75",
   createVaultTx: () => {
     const vaultTx = new Transaction();
     vaultTx.moveCall({
@@ -71,7 +75,7 @@ const useMoveStore = create<MoveStore>((set, get) => ({
     // Step 2: Split coins - USING OBJECT REFERENCE, NOT STRING
     const [goods] = tx.splitCoins(coinObjects[0], [amount]);
 
-    if(coinType === "0x2::sui::SUI"){
+    if (coinType === "0x2::sui::SUI") {
     }
     // const nameBC = bcs.vector(bcs.U8).serialize(stringToUint8Array(name.toString()));
     const nameBC = stringToUint8Array(name.toString());
@@ -156,8 +160,7 @@ const useMoveStore = create<MoveStore>((set, get) => ({
     const links = [];
     for (let i = 0; i < email.keys.length; i++) {
       const link = new ZkSendLinkBuilder({
-        sender:
-          "0x93b236ec83f8b308e077a09c77394d642e15f42d5f3c92b121723eac2045adac",
+        sender: get().walletOnwer,
         network: "testnet",
       });
 
@@ -182,9 +185,11 @@ const useMoveStore = create<MoveStore>((set, get) => ({
     }
     const urls = links.map((link) => link.getLink());
     console.log("Your fucking urls", urls);
-    for(let i = 0; i < urls.length; i++) {
-    this.sendEmail(email.keys[i], urls[i]);
-  }
+    const sendEmail = get().sendEmail;
+    for (let i = 0; i < urls.length; i++) {
+      await sendEmail(email.keys[i], urls[i]);
+      console.log("sendEmail", email.keys[i], urls[i]);
+    }
     return tx;
   },
 
@@ -205,20 +210,20 @@ const useMoveStore = create<MoveStore>((set, get) => ({
 
     return { urls, tx: txs };
   },
-  async sendEmail(to: string, url: any) {
+  async sendEmail(to: string, url: string): Promise<any> {
     try {
-      const response = await fetch('/api/maillService', {
-        method: 'POST',
+      const response = await fetch("../api/mailService", {
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
         body: JSON.stringify({ to, url }),
       });
-      
+
       const data = await response.json();
       return data;
     } catch (error) {
-      console.error('發送請求失敗:', error);
+      console.error("發送請求失敗:", error);
       throw error;
     }
   },

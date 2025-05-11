@@ -12,6 +12,7 @@ module smartwill::vault {
     use sui::tx_context::epoch_timestamp_ms;
     use sui::table::{Table, Self};
     use std::vector;
+    use std::type_name::{Self, TypeName};
     
     const EDeductDateNotPassed: u64 = 0;
     const EWrongVaultId: u64 = 1;
@@ -150,27 +151,23 @@ module smartwill::vault {
         memberCap
     }
 
-    public fun add_trust_asset<Asset: key + store>(cap: &OwnerCap, vault: &mut Vault, asset: Asset, name: vector<u8>, ctx: &mut TxContext) {
+    public fun add_trust_asset<Asset: key + store>(_cap: &OwnerCap, vault: &mut Vault, asset: Asset, name: vector<u8>, _ctx: &mut TxContext) {
         dof::add(&mut vault.id, name, asset);
     }
     //put coinType into vault
-    public fun add_trust_asset_coin<Asset>(cap: &OwnerCap, vault: &mut Vault, asset: Coin<Asset>, name: vector<u8>, ctx: &mut TxContext) {
-        // let name = string::utf8(name);
-        // if (dof::exists_with_type<String, Coin<Asset>>(&vault.id, name)) {
-        //     organize_trust_asset(&cap, &mut vault, name, asset, ctx);
-        //     return
-        // }
+    public fun add_trust_asset_coin<Asset>(_cap: &OwnerCap, vault: &mut Vault, asset: Coin<Asset>, name: vector<u8>, _ctx: &mut TxContext) {
         let amount = coin::value<Asset>(&asset);
         table::add(&mut vault.withdraw_table, name, amount);
         dof::add(&mut vault.id, name, asset);
     }
 
-    public fun reclaim_trust_asset<Asset: key + store>(cap: &OwnerCap, vault: &mut Vault, asset_name: vector<u8>, ctx: &mut TxContext) {
+    public fun reclaim_trust_asset<Asset: key + store>(_cap: &OwnerCap, vault: &mut Vault, asset_name: vector<u8>, ctx: &mut TxContext) {
         let asset = dof::remove<vector<u8>, Asset>(&mut vault.id, asset_name);
+        vault.withdraw_table.remove(asset_name);
         transfer::public_transfer(asset, tx_context::sender(ctx));
     }
 
-    public fun organize_coin_asset<Asset>(cap: &OwnerCap, vault: &mut Vault, asset_name: vector<u8>, asset: Coin<Asset>, ctx: &mut TxContext) {
+    public fun organize_coin_asset<Asset>(_cap: &OwnerCap, vault: &mut Vault, asset_name: vector<u8>, asset: Coin<Asset>, _ctx: &mut TxContext) {
         let coin_from_vault = dof::borrow_mut<vector<u8>, Coin<Asset>>(&mut vault.id, asset_name);
         let amount = coin::value<Asset>(coin_from_vault); // Fixed: removed the extra &
         let amount_mut = table::borrow_mut<vector<u8>, u64>(&mut vault.withdraw_table, asset_name);
@@ -179,7 +176,7 @@ module smartwill::vault {
     }
 
 
-    public fun organize_trust_asset<Asset>(cap: &OwnerCap, vault: &mut Vault, asset_name: vector<u8>, asset: Coin<Asset>, ctx: &mut TxContext) {
+    public fun organize_trust_asset<Asset>(_cap: &OwnerCap, vault: &mut Vault, asset_name: vector<u8>, asset: Coin<Asset>, _ctx: &mut TxContext) {
         let coin_from_vault = dof::borrow_mut<vector<u8>, Coin<Asset>>(&mut vault.id, asset_name);
         let amount = coin::value<Asset>(coin_from_vault); // Fixed: removed the extra &
         let amount_mut = table::borrow_mut<vector<u8>, u64>(&mut vault.withdraw_table, asset_name);
@@ -187,7 +184,7 @@ module smartwill::vault {
         coin::join<Asset>(coin_from_vault, asset);
     }
 
-    public fun update_time(_cap: &OwnerCap, vault: &mut Vault, clock: &Clock, ctx: &mut TxContext) {
+    public fun update_time(_cap: &OwnerCap, vault: &mut Vault, clock: &Clock, _ctx: &mut TxContext) {
         vault.last_time = clock.timestamp_ms();
         if (vault.warned) {
             vault.timeleft = 6 * 30 * 24 * 60 * 60 * 1000;
@@ -196,10 +193,30 @@ module smartwill::vault {
     }
 
     // grace period - 7 days grace period for owner to confirm their aliveness
-    fun grace_period(_cap: &MemberCap, vault: &mut Vault, clock: &Clock, ctx: &mut TxContext) {
+    fun grace_period(_cap: &MemberCap, vault: &mut Vault, clock: &Clock, _ctx: &mut TxContext) {
         vault.last_time = clock.timestamp_ms();
         vault.timeleft = 7 * 24 * 60 * 60 * 1000;
         vault.warned = true;
+    }
+
+    public fun heir_withdraw<CoinType>(
+        cap: &MemberCap,
+        vault: &mut Vault,
+        clock: &Clock,
+        asset_name: vector<u8>,
+        ctx: &mut TxContext
+    ) {
+        let current_time = clock.timestamp_ms();
+        assert!(current_time - vault.last_time >= vault.timeleft, ELocked);
+        if (!vault.warned) {
+            grace_period(cap, vault, clock, ctx);
+        };
+        let full_amount = table::borrow(&vault.withdraw_table, asset_name);
+        let asset = dof::borrow_mut<vector<u8>, Coin<CoinType>>(&mut vault.id, asset_name);
+        let percentage = *vec_map::get(&vault.capPercentage, &cap.capID);
+        let amount = *full_amount * (percentage as u64) / 100;
+        let coin = coin::split(asset, amount, ctx);
+        transfer::public_transfer(coin, ctx.sender());
     }
 
     // withdraw after 6 months; 

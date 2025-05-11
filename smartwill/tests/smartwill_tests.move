@@ -1,6 +1,7 @@
 #[test_only]
 module smartwill::smartwill_tests;
 use smartwill::vault::{Self, Vault, OwnerCap, MemberCap};
+use sui::dynamic_object_field as dof;
 use sui::test_scenario::{Self as ts, Scenario};
 use sui::coin::{Self, Coin};
 use sui::sui::SUI;
@@ -10,7 +11,10 @@ use sui::clock::{Self, Clock};
 use sui::bcs;
 use std::vector;
 use std::debug;
-use std::type_name;
+use usdc::usdc::USDC;
+use std::type_name::{Self, TypeName};
+use sui::transfer;
+use sui::balance;
 
 // const ENotImplemented: u64 = 0;
 const ALICE: address = @0xA;
@@ -20,17 +24,21 @@ const DAVE: address = @0xD;
 const Error: u64 = 444;
 const FRED: address = @0xF;
 #[test_only]
-fun test_coin(ts: &mut Scenario): Coin<SUI> {
+fun test_sui(ts: &mut Scenario): Coin<SUI> {
+    coin::mint_for_testing(42, ts.ctx())
+}
+
+#[test_only]
+fun test_usdc(ts: &mut Scenario): Coin<USDC> {
     coin::mint_for_testing(42, ts.ctx())
 }
 
 #[test]
-
 fun test_init_member() {
    let mut scenario = ts::begin(@0x0);
     {
         scenario.next_tx(ALICE);
-        let coin = test_coin(&mut scenario);
+        let coin = test_sui(&mut scenario);
         vault::createVault(scenario.ctx());
         coin::burn_for_testing(coin);
     };
@@ -74,7 +82,7 @@ fun test_add_member_by_address() {
     let mut scenario = ts::begin(@0x0);
     {
         scenario.next_tx(ALICE);
-        let coin = test_coin(&mut scenario);
+        let coin = test_sui(&mut scenario);
         vault::createVault(scenario.ctx());
         coin::burn_for_testing(coin);
     };
@@ -103,7 +111,7 @@ fun test_add_member_by_email() {
     let mut scenario = ts::begin(@0x0);
     {
         scenario.next_tx(ALICE);
-        let coin = test_coin(&mut scenario);
+        let coin = test_sui(&mut scenario);
         vault::createVault(scenario.ctx());
         coin::burn_for_testing(coin);
     };
@@ -113,7 +121,7 @@ fun test_add_member_by_email() {
         let mut vault: Vault = scenario.take_shared();
         
         let emailCap: MemberCap = vault::addMemberByEmail(&ownerCap, &mut vault, b"BOB@seawallet.ai".to_string(), 50, scenario.ctx());
-        debug::print(&emailCap);
+        // debug::print(&emailCap);
         transfer::public_transfer(emailCap, BOB);
         // finish and return used stuff
         ts::return_to_sender(&scenario, ownerCap);
@@ -128,38 +136,114 @@ fun test_add_member_by_email() {
     };
     ts::end(scenario);
 }
+
+#[test]
+fun test_add_reclaim() {
+    let mut scenario = ts::begin(@0x1);
+    {
+        debug::print(& b"test_add_reclaim");
+        scenario.next_tx(ALICE);
+        vault::createVault(scenario.ctx());
+    };
+
+    {
+        scenario.next_tx(ALICE);
+        let ownerCap: OwnerCap = scenario.take_from_sender();
+        let mut vault: Vault = scenario.take_shared();
+        let coin: Coin<SUI> = test_sui(&mut scenario);
+        vault::add_trust_asset_coin(&ownerCap, &mut vault, coin, b"SUI", scenario.ctx());
+        
+        let coin2: Coin<SUI> = test_sui(&mut scenario);
+        vault::organize_coin_asset(&ownerCap, &mut vault, b"SUI", coin2, scenario.ctx());
+        debug::print(&vault);
+        
+        // finish and return used stuff
+        ts::return_to_sender(&scenario, ownerCap);
+        ts::return_shared(vault);
+    };
+    {
+        scenario.next_tx(ALICE);
+        let ownerCap: OwnerCap = scenario.take_from_sender();
+        let mut vault: Vault = scenario.take_shared();
+        vault::reclaim_trust_asset<Coin<SUI>>(&ownerCap, &mut vault, b"SUI", scenario.ctx());
+        
+        // finish and return used stuff
+        ts::return_to_sender(&scenario, ownerCap);
+        ts::return_shared(vault);
+    };
+    {
+        scenario.next_tx(ALICE);
+        let mergedCoin: Coin<SUI> = scenario.take_from_sender();
+        debug::print(&mergedCoin);
+        ts::return_to_sender(&scenario, mergedCoin);
+    };
+
+    ts::end(scenario);
+}
+
 // #[test]
-// fun test_add_reclaim() {
-//     let mut scenario = ts::begin(@0x1);
+// #[expected_failure]
+// fun test_first_withdraw_failure() {
+//     let mut scenario = ts::begin(@0x0);
 //     {
-//         debug::print(& b"test_add_reclaim");
 //         scenario.next_tx(ALICE);
 //         vault::createVault(scenario.ctx());
+//         debug::print(& b"first stage passed");
 //     };
 
+//     // init member and deposit
 //     {
 //         scenario.next_tx(ALICE);
 //         let ownerCap: OwnerCap = scenario.take_from_sender();
 //         let mut vault: Vault = scenario.take_shared();
-//         let coin: Coin<SUI> = test_coin(&mut scenario);
-//         vault::add_trust_asset_coin(&ownerCap, &mut vault, coin, b"SUI", scenario.ctx());
-        
-//         let coin2: Coin<SUI> = test_coin(&mut scenario);
-//         vault::organize_trust_asset(&ownerCap, &mut vault, b"SUI", coin2, scenario.ctx());
 //         debug::print(&vault);
+
+//         // init member
+//         let mut addrList = vector::empty<address>();
+//         let mut addrPer = vector::empty<u8>();
+//         addrList.push_back(BOB);
+//         addrPer.push_back(50);
+//         let mut emailList = vector::empty<String>();
+//         emailList.push_back(string::utf8(b"charlie@seawallet.ai"));
+//         let mut emailPer = vector::empty<u8>();
+//         emailPer.push_back(50);
+//         let mut emailCaps: vector<MemberCap> = vault::initMember(&ownerCap, &mut vault, addrList, addrPer, emailList, emailPer, scenario.ctx());
+//         let emailCap = emailCaps.pop_back();
+//         transfer::public_transfer(emailCap, CHARLIE);
+//         emailCaps.destroy_empty();
+
+//         // deposit
+//         let coin: Coin<SUI> = test_sui(&mut scenario);
+//         vault::add_trust_asset_coin(&ownerCap, &mut vault, coin, b"SUI", scenario.ctx());
+
 //         // finish and return used stuff
 //         ts::return_to_sender(&scenario, ownerCap);
 //         ts::return_shared(vault);
+//         debug::print(& b"second stage passed");
+//     };
+
+//     {
+//         scenario.next_tx(BOB);
+//         let mut vault: Vault = scenario.take_shared();
+//         let memberCap: MemberCap = scenario.take_from_sender();
+//         let clock: Clock = clock::create_for_testing(scenario.ctx());
+//         let mut assetVec: vector<vector<u8>> = vector::empty<vector<u8>>();
+//         assetVec.push_back(b"SUI");
+//         vault::member_withdraw<SUI>(&memberCap, &mut vault, &clock, assetVec, scenario.ctx());
+//         ts::return_to_sender(&scenario, memberCap);
+//         ts::return_shared(vault);
+//         clock::destroy_for_testing(clock);
 //     };
 
 //     ts::end(scenario);
 // }
+
 // #[test]
 // fun test_withdraw() {
 //     let mut scenario = ts::begin(@0x0);
 //     {
 //         scenario.next_tx(ALICE);
-//         let coin = test_coin(&mut scenario);
+//         let coin = test_sui(&mut scenario);
 //         vault::createVault(scenario.ctx());
 //         coin::burn_for_testing(coin);
 //     };
