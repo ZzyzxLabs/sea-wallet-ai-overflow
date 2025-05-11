@@ -13,7 +13,8 @@ use std::vector;
 use std::debug;
 use usdc::usdc::USDC;
 use std::type_name::{Self, TypeName};
-use transfer::transfer;
+use sui::transfer;
+use sui::balance;
 
 // const ENotImplemented: u64 = 0;
 const ALICE: address = @0xA;
