@@ -171,7 +171,8 @@ module SeaWallet::seaVault {
     }
 
     /// for owner to take a certain amount of coin
-    public fun take_coin<Asset: key + store>(_cap: &OwnerCap, vault: &mut SeaVault, asset_name: vector<u8>, amount: u64, ctx: &mut TxContext) {
+    #[allow(lint(self_transfer))]
+    public fun take_coin<Asset>(_cap: &OwnerCap, vault: &mut SeaVault, asset_name: vector<u8>, amount: u64, ctx: &mut TxContext) {
         assert!(amount <= *table::borrow(&vault.asset_sum, asset_name), ENotEnough);
         // update table amount
         let amount_mut = table::borrow_mut<vector<u8>, u64>(&mut vault.asset_sum, asset_name);
