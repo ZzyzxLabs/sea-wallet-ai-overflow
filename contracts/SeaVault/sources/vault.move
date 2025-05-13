@@ -118,7 +118,7 @@ module SeaWallet::seaVault {
 
     /// check if the total percentage of all caps is 100
     /// call everytime modifying caps percentage
-    public fun checkPercentage(_cap: &OwnerCap, vault: &mut SeaVault) {
+    public fun check_percentage(_cap: &OwnerCap, vault: &mut SeaVault) {
         let mut i: u8 = 0;
         let length = vault.cap_percentage.size() as u8;
         let mut totalPercentage = 0;
@@ -202,6 +202,7 @@ module SeaWallet::seaVault {
     }
 
     /// for member to withdraw their share of asset, withdraw one coinType at a time
+    #[allow(lint(self_transfer))]
     public fun member_withdraw<CoinType>(
         cap: &MemberCap,
         vault: &mut SeaVault,
@@ -214,11 +215,11 @@ module SeaWallet::seaVault {
         let current_time = clock.timestamp_ms();
         assert!(current_time - vault.last_update >= vault.time_left, ELocked);
         if (!vault.is_warned) {
-            grace_period(cap, vault, clock);
+            return grace_period(cap, vault, clock); // do not add a fucking semicolon here
         };
 
         // check if the member has already withdrawn
-        let mut withdrawn_list = table::borrow_mut(&mut vault.asset_withdrawn, asset_name);
+        let withdrawn_list = table::borrow_mut(&mut vault.asset_withdrawn, asset_name);
         assert!(!vector::contains(withdrawn_list, &cap.capID), EAlreadyWithdrawn);
         vector::push_back(withdrawn_list, cap.capID);
 
@@ -332,9 +333,15 @@ module SeaWallet::seaVault {
         };
         transfer::public_transfer(subproof, cap.paddr);
     }
-    //getter
+
+    /// getter functions
     public fun vaultID(vault: &SeaVault): ID {
         let id = object::id(vault);
         id
+    }
+
+    #[test_only]
+    public fun is_warned(vault: &SeaVault): bool {
+        vault.is_warned
     }
 }

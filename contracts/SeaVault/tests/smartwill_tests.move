@@ -1,6 +1,4 @@
-#[test_only]
 module SeaWallet::smartwill_tests;
-// Import necessary modules and dependencies
 use SeaWallet::seaVault::{Self, SeaVault, OwnerCap, MemberCap};
 use sui::{
     dynamic_object_field as dof,
@@ -31,18 +29,25 @@ const BOB: address = @0xB;
 const CHARLIE: address = @0xC;
 const DAVE: address = @0xD;
 const FRED: address = @0xF;
+const SIX_MONTHS: u64 = 6 * 30 * 24 * 60 * 60 * 1000;
+const SEVEN_DAYS: u64 = 7 * 24 * 60 * 60 * 1000;
 
 const Error: u64 = 444;
 
 #[test_only]
 fun test_sui(ts: &mut Scenario): Coin<SUI> {
-    coin::mint_for_testing(42, ts.ctx())
+    coin::mint_for_testing(100, ts.ctx())
 }
 
 #[test_only]
 fun test_usdc(ts: &mut Scenario): Coin<USDC> {
-    coin::mint_for_testing(42, ts.ctx())
+    coin::mint_for_testing(100, ts.ctx())
 }
+
+// TODO: test modifyMemberCap
+// TODO: test addAsset
+// TODO: test update_time
+// TODO: test member_withdraw
 
 #[test]
 fun test_init_member() {
@@ -78,7 +83,7 @@ fun test_init_member() {
         transfer::public_transfer(capFred, FRED);
 
         // check percentage
-        seaVault::checkPercentage(&ownerCap, &mut vault);
+        seaVault::check_percentage(&ownerCap, &mut vault);
         
         // finish and return used stuff
         ts::return_to_sender(&scenario, ownerCap);
@@ -89,10 +94,9 @@ fun test_init_member() {
 }
 
 #[test]
-fun test_add_reclaim() {
+fun test_deposit_withdraw() {
     let mut scenario = ts::begin(@0x1);
     {
-        debug::print(& b"test_add_reclaim");
         scenario.next_tx(ALICE);
         seaVault::createVault(scenario.ctx());
     };
@@ -114,7 +118,7 @@ fun test_add_reclaim() {
 
         let more_usdc_coin: Coin<USDC> = test_usdc(&mut scenario);
         seaVault::organize_coin(&ownerCap, &mut vault, b"USDC", more_usdc_coin);
-        debug::print(&vault);
+        // debug::print(&vault);
         
         // finish and return used stuff
         ts::return_to_sender(&scenario, ownerCap);
@@ -168,12 +172,12 @@ fun test_add_reclaim() {
         scenario.next_tx(ALICE);
         // check all the SUI amount reclaimed
         let all_sui: Coin<SUI> = scenario.take_from_sender();
-        assert_eq!(all_sui.value(), 64);
+        assert_eq!(all_sui.value(), 180);
         ts::return_to_sender(&scenario, all_sui);
 
         // check all the USDC amount reclaimed
         let all_usdc: Coin<USDC> = scenario.take_from_sender();
-        assert_eq!(all_usdc.value(), 64);
+        assert_eq!(all_usdc.value(), 180);
         ts::return_to_sender(&scenario, all_usdc);
     };
 
@@ -181,110 +185,231 @@ fun test_add_reclaim() {
 }
 
 
-// #[test]
-// #[expected_failure]
-// fun test_first_withdraw_failure() {
-//     let mut scenario = ts::begin(@0x0);
-//     {
-//         scenario.next_tx(ALICE);
-//         vault::createVault(scenario.ctx());
-//         debug::print(& b"first stage passed");
-//     };
+#[test]
+#[expected_failure]
+fun test_first_withdraw_failure() {
+    let mut scenario = ts::begin(@0x0);
+    {
+        scenario.next_tx(ALICE);
+        seaVault::createVault(scenario.ctx());
+    };
 
-//     // init member and deposit
-//     {
-//         scenario.next_tx(ALICE);
-//         let ownerCap: OwnerCap = scenario.take_from_sender();
-//         let mut vault: Vault = scenario.take_shared();
-//         debug::print(&vault);
+    // init member and deposit
+    {
+        scenario.next_tx(ALICE);
+        let ownerCap: OwnerCap = scenario.take_from_sender();
+        let mut vault: SeaVault = scenario.take_shared();
+        
+         // add BOB by address
+        let mut address_list = vector::empty<address>();
+        let mut percentage_list = vector::empty<u8>();
+        address_list.push_back(BOB);
+        percentage_list.push_back(100);
+        seaVault::addMemberByAddresses(&ownerCap, &mut vault, address_list, percentage_list, scenario.ctx());
 
-//         // init member
-//         let mut address_list = vector::empty<address>();
-//         let mut percentage_list = vector::empty<u8>();
-//         address_list.push_back(BOB);
-//         percentage_list.push_back(50);
-//         let mut emailList = vector::empty<String>();
-//         emailList.push_back(string::utf8(b"charlie@seawallet.ai"));
-//         let mut emailPer = vector::empty<u8>();
-//         emailPer.push_back(50);
-//         let mut emailCaps: vector<MemberCap> = vault::initMember(&ownerCap, &mut vault, address_list, percentage_list, emailList, emailPer, scenario.ctx());
-//         let emailCap = emailCaps.pop_back();
-//         transfer::public_transfer(emailCap, CHARLIE);
-//         emailCaps.destroy_empty();
+        // deposit
+        let coin: Coin<SUI> = test_sui(&mut scenario);
+        seaVault::add_coin(&ownerCap, &mut vault, b"SUI", coin);
 
-//         // deposit
-//         let coin: Coin<SUI> = test_sui(&mut scenario);
-//         vault::add_trust_asset_coin(&ownerCap, &mut vault, coin, b"SUI", scenario.ctx());
+        // finish and return used stuff
+        ts::return_to_sender(&scenario, ownerCap);
+        ts::return_shared(vault);
+    };
 
-//         // finish and return used stuff
-//         ts::return_to_sender(&scenario, ownerCap);
-//         ts::return_shared(vault);
-//         debug::print(& b"second stage passed");
-//     };
+    {
+        scenario.next_tx(BOB);
+        let memberCap: MemberCap = scenario.take_from_sender();
+        let mut vault: SeaVault = scenario.take_shared();
+        let clock: Clock = clock::create_for_testing(scenario.ctx());
 
-//     {
-//         scenario.next_tx(BOB);
-//         let mut vault: Vault = scenario.take_shared();
-//         let memberCap: MemberCap = scenario.take_from_sender();
-//         let clock: Clock = clock::create_for_testing(scenario.ctx());
-//         let mut assetVec: vector<vector<u8>> = vector::empty<vector<u8>>();
-//         assetVec.push_back(b"SUI");
-//         vault::member_withdraw<SUI>(&memberCap, &mut vault, &clock, assetVec, scenario.ctx());
-//         ts::return_to_sender(&scenario, memberCap);
-//         ts::return_shared(vault);
-//         clock::destroy_for_testing(clock);
-//     };
+        // expect failure
+        seaVault::member_withdraw<SUI>(&memberCap, &mut vault, &clock, b"SUI", scenario.ctx());
 
-//     ts::end(scenario);
-// }
+        // finish and return used stuff
+        ts::return_to_sender(&scenario, memberCap);
+        ts::return_shared(vault);
+        clock::destroy_for_testing(clock);
+    };
 
-// #[test]
-// fun test_withdraw() {
-//     let mut scenario = ts::begin(@0x0);
-//     {
-//         scenario.next_tx(ALICE);
-//         let coin = test_sui(&mut scenario);
-//         vault::createVault(scenario.ctx());
-//         coin::burn_for_testing(coin);
-//     };
+    ts::end(scenario);
+}
 
-//     {
-//         scenario.next_tx(ALICE);
-//         let ownerCap: OwnerCap = scenario.take_from_sender();
-//         let mut vault: Vault = scenario.take_shared();
-//         let mut address_list = vector::empty<address>();
-//         let mut percentage_list = vector::empty<u8>();
-//         address_list.push_back(BOB);
-//         percentage_list.push_back(30);
-//         address_list.push_back(CHARLIE);
-//         percentage_list.push_back(40);
-//         let email = string::utf8(b"x@seawallet.ai");
-//         let mut emailList = vector::empty<String>();
-//         emailList.push_back(email);
-//         let mut emailPer = vector::empty<u8>();
-//         emailPer.push_back(30);
-//         let mut emailCaps: vector<MemberCap> = vault::initMember(&ownerCap, &mut vault, address_list, percentage_list, emailList,  emailPer, scenario.ctx());
-//         // finish and return used stuff
-//         ts::return_to_sender(&scenario, ownerCap);
-//         ts::return_shared(vault);
-//         let emailCap = emailCaps.pop_back();
-//         transfer::public_transfer(emailCap, DAVE);
-//         emailCaps.destroy_empty();
-//     };
+#[test]
+fun test_withdraw_percentage() {
+    let mut scenario = ts::begin(@0x0);
+    {
+        scenario.next_tx(ALICE);
+        seaVault::createVault(scenario.ctx());
+    };
 
-//     {
-//         scenario.next_tx(BOB);
-//         let mut vault: Vault = scenario.take_shared();
-//         let memberCap: MemberCap = scenario.take_from_sender();
-//         let clock: Clock = clock::create_for_testing(scenario.ctx());
-//         let mut assetVec: vector<vector<u8>> = vector::empty<vector<u8>>();
-//         assetVec.push_back(b"SUI");
-//         // assert!(memberCap.capid == 0, )
-//         vault::member_withdraw<SUI>(&memberCap, & mut vault, &clock, assetVec, scenario.ctx());
-//         scenario.return_to_sender(memberCap);
-//         ts::return_shared(vault);
-//         clock::destroy_for_testing(clock);
-//     };
+    // init member and deposit
+    {
+        scenario.next_tx(ALICE);
+        let ownerCap: OwnerCap = scenario.take_from_sender();
+        let mut vault: SeaVault = scenario.take_shared();
+        
+         // add BOB and by address
+        let mut address_list = vector::empty<address>();
+        let mut percentage_list = vector::empty<u8>();
+        address_list.push_back(BOB);
+        percentage_list.push_back(20);
+        seaVault::addMemberByAddresses(&ownerCap, &mut vault, address_list, percentage_list, scenario.ctx());
 
-//     ts::end(scenario);
-// }
+        // add DAVE by email
+        let emailDave = string::utf8(b"Dave@seawallet.ai");
+        let percentageDave = 80;
+        let capDave = seaVault::addMemberByEmail(&ownerCap, &mut vault, emailDave, percentageDave, scenario.ctx());
+        transfer::public_transfer(capDave, DAVE);
+
+        // deposit
+        let coin_sui: Coin<SUI> = test_sui(&mut scenario);
+        seaVault::add_coin(&ownerCap, &mut vault, b"SUI", coin_sui);
+        let coin_usdc: Coin<USDC> = test_usdc(&mut scenario);
+        seaVault::add_coin(&ownerCap, &mut vault, b"USDC", coin_usdc);
+        let more_coin_usdc: Coin<USDC> = test_usdc(&mut scenario);
+        seaVault::organize_coin(&ownerCap, &mut vault, b"USDC", more_coin_usdc);
+
+        // finish and return used stuff
+        ts::return_to_sender(&scenario, ownerCap);
+        ts::return_shared(vault);
+    };
+
+    // locked -> grace period
+    {
+        scenario.next_tx(BOB);
+        let memberCap: MemberCap = scenario.take_from_sender();
+        let mut vault: SeaVault = scenario.take_shared();
+        let mut clock: Clock = clock::create_for_testing(scenario.ctx());
+        clock.set_for_testing(SIX_MONTHS+1);
+
+        seaVault::member_withdraw<SUI>(&memberCap, &mut vault, &clock, b"SUI", scenario.ctx());
+        assert!(seaVault::is_warned(&vault) == true);
+
+        // finish and return used stuff
+        ts::return_to_sender(&scenario, memberCap);
+        ts::return_shared(vault);
+        clock::destroy_for_testing(clock);
+    };
+
+    // grace period -> BOB withdraw
+    {
+        scenario.next_tx(BOB);
+        let memberCap: MemberCap = scenario.take_from_sender();
+        let mut vault: SeaVault = scenario.take_shared();
+        let mut clock: Clock = clock::create_for_testing(scenario.ctx());
+        clock.set_for_testing(SIX_MONTHS+1+SEVEN_DAYS+1);
+
+        seaVault::member_withdraw<SUI>(&memberCap, &mut vault, &clock, b"SUI", scenario.ctx());
+        seaVault::member_withdraw<USDC>(&memberCap, &mut vault, &clock, b"USDC", scenario.ctx());
+
+        // finish and return used stuff
+        ts::return_to_sender(&scenario, memberCap);
+        ts::return_shared(vault);
+        clock::destroy_for_testing(clock);
+    };
+
+    // DAVE success to withdraw
+    {
+        scenario.next_tx(DAVE);
+        let memberCap: MemberCap = scenario.take_from_sender();
+        let mut vault: SeaVault = scenario.take_shared();
+        let mut clock: Clock = clock::create_for_testing(scenario.ctx());
+        clock.set_for_testing(SIX_MONTHS+1+SEVEN_DAYS+1);
+        seaVault::member_withdraw<SUI>(&memberCap, &mut vault, &clock, b"SUI", scenario.ctx());
+        seaVault::member_withdraw<USDC>(&memberCap, &mut vault, &clock, b"USDC", scenario.ctx());
+
+        // finish and return used stuff
+        ts::return_to_sender(&scenario, memberCap);
+        ts::return_shared(vault);
+        clock::destroy_for_testing(clock);
+    };
+
+    // confirm Bob's withdraw
+    {
+        scenario.next_tx(BOB);
+        let coin_sui: Coin<SUI> = scenario.take_from_sender();
+        assert_eq!(coin_sui.value(), 20);
+        ts::return_to_sender(&scenario, coin_sui);
+        let coin_usdc: Coin<USDC> = scenario.take_from_sender();
+        assert_eq!(coin_usdc.value(), 40);
+        ts::return_to_sender(&scenario, coin_usdc);
+
+    };
+
+    {
+        scenario.next_tx(DAVE);
+        let coin_sui: Coin<SUI> = scenario.take_from_sender();
+        assert_eq!(coin_sui.value(), 80);
+        ts::return_to_sender(&scenario, coin_sui);
+        let coin_usdc: Coin<USDC> = scenario.take_from_sender();
+        assert_eq!(coin_usdc.value(), 160);
+        ts::return_to_sender(&scenario, coin_usdc);
+    };
+
+    ts::end(scenario);
+}
+
+
+#[test]
+#[expected_failure]
+fun test_member_withdraw_same_asset_twice() {
+    let mut scenario = ts::begin(@0x0);
+    {
+        scenario.next_tx(ALICE);
+        seaVault::createVault(scenario.ctx());
+    };
+
+    // init member and deposit
+    {
+        scenario.next_tx(ALICE);
+        let ownerCap: OwnerCap = scenario.take_from_sender();
+        let mut vault: SeaVault = scenario.take_shared();
+        
+         // add BOB and CHARLIE by address
+        let mut address_list = vector::empty<address>();
+        let mut percentage_list = vector::empty<u8>();
+        address_list.push_back(BOB);
+        percentage_list.push_back(10);
+        address_list.push_back(CHARLIE);
+        percentage_list.push_back(20);
+        seaVault::addMemberByAddresses(&ownerCap, &mut vault, address_list, percentage_list, scenario.ctx());
+
+        // add DAVE and FRED by email
+        let emailDave = string::utf8(b"Dave@seawallet.ai");
+        let percentageDave = 30;
+        let capDave = seaVault::addMemberByEmail(&ownerCap, &mut vault, emailDave, percentageDave, scenario.ctx());
+        transfer::public_transfer(capDave, DAVE);
+
+        let emailFred = string::utf8(b"Fred@seawallet.ai");
+        let percentageFred = 40;
+        let capFred = seaVault::addMemberByEmail(&ownerCap, &mut vault, emailFred, percentageFred, scenario.ctx());
+        transfer::public_transfer(capFred, FRED);
+
+        // deposit
+        let coin: Coin<SUI> = test_sui(&mut scenario);
+        seaVault::add_coin(&ownerCap, &mut vault, b"SUI", coin);
+
+        // finish and return used stuff
+        ts::return_to_sender(&scenario, ownerCap);
+        ts::return_shared(vault);
+    };
+
+    {
+        scenario.next_tx(BOB);
+        let memberCap: MemberCap = scenario.take_from_sender();
+        let mut vault: SeaVault = scenario.take_shared();
+        let clock: Clock = clock::create_for_testing(scenario.ctx());
+
+        // expect failure
+        seaVault::member_withdraw<SUI>(&memberCap, &mut vault, &clock, b"SUI", scenario.ctx());
+
+        // finish and return used stuff
+        ts::return_to_sender(&scenario, memberCap);
+        ts::return_shared(vault);
+        clock::destroy_for_testing(clock);
+    };
+
+    ts::end(scenario);
+}
+
+// test (member_withdraw and owner update_time) and (member_withdraw and owner reclaim_asset)
