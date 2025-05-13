@@ -1,4 +1,4 @@
-module SeaWallet::SeaVault {
+module SeaWallet::seaVault {
     use std::{
         string::{Self, String},
         vector,
@@ -119,7 +119,7 @@ module SeaWallet::SeaVault {
     /// check if the total percentage of all caps is 100
     /// call everytime modifying caps percentage
     public fun checkPercentage(_cap: &OwnerCap, vault: &mut SeaVault) {
-        let i: u8 = 0;
+        let mut i: u8 = 0;
         let length = vault.cap_percentage.size() as u8;
         let mut totalPercentage = 0;
         while (i < length) {
@@ -335,65 +335,5 @@ module SeaWallet::SeaVault {
     public fun vaultID(vault: &SeaVault): ID {
         let id = object::id(vault);
         id
-    }
-
-    // initMember, return vector of caps for email members, (test only because it's hard to process emailCap in frontend)
-    #[test_only]
-    public fun initMember(_cap: &OwnerCap, vault: &mut SeaVault, address_list: vector<address>, percentage_list: vector<u8>, emailList: vector<String>, emailPer: vector<u8>, ctx: &mut TxContext): vector<MemberCap> {
-        assert!(address_list.length() == percentage_list.length(), EMisMatch);
-        assert!(emailList.length() == emailPer.length(), EMisMatch);
-        let mut capCount: u8 = 0;
-
-        // Handle addresses
-        let mut i = 0;
-        while (i < address_list.length()) {
-            let addrCap = MemberCap {
-                id: object::new(ctx),
-                vaultID: object::id(vault),
-                capID: capCount,
-            };
-            
-            transfer::public_transfer(addrCap, address_list[i]);
-            vault.cap_percentage.insert(capCount, percentage_list[i]);
-            vault.cap_activated.insert(capCount, true);
-
-            capCount = capCount + 1;
-            i = i + 1;
-        };
-
-        // Handle emails
-        let mut emailCaps = vector::empty<MemberCap>();
-        let mut j = 0;
-
-        while (j < emailList.length()) {
-            let emailCap = MemberCap {
-                id: object::new(ctx),
-                vaultID: object::id(vault),
-                capID: capCount,
-            };
-            
-            emailCaps.push_back(emailCap);
-            vault.cap_percentage.insert(capCount, emailPer[j]);
-            vault.cap_activated.insert(capCount, true);
-
-            capCount = capCount + 1;
-            j = j + 1;
-        };
-
-        emailCaps
-    }
-
-    #[test_only]
-    public fun addMemberByAddress(_cap: &OwnerCap, vault: &mut SeaVault, member: address, percentage: u8, ctx: &mut TxContext) {
-        // let x = (vec_map::size(&vault.cap_percentage) as u8);
-        let capCount = (vault.cap_percentage.size() as u8);
-        let memberCap = MemberCap {
-            id: object::new(ctx),
-            vaultID: object::id(vault),
-            capID: capCount,
-        };
-        vault.cap_percentage.insert(capCount, percentage);
-        vault.cap_activated.insert(capCount, true);
-        transfer::public_transfer(memberCap, member);
     }
 }
