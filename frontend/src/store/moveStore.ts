@@ -51,7 +51,7 @@ const useMoveStore = create<MoveStore>((set, get) => ({
   createVaultTx: () => {
     const vaultTx = new Transaction();
     vaultTx.moveCall({
-      target: `${get().packageName}::vault::createVault`,
+      target: `${get().packageName}::seaVault::createVault`,
       arguments: [],
     });
     return vaultTx;
@@ -81,7 +81,7 @@ const useMoveStore = create<MoveStore>((set, get) => ({
     const nameBC = stringToUint8Array(name.toString());
     // Step 3: use goods as asset input into addToVault
     tx.moveCall({
-      target: `${get().packageName}::vault::organize_trust_asset`,
+      target: `${get().packageName}::seaVault::organize_trust_asset`,
       arguments: [tx.object(capId), tx.object(vaultId), tx.pure(nameBC), goods],
       typeArguments: [coinType],
     });
@@ -113,7 +113,7 @@ const useMoveStore = create<MoveStore>((set, get) => ({
       .serialize(stringToUint8Array(name.toString()));
     // Step 3: use goods as asset input into addToVault
     tx.moveCall({
-      target: `${get().packageName}::vault::add_trust_asset_coin`,
+      target: `${get().packageName}::seaVault::add_trust_asset_coin`,
       arguments: [tx.object(capId), tx.object(vaultId), goods, tx.pure(nameBC)],
       typeArguments: [coinType || "unknown_coin_type"],
     });
@@ -147,7 +147,7 @@ const useMoveStore = create<MoveStore>((set, get) => ({
 
     // handle addresses
     tx.moveCall({
-      target: `${get().packageName}::vault::addMemberByAddresses`,
+      target: `${get().packageName}::seaVault::addMemberByAddresses`,
       arguments: [
         tx.object(cap),
         tx.object(vault),
@@ -165,7 +165,7 @@ const useMoveStore = create<MoveStore>((set, get) => ({
       });
 
       let emailCap = tx.moveCall({
-        target: `${get().packageName}::vault::addMemberByEmail`,
+        target: `${get().packageName}::seaVault::addMemberByEmail`,
         arguments: [
           tx.object(cap),
           tx.object(vault),
@@ -176,7 +176,7 @@ const useMoveStore = create<MoveStore>((set, get) => ({
 
       link.addClaimableObjectRef(
         emailCap,
-        `${get().packageName}::vault::MemberCap`
+        `${get().packageName}::seaVault::MemberCap`
       );
       await link.createSendTransaction({
         transaction: tx,

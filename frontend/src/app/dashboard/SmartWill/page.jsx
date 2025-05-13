@@ -1,26 +1,28 @@
 "use client";
 import "@mysten/dapp-kit/dist/index.css";
-import { ConnectButton, useAutoConnectWallet, useSuiClientQuery } from "@mysten/dapp-kit";
+import {
+  ConnectButton,
+  useAutoConnectWallet,
+  useSuiClientQuery,
+} from "@mysten/dapp-kit";
 import { useCurrentAccount } from "@mysten/dapp-kit";
 import { useState, useEffect } from "react";
 import useHeirStore from "../../../store/heirStore"; // 確保正確引入 store 路徑
 import { useRouter } from "next/navigation";
-import  { AllWilllist }  from "../../../component/willComponent/willmain";
+import { AllWilllist } from "../../../component/willComponent/willmain";
+
 export default function Dashboard() {
   const account = useCurrentAccount();
   const router = useRouter();
   const autoConnectionStatus = useAutoConnectWallet();
-  
+
   // 從 Zustand store 獲取狀態和方法
-  const {
-    heirs,
-    getTotalRatio,
-  } = useHeirStore();
+  const { heirs, getTotalRatio } = useHeirStore();
 
   // 如果沒有繼承人資料，可能需要重定向或顯示特定訊息
   useEffect(() => {
     // 僅在客戶端渲染時檢查
-    if (typeof window !== 'undefined') {
+    if (typeof window !== "undefined") {
       // 如果沒有繼承人資料或者資料不完整，可選擇重定向到主頁
       if (!heirs || heirs.length === 0 || !heirs[0].name) {
         // console.log("沒有繼承人資料，顯示空狀態");
@@ -30,17 +32,23 @@ export default function Dashboard() {
     }
   }, [heirs, router]);
 
-  // 100 天倒計時狀態
-  const [daysRemaining, setDaysRemaining] = useState(100);
-  const [hours, setHours] = useState(0);
-  const [minutes, setMinutes] = useState(0);
-  const [seconds, setSeconds] = useState(0);
+  // 倒計時狀態 - 從截圖調整為 30 天
+  const [daysRemaining, setDaysRemaining] = useState(30);
+  const [hours, setHours] = useState(11);
+  const [minutes, setMinutes] = useState(59);
+  const [seconds, setSeconds] = useState(14);
+
+  // 完成度狀態 - 根據截圖添加
+  const [completionPercentage, setCompletionPercentage] = useState(86.7);
 
   // 設置倒計時
   useEffect(() => {
-    // 假設設置一個 100 天後的結束日期
+    // 設置一個 30 天後的結束日期
     const endDate = new Date();
     endDate.setDate(endDate.getDate() + daysRemaining);
+    endDate.setHours(endDate.getHours() + hours);
+    endDate.setMinutes(endDate.getMinutes() + minutes);
+    endDate.setSeconds(endDate.getSeconds() + seconds);
 
     const timer = setInterval(() => {
       const now = new Date();
@@ -70,169 +78,177 @@ export default function Dashboard() {
 
     return () => clearInterval(timer);
   }, []);
-  
-  // 處理地址顯示格式化
-  const formatAddress = (address) => {
-    if (!address) return "Not set";
-    if (address.includes('@')) return address; // 如果是電子郵件，直接返回
-    // 如果是 Sui 地址，返回縮寫形式
-    return `${address.slice(0, 5)}...${address.slice(-5)}`;
-  };
 
-  // 檢查地址類型並返回對應圖標
-  const getAddressIcon = (address) => {
-    if (!address) return null;
-    if (address.startsWith("0x") && !address.includes("@")) {
-      return "./sui.svg";
-    }
-    return "./mail-142.svg";
-  };
-  // const { data, isPending, error, refetch } = useSuiClientQuery('getDynamicFieldObject', {
-	// 	parentId: "0x89d0c03b5d8afbc76c7b4a1c63dc27490a5457caab2c40ce53e91b8825a58dcb",
-  //   name:{
-  //     "type": "vector<u8>",
-  //     "value": [
-  //         115,
-  //         117,
-  //         105
-  //     ]
-  // }
-	// });
+  // 模擬繼承人資料 - 根據截圖調整
+  const nominatedHeirs = [
+    {
+      id: 1,
+      address: "alexnander99904dj@gmail.com",
+      type: "email",
+      dateNominated: "Apr 12, 2025",
+      allocation: "30%",
+    },
+    {
+      id: 2,
+      address: "0x71C7656EC7ab88b09...976F",
+      type: "wallet",
+      dateNominated: "Apr 12, 2025",
+      allocation: "20%",
+    },
+    {
+      id: 3,
+      address: "0x77C2344CCEa7ac890...66F8",
+      type: "wallet",
+      dateNominated: "May 4, 2025",
+      allocation: "20%",
+    },
+    {
+      id: 4,
+      address: "0x77C2344CCEa7ac890...66F8",
+      type: "wallet",
+      dateNominated: "May 4, 2025",
+      allocation: "20%",
+    },
+    {
+      id: 5,
+      address: "0x77C2344CCEa7ac890...66F8",
+      type: "wallet",
+      dateNominated: "May 4, 2025",
+      allocation: "10%",
+    },
+  ];
 
   return (
-    <div className="flex flex-col h-screen bg-gray-100">
-      {/* 標題區域 */}
-      <div className="bg-blue-300 py-8">
-        <h1 className="text-3xl text-gray-800 font-bold text-center">
-          Will Center
-        </h1>
-        <p className="text-lg text-gray-800 font-semibold text-center mt-2">
-          Inspect and Alter your Smart Will
-        </p>
+    <div className="flex-1 px-8 py-8 bg-white">
+      {/* 頂部標題與錢包按鈕 */}
+      <div className="flex justify-between items-center mb-6">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">Smart Will State</h1>
+          <p className="text-sm text-gray-600">
+            Monitor your smart will countdown and manage heir distributions
+          </p>
+        </div>
+        <ConnectButton />
       </div>
-      <AllWilllist 
-        width="50%" 
-        height="400px" 
+
+      {/* 倒計時卡片 */}
+      <div className="bg-blue-500 rounded-lg mb-6 overflow-hidden">
+        <div className="flex flex-col p-6  items-center">
+          <div className="flex justify-end mb-2">
+          </div>
+          <div className="flex justify-center space-x-4 text-white text-5xl font-bold py-10">
+            <div className="flex flex-col items-center">
+              <span>{daysRemaining}</span>
+              <span className="text-sm mt-1">Days</span>
+            </div>
+            <div className="text-4xl self-start mt-2">:</div>
+            <div className="flex flex-col items-center">
+              <span>{hours.toString().padStart(2, "0")}</span>
+              <span className="text-sm mt-1">Hours</span>
+            </div>
+            <div className="text-4xl self-start mt-2">:</div>
+            <div className="flex flex-col items-center">
+              <span>{minutes.toString().padStart(2, "0")}</span>
+              <span className="text-sm mt-1">Minutes</span>
+            </div>
+            <div className="text-4xl self-start mt-2">:</div>
+            <div className="flex flex-col items-center">
+              <span>{seconds.toString().padStart(2, "0")}</span>
+              <span className="text-sm mt-1">Seconds</span>
+            </div>
+          </div>
+          <div className="justify-center"> Till Will Execution</div>
+        </div>
+      </div>
+
+      <p className="text-sm text-gray-600 mb-6">
+
+      </p>
+      <AllWilllist
+        width="100%"
+        height="400px"
         maxWidth="600px"
-        style={{ margin: '20px auto' }}
-      />
-      <div className="flex flex-col md:flex-row h-content">
-        {/* 左側區域 - 100 天倒計時 */}
-        <div className="flex-1 bg-secondary p-6">
-          <div className="bg-white rounded-lg shadow-md p-6">
-            <h2 className="text-2xl font-semibold text-gray-800 mb-4">
-              Smart Will Countdown
-            </h2>
-            <div className="bg-gray-100 rounded-lg p-6">
-              <div className="text-center">
-                <div className="text-5xl font-bold text-primary mb-4">
-                  {daysRemaining}
-                </div>
-                <div className="text-xl font-medium text-gray-700">Days</div>
-              </div>
-
-              <div className="flex justify-center mt-4 space-x-4">
-                <div className="text-center">
-                  <div className="text-2xl text-gray-600 font-bold">
-                    {hours}
-                  </div>
-                  <div className="text-sm text-gray-600">Hours</div>
-                </div>
-                <div className="text-center">
-                  <div className="text-2xl text-gray-600 font-bold">
-                    {minutes}
-                  </div>
-                  <div className="text-sm text-gray-600">Minutes</div>
-                </div>
-                <div className="text-center">
-                  <div className="text-2xl text-gray-600 font-bold">
-                    {seconds}
-                  </div>
-                  <div className="text-sm text-gray-600">Seconds</div>
-                </div>
-              </div>
+        style={{ margin: "20px auto" }}
+      ></AllWilllist>
+      {/* 繼承人列表 */}
+      <div className="mb-6">
+        <h2 className="text-lg font-semibold mb-4">Nominated Heirs</h2>
+        <div className="border rounded-lg overflow-hidden">
+          {/* 表頭 */}
+          <div className="grid grid-cols-12 bg-gray-50 py-3 px-4 border-b">
+            <div className="col-span-5">
+              <span className="text-sm font-medium text-gray-700">
+                Heir Info
+              </span>
             </div>
-            
-            {/* 重新啟動按鈕 */}
-            <div className="mt-6 flex justify-center">
-              <button 
-                onClick={() => router.push("/")}
-                className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition"
-              >
-                Restart Process
-              </button>
+            <div className="col-span-4">
+              <span className="text-sm font-medium text-gray-700">
+                Date Nominated
+              </span>
+            </div>
+            <div className="col-span-3 text-right">
+              <span className="text-sm font-medium text-gray-700">
+                Allocation
+              </span>
             </div>
           </div>
-        </div>
 
-        {/* 右側區域 - 繼承人確認列表 */}
-        <div className="flex-1 p-6">
-          <div className="bg-white rounded-lg shadow-md p-6 h-full">
-            <h2 className="text-2xl font-semibold text-gray-800 mb-4">
-              Heir Confirmation List
-            </h2>
-
-            {heirs && heirs.length > 0 && heirs[0].name ? (
-              <div className="space-y-4">
-                {heirs.map((heir, index) => (
-                  <div
-                    key={heir.id}
-                    className="border rounded-lg p-4 bg-gray-50"
-                  >
-                    <div className="flex justify-between items-center flex-wrap">
-                      <div className="mb-2 md:mb-0">
-                        <h3 className="text-lg font-medium text-gray-800">
-                          {heir.name || `Heir #${index + 1}`}
-                        </h3>
-                        <div className="flex items-center mt-1">
-                          {heir.address && (
-                            <img 
-                              src={getAddressIcon(heir.address)} 
-                              alt="Address Type" 
-                              className="h-4 w-4 mr-2"
-                            />
-                          )}
-                          <p className="text-gray-600">
-                            <span className="font-medium">Address:</span>{" "}
-                            {formatAddress(heir.address)}
-                          </p>
-                        </div>
-                        <div className="mt-2 flex items-center">
-                          <span className="mr-2 text-gray-800">Allocation ratio:</span>
-                          <span className="font-medium text-gray-800">{heir.ratio}%</span>
-                        </div>
-                      </div>
-                      <div className="flex items-center">
-                        {heir.address ? (
-                          <span className="bg-green-100 text-green-800 px-4 py-2 rounded-full text-sm font-medium">
-                            Confirmed
-                          </span>
-                        ) : (
-                          <span className="bg-yellow-100 text-yellow-800 px-4 py-2 rounded-full text-sm font-medium">
-                            Not Confirmed
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                ))}
+          {/* 繼承人列表項 */}
+          {nominatedHeirs.map((heir) => (
+            <div
+              key={heir.id}
+              className="grid grid-cols-12 py-3 px-4 border-b last:border-b-0"
+            >
+              <div className="col-span-5 flex items-center">
+                <div className="flex-shrink-0 mr-3">
+                  {heir.type === "email" ? (
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      className="h-5 w-5 text-gray-500"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
+                      />
+                    </svg>
+                  ) : (
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      className="h-5 w-5 text-gray-500"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"
+                      />
+                    </svg>
+                  )}
+                </div>
+                <span className="text-sm text-gray-800">{heir.address}</span>
               </div>
-            ) : (
-              <div className="text-center py-10 text-gray-500">
-                <p>No heirs have been set up yet.</p>
+              <div className="col-span-4 flex items-center">
+                <span className="text-sm text-gray-800">
+                  {heir.dateNominated}
+                </span>
               </div>
-            )}
-
-            {heirs && heirs.length > 0 && (
-              <div className="mt-4 text-sm text-gray-500 text-right">
-                Total allocation ratio: {getTotalRatio()}%
+              <div className="col-span-3 flex items-center justify-end">
+                <span className="text-sm font-medium text-gray-800">
+                  {heir.allocation}
+                </span>
               </div>
-            )}
-          </div>
+            </div>
+          ))}
         </div>
       </div>
-
-      <div className="p-10"></div>
     </div>
   );
 }

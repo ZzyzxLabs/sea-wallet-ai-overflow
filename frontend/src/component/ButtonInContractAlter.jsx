@@ -33,11 +33,10 @@ const ButtonInContractAlter = () => {
           showRawEffects: true,
         },
       }),
-  });
-  // Get fuseTxFunctions from store
+  });  // Get fuseTxFunctions from store
   const fuseTxFunctions = useMoveStore((state) => state.fuseTxFunctions);
   const alterTx = useMoveStore((state) => state.alterTx);
-  const VaultNames = useHeirStore((state) => state.VaultNames);
+  const VaultNames = useHeirStore((state) => state.VaultName);
   const packageName = useMoveStore((state) => state.packageName);
   // Get the Sui client for advanced transaction options
   const suiClient = useSuiClient();
@@ -272,8 +271,7 @@ const ButtonInContractAlter = () => {
       
       // Extract the coin type
       const finalCoinType = normalizeType(selectedCoin[1]);
-      
-      console.log("Transaction parameters:", {
+        console.log("Transaction parameters:", {
         capId: ownerCapObjects[0].data.objectId,
         vaultId: vault.objectId,
         coinIds: coinObjectIds,
@@ -282,7 +280,7 @@ const ButtonInContractAlter = () => {
         coinType: finalCoinType
       });
       let tx
-      if(!VaultNames.includes(selectedCoin[0])){
+      if(!VaultNames || !Array.isArray(VaultNames) || !VaultNames.includes(selectedCoin[0])){
         tx = fuseTxFunctions(
           ownerCapObjects[0].data.objectId,
           vault.objectId, 
