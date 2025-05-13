@@ -38,7 +38,7 @@ module SeaWallet::SeaVault {
         is_warned: bool, // is warned for inactivity
         cap_percentage: VecMap<u8, u8>, // capID: percentage
         cap_activated: VecMap<u8, bool>, // capID: isActivated
-        total_asset: Table<vector<u8>, u64>, // asset_name: amount
+        asset_sum: Table<vector<u8>, u64>, // asset_name: amount
         asset_withdrawn: Table<vector<u8>, vector<u8>>// asset_name: withdrawn capIDs
     }
     
@@ -63,7 +63,7 @@ module SeaWallet::SeaVault {
             is_warned: false,
             cap_percentage: vec_map::empty<u8, u8>(),
             cap_activated: vec_map::empty<u8, bool>(),
-            total_asset: table::new<vector<u8>, u64>(ctx),
+            asset_sum: table::new<vector<u8>, u64>(ctx),
             asset_withdrawn: table::new<vector<u8>, vector<u8>>(ctx),
         };
         let ownerCap = OwnerCap {
@@ -139,7 +139,7 @@ module SeaWallet::SeaVault {
     public fun add_coin<Asset>(_cap: &OwnerCap, vault: &mut SeaVault, asset_name: vector<u8>, asset: Coin<Asset>) {
         // update table amount
         let amount = coin::value<Asset>(&asset);
-        table::add(&mut vault.total_asset, asset_name, amount);
+        table::add(&mut vault.asset_sum, asset_name, amount);
         table::add(&mut vault.asset_withdrawn, asset_name, vector::empty<u8>());
 
         // add coin to vault
@@ -150,7 +150,7 @@ module SeaWallet::SeaVault {
     public fun organize_coin<Asset>(_cap: &OwnerCap, vault: &mut SeaVault, asset_name: vector<u8>, asset: Coin<Asset>) {
         // update table amount
         let added_amount = coin::value<Asset>(&asset);
-        let amount_mut = table::borrow_mut<vector<u8>, u64>(&mut vault.total_asset, asset_name);
+        let amount_mut = table::borrow_mut<vector<u8>, u64>(&mut vault.asset_sum, asset_name);
         *amount_mut = *amount_mut + added_amount;
 
         // add coin to vault
@@ -161,8 +161,8 @@ module SeaWallet::SeaVault {
     /// for owner to reclaim asset (NFT or all coins at once)
     public fun reclaim_asset<Asset: key + store>(_cap: &OwnerCap, vault: &mut SeaVault, asset_name: vector<u8>, ctx: &mut TxContext) {
         // remove from table
-        if(vault.total_asset.contains(asset_name)) {
-            table::remove(&mut vault.total_asset, asset_name);
+        if(vault.asset_sum.contains(asset_name)) {
+            table::remove(&mut vault.asset_sum, asset_name);
         };
 
         // remove from vault
@@ -172,9 +172,9 @@ module SeaWallet::SeaVault {
 
     /// for owner to take a certain amount of coin
     public fun take_coin<Asset: key + store>(_cap: &OwnerCap, vault: &mut SeaVault, asset_name: vector<u8>, amount: u64, ctx: &mut TxContext) {
-        assert!(amount <= *table::borrow(&vault.total_asset, asset_name), ENotEnough);
+        assert!(amount <= *table::borrow(&vault.asset_sum, asset_name), ENotEnough);
         // update table amount
-        let amount_mut = table::borrow_mut<vector<u8>, u64>(&mut vault.total_asset, asset_name);
+        let amount_mut = table::borrow_mut<vector<u8>, u64>(&mut vault.asset_sum, asset_name);
         *amount_mut = *amount_mut - amount;
 
         // take coin from vault
@@ -222,7 +222,7 @@ module SeaWallet::SeaVault {
         vector::push_back(withdrawn_list, cap.capID);
 
         // calculate the amount to withdraw
-        let full_amount = *table::borrow(&vault.total_asset, asset_name);
+        let full_amount = *table::borrow(&vault.asset_sum, asset_name);
         let percentage = *vec_map::get(&vault.cap_percentage, &cap.capID) as u64;
         let amount = full_amount * percentage / 100;
         
