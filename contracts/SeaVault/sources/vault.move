@@ -1,33 +1,45 @@
-module smartwill::vault {
-    use sui::dynamic_object_field as dof;
-    use sui::balance::{Self, Balance};
-    use sui::coin::{Self, Coin};
-    use sui::object::{Self, UID, ID};
-    use sui::transfer;
-    use sui::tx_context::{Self, TxContext};
-    use sui::vec_map::{Self, VecMap};
-    use std::string::{Self, String};
-    use sui::sui::SUI;
-    use sui::clock::{Self, Clock};
-    use sui::tx_context::epoch_timestamp_ms;
-    use sui::table::{Table, Self};
-    use std::vector;
-    use std::type_name::{Self, TypeName};
+module SeaWallet::SeaVault {
+    use std::{
+        string::{Self, String},
+        vector,
+        type_name::{Self, TypeName},
+    };
+    use sui::{
+        dynamic_object_field as dof,
+        balance::{Self, Balance},
+        coin::{Self, Coin},
+        object::{Self, UID, ID},
+        transfer,
+        tx_context::{Self, TxContext, epoch_timestamp_ms},
+        vec_map::{Self, VecMap},
+        sui::SUI,
+        clock::{Self, Clock},
+        table::{Table, Self},
+        event::emit,
+    };
     
     const EDeductDateNotPassed: u64 = 0;
     const EWrongVaultId: u64 = 1;
     const EWrongServiceId: u64 = 2;
     const ELocked: u64 = 4;
     const EMisMatch: u64 = 5;
+    const ECapNotFound: u64 = 6;
+    const ETotalPercentageNot100: u64 = 7;
+    const ENotEnough: u64 = 8; // Error code for insufficient amount
+    const EAlreadyWithdrawn: u64 = 9;
 
-    public struct Vault has key {
-        id: UID,
-        last_time: u64,
-        warned: bool,
-        timeleft: u64,
-        capPercentage: VecMap<u8, u8>,
-        capBool: VecMap<u8, bool>, 
-        withdraw_table: Table<vector<u8>, u64>,
+    const SIX_MONTHS: u64 = 6 * 30 * 24 * 60 * 60 * 1000;
+    const SEVEN_DAYS: u64 = 7 * 24 * 60 * 60 * 1000;
+
+    public struct SeaVault has key {
+        id: UID, // vault ID
+        last_update: u64, // last update time
+        time_left: u64, // time left till inherit
+        is_warned: bool, // is warned for inactivity
+        cap_percentage: VecMap<u8, u8>, // capID: percentage
+        cap_activated: VecMap<u8, bool>, // capID: isActivated
+        asset_sum: Table<vector<u8>, u64>, // asset_name: amount
+        asset_withdrawn: Table<vector<u8>, vector<u8>>// asset_name: withdrawn capIDs
     }
     
     public struct OwnerCap has key, store {
@@ -41,208 +53,183 @@ module smartwill::vault {
         capID: u8,
     }
 
+    /// create a new SeaVault
     #[allow(lint(self_transfer))]
     public fun createVault(ctx: &mut TxContext) {
-        let vault = Vault {
+        let vault = SeaVault {
             id: object::new(ctx),
-            last_time: tx_context::epoch_timestamp_ms(ctx),
-            warned: false,
-            timeleft: 6 * 30 * 24 * 60 * 60 * 1000,
-            capPercentage: vec_map::empty<u8, u8>(),
-            capBool: vec_map::empty<u8, bool>(),
-            withdraw_table: table::new<vector<u8>, u64>(ctx),
+            last_update: tx_context::epoch_timestamp_ms(ctx),
+            time_left: SIX_MONTHS,
+            is_warned: false,
+            cap_percentage: vec_map::empty<u8, u8>(),
+            cap_activated: vec_map::empty<u8, bool>(),
+            asset_sum: table::new<vector<u8>, u64>(ctx),
+            asset_withdrawn: table::new<vector<u8>, vector<u8>>(ctx),
         };
         let ownerCap = OwnerCap {
             id: object::new(ctx),
             vaultID: object::id(&vault),
         };
         transfer::share_object(vault);
-        transfer::public_transfer(ownerCap, tx_context::sender(ctx));
+        transfer::public_transfer(ownerCap, ctx.sender());
     }
 
-    // initMember, return vector of caps for email members
-    // TODO: return <email, cap> map
-    public fun initMember(_cap: &OwnerCap, vault: &mut Vault, addrList: vector<address>, addrPer: vector<u8>, emailList: vector<String>, emailPer: vector<u8>, ctx: &mut TxContext): vector<MemberCap> {
-        assert!(addrList.length() == addrPer.length(), EMisMatch);
-        assert!(emailList.length() == emailPer.length(), EMisMatch);
-        let mut capCount: u8 = 0;
-
-        // Handle addresses
+    /// add multiple members by addresses vector
+    public fun addMemberByAddresses(_cap: &OwnerCap, vault: &mut SeaVault, address_list: vector<address>, percentage_list: vector<u8>, ctx: &mut TxContext) {
         let mut i = 0;
-        while (i < addrList.length()) {
+        let mut capCount = (vault.cap_percentage.size() as u8);
+        while (i < address_list.length()) {
             let addrCap = MemberCap {
                 id: object::new(ctx),
                 vaultID: object::id(vault),
                 capID: capCount,
             };
             
-            transfer::public_transfer(addrCap, addrList[i]);
-            vault.capPercentage.insert(capCount, addrPer[i]);
-            vault.capBool.insert(capCount, true);
-
-            capCount = capCount + 1;
-            i = i + 1;
-        };
-
-        // Handle emails
-        let mut emailCaps = vector::empty<MemberCap>();
-        let mut j = 0;
-
-        while (j < emailList.length()) {
-            let emailCap = MemberCap {
-                id: object::new(ctx),
-                vaultID: object::id(vault),
-                capID: capCount,
-            };
-            
-            emailCaps.push_back(emailCap);
-            vault.capPercentage.insert(capCount, emailPer[j]);
-            vault.capBool.insert(capCount, true);
-
-            capCount = capCount + 1;
-            j = j + 1;
-        };
-
-        emailCaps
-    }
-
-    public fun addMemberByAddress(_cap: &OwnerCap, vault: &mut Vault, member: address, percentage: u8, ctx: &mut TxContext) {
-        // let x = (vec_map::size(&vault.capPercentage) as u8);
-        let capCount = (vault.capPercentage.size() as u8);
-        let memberCap = MemberCap {
-            id: object::new(ctx),
-            vaultID: object::id(vault),
-            capID: capCount,
-        };
-        vault.capPercentage.insert(capCount, percentage);
-        vault.capBool.insert(capCount, true);
-        transfer::public_transfer(memberCap, member);
-    }
-
-    public fun addMemberByAddresses(_cap: &OwnerCap, vault: &mut Vault, addrList: vector<address>, addrPer: vector<u8>, ctx: &mut TxContext) {
-        // let x = (vec_map::size(&vault.capPercentage) as u8);
-        let mut i = 0;
-        let mut capCount = (vault.capPercentage.size() as u8);
-        while (i < addrList.length()) {
-            let addrCap = MemberCap {
-                id: object::new(ctx),
-                vaultID: object::id(vault),
-                capID: capCount,
-            };
-            
-            transfer::public_transfer(addrCap, addrList[i]);
-            vault.capPercentage.insert(capCount, addrPer[i]);
-            vault.capBool.insert(capCount, true);
+            transfer::public_transfer(addrCap, address_list[i]);
+            vault.cap_percentage.insert(capCount, percentage_list[i]);
+            vault.cap_activated.insert(capCount, true);
 
             capCount = capCount + 1;
             i = i + 1;
         };
     }
 
-    public fun addMemberByEmail(_cap: &OwnerCap, vault: &mut Vault, _email: String, percentage: u8, ctx: &mut TxContext): MemberCap {
-        let capCount = (vault.capPercentage.size() as u8);
-        let memberCap = MemberCap {
+    /// add single member by an email string
+    public fun addMemberByEmail(_cap: &OwnerCap, vault: &mut SeaVault, _email: String, percentage: u8, ctx: &mut TxContext): MemberCap {
+        let capCount = (vault.cap_percentage.size() as u8);
+        let emailCap = MemberCap {
             id: object::new(ctx),
             vaultID: object::id(vault),
             capID: capCount,
         };
-        vault.capPercentage.insert(capCount, percentage);
-        vault.capBool.insert(capCount, true);
-        memberCap
+        vault.cap_percentage.insert(capCount, percentage);
+        vault.cap_activated.insert(capCount, true);
+        emailCap
     }
 
-    public fun add_trust_asset<Asset: key + store>(_cap: &OwnerCap, vault: &mut Vault, asset: Asset, name: vector<u8>, _ctx: &mut TxContext) {
+    /// modify percentage and activated status of a cap
+    public fun modifyMemberCap(_cap: &OwnerCap, vault: &mut SeaVault, capID: u8, percentage: u8, activated: bool) {
+        assert!(vec_map::contains(&vault.cap_percentage, &capID), ECapNotFound);
+        let capPercentage_mut = vec_map::get_mut(&mut vault.cap_percentage, &capID);
+        *capPercentage_mut = percentage;
+        let capActivated_mut = vec_map::get_mut(&mut vault.cap_activated, &capID);
+        *capActivated_mut = activated;
+    }
+
+    /// check if the total percentage of all caps is 100
+    /// call everytime modifying caps percentage
+    public fun checkPercentage(_cap: &OwnerCap, vault: &mut SeaVault) {
+        let i: u8 = 0;
+        let length = vault.cap_percentage.size() as u8;
+        let mut totalPercentage = 0;
+        while (i < length) {
+            let percentage = *vec_map::get(&vault.cap_percentage, &i);
+            totalPercentage = totalPercentage + percentage;
+            i = i + 1;
+        };
+        assert!(totalPercentage == 100, ETotalPercentageNot100);
+    }
+
+    /// add non-coin asset to vault
+    public fun add_asset<Asset: key + store>(_cap: &OwnerCap, vault: &mut SeaVault, asset: Asset, name: vector<u8>, _ctx: &mut TxContext) {
         dof::add(&mut vault.id, name, asset);
     }
-    //put coinType into vault
-    public fun add_trust_asset_coin<Asset>(_cap: &OwnerCap, vault: &mut Vault, asset: Coin<Asset>, name: vector<u8>, _ctx: &mut TxContext) {
+
+    /// add coin asset to vault (when the coinType isn't added before)
+    public fun add_coin<Asset>(_cap: &OwnerCap, vault: &mut SeaVault, asset_name: vector<u8>, asset: Coin<Asset>) {
+        // update table amount
         let amount = coin::value<Asset>(&asset);
-        table::add(&mut vault.withdraw_table, name, amount);
-        dof::add(&mut vault.id, name, asset);
+        table::add(&mut vault.asset_sum, asset_name, amount);
+        table::add(&mut vault.asset_withdrawn, asset_name, vector::empty<u8>());
+
+        // add coin to vault
+        dof::add(&mut vault.id, asset_name, asset);
     }
 
-    public fun reclaim_trust_asset<Asset: key + store>(_cap: &OwnerCap, vault: &mut Vault, asset_name: vector<u8>, ctx: &mut TxContext) {
+    /// add more coin asset to vault (when the coinType is already added before)
+    public fun organize_coin<Asset>(_cap: &OwnerCap, vault: &mut SeaVault, asset_name: vector<u8>, asset: Coin<Asset>) {
+        // update table amount
+        let added_amount = coin::value<Asset>(&asset);
+        let amount_mut = table::borrow_mut<vector<u8>, u64>(&mut vault.asset_sum, asset_name);
+        *amount_mut = *amount_mut + added_amount;
+
+        // add coin to vault
+        let coin_from_vault = dof::borrow_mut<vector<u8>, Coin<Asset>>(&mut vault.id, asset_name);
+        coin::join<Asset>(coin_from_vault, asset);
+    }
+
+    /// for owner to reclaim asset (NFT or all coins at once)
+    public fun reclaim_asset<Asset: key + store>(_cap: &OwnerCap, vault: &mut SeaVault, asset_name: vector<u8>, ctx: &mut TxContext) {
+        // remove from table
+        if(vault.asset_sum.contains(asset_name)) {
+            table::remove(&mut vault.asset_sum, asset_name);
+        };
+
+        // remove from vault
         let asset = dof::remove<vector<u8>, Asset>(&mut vault.id, asset_name);
-        vault.withdraw_table.remove(asset_name);
-        transfer::public_transfer(asset, tx_context::sender(ctx));
+        transfer::public_transfer(asset, ctx.sender());
     }
 
-    public fun organize_coin_asset<Asset>(_cap: &OwnerCap, vault: &mut Vault, asset_name: vector<u8>, asset: Coin<Asset>, _ctx: &mut TxContext) {
+    /// for owner to take a certain amount of coin
+    public fun take_coin<Asset: key + store>(_cap: &OwnerCap, vault: &mut SeaVault, asset_name: vector<u8>, amount: u64, ctx: &mut TxContext) {
+        assert!(amount <= *table::borrow(&vault.asset_sum, asset_name), ENotEnough);
+        // update table amount
+        let amount_mut = table::borrow_mut<vector<u8>, u64>(&mut vault.asset_sum, asset_name);
+        *amount_mut = *amount_mut - amount;
+
+        // take coin from vault
         let coin_from_vault = dof::borrow_mut<vector<u8>, Coin<Asset>>(&mut vault.id, asset_name);
-        let amount = coin::value<Asset>(coin_from_vault); // Fixed: removed the extra &
-        let amount_mut = table::borrow_mut<vector<u8>, u64>(&mut vault.withdraw_table, asset_name);
-        *amount_mut = *amount_mut + amount;
-        coin::join<Asset>(coin_from_vault, asset);
+        let coin = coin::split(coin_from_vault, amount, ctx);
+        transfer::public_transfer(coin, ctx.sender());
     }
 
-
-    public fun organize_trust_asset<Asset>(_cap: &OwnerCap, vault: &mut Vault, asset_name: vector<u8>, asset: Coin<Asset>, _ctx: &mut TxContext) {
-        let coin_from_vault = dof::borrow_mut<vector<u8>, Coin<Asset>>(&mut vault.id, asset_name);
-        let amount = coin::value<Asset>(coin_from_vault); // Fixed: removed the extra &
-        let amount_mut = table::borrow_mut<vector<u8>, u64>(&mut vault.withdraw_table, asset_name);
-        *amount_mut = *amount_mut + amount;
-        coin::join<Asset>(coin_from_vault, asset);
-    }
-
-    public fun update_time(_cap: &OwnerCap, vault: &mut Vault, clock: &Clock, _ctx: &mut TxContext) {
-        vault.last_time = clock.timestamp_ms();
-        if (vault.warned) {
-            vault.timeleft = 6 * 30 * 24 * 60 * 60 * 1000;
-            vault.warned = false;
+    /// update the last update time
+    /// if the vault is warned, reset the time left to 6 months, and set is_warned to false
+    public fun update_time(_cap: &OwnerCap, vault: &mut SeaVault, clock: &Clock) {
+        vault.last_update = clock.timestamp_ms();
+        if (vault.is_warned) {
+            vault.time_left = SIX_MONTHS;
+            vault.is_warned = false;
         }
     }
 
-    // grace period - 7 days grace period for owner to confirm their aliveness
-    fun grace_period(_cap: &MemberCap, vault: &mut Vault, clock: &Clock, _ctx: &mut TxContext) {
-        vault.last_time = clock.timestamp_ms();
-        vault.timeleft = 7 * 24 * 60 * 60 * 1000;
-        vault.warned = true;
+    /// grace period - 7 days grace period for owner to confirm their aliveness
+    fun grace_period(_cap: &MemberCap, vault: &mut SeaVault, clock: &Clock) {
+        vault.last_update = clock.timestamp_ms();
+        vault.time_left = SEVEN_DAYS;
+        vault.is_warned = true;
     }
 
-    public fun heir_withdraw<CoinType>(
+    /// for member to withdraw their share of asset, withdraw one coinType at a time
+    public fun member_withdraw<CoinType>(
         cap: &MemberCap,
-        vault: &mut Vault,
+        vault: &mut SeaVault,
+
         clock: &Clock,
         asset_name: vector<u8>,
         ctx: &mut TxContext
     ) {
+        // check if the vault is locked
         let current_time = clock.timestamp_ms();
-        assert!(current_time - vault.last_time >= vault.timeleft, ELocked);
-        if (!vault.warned) {
-            grace_period(cap, vault, clock, ctx);
+        assert!(current_time - vault.last_update >= vault.time_left, ELocked);
+        if (!vault.is_warned) {
+            grace_period(cap, vault, clock);
         };
-        let full_amount = table::borrow(&vault.withdraw_table, asset_name);
+
+        // check if the member has already withdrawn
+        let mut withdrawn_list = table::borrow_mut(&mut vault.asset_withdrawn, asset_name);
+        assert!(!vector::contains(withdrawn_list, &cap.capID), EAlreadyWithdrawn);
+        vector::push_back(withdrawn_list, cap.capID);
+
+        // calculate the amount to withdraw
+        let full_amount = *table::borrow(&vault.asset_sum, asset_name);
+        let percentage = *vec_map::get(&vault.cap_percentage, &cap.capID) as u64;
+        let amount = full_amount * percentage / 100;
+        
+        // transfer the asset
         let asset = dof::borrow_mut<vector<u8>, Coin<CoinType>>(&mut vault.id, asset_name);
-        let percentage = *vec_map::get(&vault.capPercentage, &cap.capID);
-        let amount = *full_amount * (percentage as u64) / 100;
         let coin = coin::split(asset, amount, ctx);
         transfer::public_transfer(coin, ctx.sender());
-    }
-
-    // withdraw after 6 months; 
-    public fun member_withdraw<CoinType>(
-        cap: &MemberCap,
-        vault: &mut Vault,
-        clock: &Clock,
-        assetVec: vector<vector<u8>>,
-        ctx: &mut TxContext
-    ) {
-        let current_time = clock.timestamp_ms();
-        assert!(current_time - vault.last_time >= vault.timeleft, ELocked);
-        if (!vault.warned) {
-            grace_period(cap, vault, clock, ctx);
-        };
-        let mut x = 0;
-        while (x < vector::length(&assetVec)) {
-            let asset_name = *vector::borrow(&assetVec, x);
-            let full_amount = table::borrow(&vault.withdraw_table, asset_name);
-            let asset = dof::borrow_mut<vector<u8>, Coin<CoinType>>(&mut vault.id, asset_name);
-            let percentage = *vec_map::get(&vault.capPercentage, &cap.capID);
-            let amount = *full_amount * (percentage as u64) / 100;
-            let coin = coin::split(asset, amount, ctx);
-            transfer::public_transfer(coin, ctx.sender());
-            x = x + 1;
-        }
     }
 
     public struct DeductCap has key, store {
@@ -289,7 +276,7 @@ module smartwill::vault {
         transfer::share_object(service);
     }
 
-    public fun subscribeMonthly<CoinType>(service: &Service<CoinType>, mut coin: Coin<CoinType>, vault: &Vault, ctx: &mut TxContext) {
+    public fun subscribeMonthly<CoinType>(service: &Service<CoinType>, mut coin: Coin<CoinType>, vault: &SeaVault, ctx: &mut TxContext) {
         let coin_to_service = coin::split<CoinType>(&mut coin, service.price, ctx);
         transfer::public_transfer(coin_to_service, service.serviceAddress);
         let deductCap = DeductCap {
@@ -309,7 +296,7 @@ module smartwill::vault {
         transfer::public_transfer(coin,service.serviceAddress);
     }
 
-    public fun subscribeYearly<CoinType>(service: &Service<CoinType>, mut coin: Coin<CoinType>, vault: &Vault, ctx: &mut TxContext) {
+    public fun subscribeYearly<CoinType>(service: &Service<CoinType>, mut coin: Coin<CoinType>, vault: &SeaVault, ctx: &mut TxContext) {
         let coin_to_service = coin::split<CoinType>(&mut coin, service.price * 12 * (service.yearlyDiscount as u64) / 100, ctx);
         transfer::public_transfer(coin_to_service, service.serviceAddress);
         let deductCap = DeductCap {
@@ -329,7 +316,7 @@ module smartwill::vault {
         transfer::public_transfer(coin, service.serviceAddress);
     }
 
-    public fun deduct<CoinType>(service: &mut Service<CoinType>, cap: &mut DeductCap, vault: &mut Vault, asset_name: vector<u8>, ctx: &mut TxContext) {
+    public fun deduct<CoinType>(service: &mut Service<CoinType>, cap: &mut DeductCap, vault: &mut SeaVault, asset_name: vector<u8>, ctx: &mut TxContext) {
         assert!(cap.deductDate < tx_context::epoch_timestamp_ms(ctx), EDeductDateNotPassed);
         assert!(object::id(vault) == cap.vaultId, EWrongVaultId);
         assert!(object::id(service) == cap.serviceID, EWrongVaultId);
@@ -345,8 +332,68 @@ module smartwill::vault {
         transfer::public_transfer(subproof, cap.paddr);
     }
     //getter
-    public fun vaultID(vault: &Vault): ID {
+    public fun vaultID(vault: &SeaVault): ID {
         let id = object::id(vault);
         id
+    }
+
+    // initMember, return vector of caps for email members, (test only because it's hard to process emailCap in frontend)
+    #[test_only]
+    public fun initMember(_cap: &OwnerCap, vault: &mut SeaVault, address_list: vector<address>, percentage_list: vector<u8>, emailList: vector<String>, emailPer: vector<u8>, ctx: &mut TxContext): vector<MemberCap> {
+        assert!(address_list.length() == percentage_list.length(), EMisMatch);
+        assert!(emailList.length() == emailPer.length(), EMisMatch);
+        let mut capCount: u8 = 0;
+
+        // Handle addresses
+        let mut i = 0;
+        while (i < address_list.length()) {
+            let addrCap = MemberCap {
+                id: object::new(ctx),
+                vaultID: object::id(vault),
+                capID: capCount,
+            };
+            
+            transfer::public_transfer(addrCap, address_list[i]);
+            vault.cap_percentage.insert(capCount, percentage_list[i]);
+            vault.cap_activated.insert(capCount, true);
+
+            capCount = capCount + 1;
+            i = i + 1;
+        };
+
+        // Handle emails
+        let mut emailCaps = vector::empty<MemberCap>();
+        let mut j = 0;
+
+        while (j < emailList.length()) {
+            let emailCap = MemberCap {
+                id: object::new(ctx),
+                vaultID: object::id(vault),
+                capID: capCount,
+            };
+            
+            emailCaps.push_back(emailCap);
+            vault.cap_percentage.insert(capCount, emailPer[j]);
+            vault.cap_activated.insert(capCount, true);
+
+            capCount = capCount + 1;
+            j = j + 1;
+        };
+
+        emailCaps
+    }
+
+    #[test_only]
+    public fun addMemberByAddress(_cap: &OwnerCap, vault: &mut SeaVault, member: address, percentage: u8, ctx: &mut TxContext) {
+        // let x = (vec_map::size(&vault.cap_percentage) as u8);
+        let capCount = (vault.cap_percentage.size() as u8);
+        let memberCap = MemberCap {
+            id: object::new(ctx),
+            vaultID: object::id(vault),
+            capID: capCount,
+        };
+        vault.cap_percentage.insert(capCount, percentage);
+        vault.cap_activated.insert(capCount, true);
+        transfer::public_transfer(memberCap, member);
     }
 }
