@@ -72,9 +72,8 @@ export default function Subscribers() {
       subscriber.service.toLowerCase().includes(searchQuery.toLowerCase());
     
     return matchesFilter && matchesSearch;
-  });
-  return (
-    <div className="p-6 max-w-[1200px] mx-auto">
+  });  return (
+    <div className="p-6 ml-8 mx-auto bg-white text-black">
       <div className="mb-8 flex justify-between items-center">
         <div>
           <h1 className="text-3xl font-bold mb-2">Subscription</h1>
@@ -96,21 +95,18 @@ export default function Subscribers() {
         </button>
       </div>
       
-      <div className="mb-6">
-        <div className="flex space-x-4 mb-6">
+      <div className="mb-6">        <div className="flex space-x-4 mb-6">
+          <a href="/dashboard/Subscriptions/subscription"
+            className="px-4 py-1.5 text-gray-600 hover:text-gray-900"
+          >
+            My Subscriptions
+          </a>
           <button 
-            className={`px-4 py-1.5 ${filter === 'My Subscribers' ? 'border-b-2 border-black font-medium' : 'text-gray-600'}`}
-            onClick={() => setFilter('My Subscribers')}
+            className="px-4 py-1.5 border-b-2 border-black font-medium"
           >
             My Subscribers
           </button>
-          <button 
-            className={`px-4 py-1.5 ${filter === 'My Subscriptions' ? 'border-b-2 border-black font-medium' : 'text-gray-600'}`}
-            onClick={() => {setFilter('My Subscriptions');}}
-          >
-            My Subscriptions
-          </button>
-        </div>        <div className="flex justify-between items-center">
+        </div><div className="flex justify-between items-center">
           <div className="flex flex-wrap gap-2">
             <button
               className={`px-4 py-1.5 rounded-full text-sm ${
