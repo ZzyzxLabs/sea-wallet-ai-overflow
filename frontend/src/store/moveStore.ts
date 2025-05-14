@@ -16,7 +16,9 @@ function stringToUint8Array(str) {
 // Define a TypeScript interface for your store state
 interface MoveStore {
   packageName: string;
-  walletOnwer: string;
+  walletOwner: string; // Fixed spelling
+  setWalletOwner: (address: string) => void; // New setter method
+  
   createVaultTx: () => Transaction;
   fuseTxFunctions: (
     capId: string,
@@ -45,9 +47,12 @@ interface MoveStore {
 const useMoveStore = create<MoveStore>((set, get) => ({
   // main
   packageName:
-    "0xfa7f043a4fb3399ba9668d311bdbb0fe728d6f0ed6c53675a66170a0f801b7da",
-  walletOnwer:
-    "0x9fcc44605f6b702244d32ff43852eb1a13938f9afbc5f5329e87709c52cfbf75",
+    "0xe2528bba656889c901cc09b29fc1681003615f80e194beae060db49c0416c452",
+  // Fixed spelling and made initial value empty or a default
+  walletOwner: "0x9fcc44605f6b702244d32ff43852eb1a13938f9afbc5f5329e87709c52cfbf75",
+  
+  // Add the setter function
+  setWalletOwner: (address: string) => set({ walletOwner: address }),
   createVaultTx: () => {
     const vaultTx = new Transaction();
     vaultTx.moveCall({
@@ -227,7 +232,7 @@ const useMoveStore = create<MoveStore>((set, get) => ({
       throw error;
     }
   },
-
+  
   // Reset all state to initial values
   resetState: () =>
     set({

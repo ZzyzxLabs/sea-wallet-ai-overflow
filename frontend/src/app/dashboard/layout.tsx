@@ -2,12 +2,17 @@ import { ReactNode } from 'react';
 import DashboardSidebar from './components/DashboardSidebar';
 import DashboardHeader from './components/DashboardHeader';
 import DashboardFooter from './components/DashboardFooter';
+import useMoveStore from '../../store/moveStore';
+import { useCurrentAccount } from '@mysten/dapp-kit';
 
 export default function DashboardLayout({
   children,
 }: {
   children: ReactNode
 }) {
+  const { walletOwner, setWalletOwner } = useMoveStore();
+  const currentAccount = useCurrentAccount();
+  setWalletOwner(currentAccount?.address);
   return (
     <div className="flex min-h-screen">
       {/* 側邊欄會使用fixed定位，因此不會推擠其他元素 */}

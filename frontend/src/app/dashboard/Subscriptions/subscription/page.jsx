@@ -1,5 +1,6 @@
 "use client";
 
+import { ConnectButton, ConnectModal } from '@mysten/dapp-kit';
 import { useState, useEffect } from 'react';
 
 const exampleService = [
@@ -84,7 +85,6 @@ const calculateMonthlyCost = (price, days) => {
 };
 
 export default function Subscriptions() {
-    const [activeTab, setActiveTab] = useState('mySubscriptions');
     const [searchQuery, setSearchQuery] = useState('');
     const [filterValue, setFilterValue] = useState('all');
     const [currentTime, setCurrentTime] = useState(Date.now());
@@ -142,48 +142,26 @@ export default function Subscriptions() {
         const minutesUntil = Math.floor((timeUntilPayment % (1000 * 60 * 60)) / (1000 * 60));
         
         return { days: daysUntil, hours: hoursUntil, minutes: minutesUntil };
-    };
-
-    // 獲取產品的月費用
+    };    // 獲取產品的月費用
     const getMonthlyCostForService = (service) => {
         let monthlyCost = 0;
-        Object.entries(service.products).forEach(([_, [price, _, days]]) => {
+        Object.entries(service.products).forEach(([productName, [price, currency, days]]) => {
             monthlyCost += parseFloat(calculateMonthlyCost(price, days));
         });
         return monthlyCost.toFixed(2);
     };
 
     return (
-        <div className="w-full bg-white px-4 pt-6">
+        <div className="bg-white ml-8 px-4 pt-6 h-full text-black">
             {/* Header */}
             <div className="flex justify-between items-center mb-2">
                 <div>
                     <h1 className="text-2xl font-bold text-gray-900">Subscriptions</h1>
                     <p className="text-sm text-gray-600">Manage your active service subscriptions and collect monthly fees from your subscribers</p>
                 </div>
-                <button className="flex items-center space-x-2 px-4 py-2 border border-gray-300 rounded-md">
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
-                    </svg>
-                    <span>Wallet</span>
-                </button>
+            <ConnectButton />
             </div>
 
-            {/* Tabs */}
-            <div className="flex border-b border-gray-200 mb-4">
-                <button
-                    className={`px-4 py-2 font-medium text-sm ${activeTab === 'mySubscriptions' ? 'text-blue-600 border-b-2 border-blue-600' : 'text-gray-500 hover:text-gray-700'}`}
-                    onClick={() => setActiveTab('mySubscriptions')}
-                >
-                    My Subscriptions
-                </button>
-                <button
-                    className={`px-4 py-2 font-medium text-sm ${activeTab === 'mySubscribers' ? 'text-blue-600 border-b-2 border-blue-600' : 'text-gray-500 hover:text-gray-700'}`}
-                    onClick={() => setActiveTab('mySubscribers')}
-                >
-                    My Subscribers
-                </button>
-            </div>
 
             {/* Filter and Search */}
             <div className="flex justify-between mb-4">
