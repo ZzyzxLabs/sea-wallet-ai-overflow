@@ -22,7 +22,7 @@ module SeaWallet::seaVault {
     const EWrongVaultId: u64 = 1;
     const EWrongServiceId: u64 = 2;
     const ELocked: u64 = 4;
-    const EMisMatch: u64 = 5;
+    const ENotYourVault: u64 = 5;
     const ECapNotFound: u64 = 6;
     const ETotalPercentageNot100: u64 = 7;
     const ENotEnough: u64 = 8; // Error code for insufficient amount
@@ -75,7 +75,8 @@ module SeaWallet::seaVault {
     }
 
     /// add multiple members by addresses vector
-    public fun addMemberByAddresses(_cap: &OwnerCap, vault: &mut SeaVault, address_list: vector<address>, percentage_list: vector<u8>, ctx: &mut TxContext) {
+    public fun addMemberByAddresses(cap: &OwnerCap, vault: &mut SeaVault, address_list: vector<address>, percentage_list: vector<u8>, ctx: &mut TxContext) {
+        assert!(object::id(vault) == cap.vaultID, ENotYourVault);
         let mut i = 0;
         let mut capCount = (vault.cap_percentage.size() as u8);
         while (i < address_list.length()) {
@@ -95,7 +96,8 @@ module SeaWallet::seaVault {
     }
 
     /// add single member by an email string
-    public fun addMemberByEmail(_cap: &OwnerCap, vault: &mut SeaVault, _email: String, percentage: u8, ctx: &mut TxContext): MemberCap {
+    public fun addMemberByEmail(cap: &OwnerCap, vault: &mut SeaVault, _email: String, percentage: u8, ctx: &mut TxContext): MemberCap {
+        assert!(object::id(vault) == cap.vaultID, ENotYourVault);
         let capCount = (vault.cap_percentage.size() as u8);
         let emailCap = MemberCap {
             id: object::new(ctx),
@@ -108,7 +110,8 @@ module SeaWallet::seaVault {
     }
 
     /// modify percentage and activated status of a cap
-    public fun modifyMemberCap(_cap: &OwnerCap, vault: &mut SeaVault, capID: u8, percentage: u8, activated: bool) {
+    public fun modifyMemberCap(cap: &OwnerCap, vault: &mut SeaVault, capID: u8, percentage: u8, activated: bool) {
+        assert!(object::id(vault) == cap.vaultID, ENotYourVault);
         assert!(vec_map::contains(&vault.cap_percentage, &capID), ECapNotFound);
         let capPercentage_mut = vec_map::get_mut(&mut vault.cap_percentage, &capID);
         *capPercentage_mut = percentage;
@@ -118,7 +121,8 @@ module SeaWallet::seaVault {
 
     /// check if the total percentage of all caps is 100
     /// call everytime modifying caps percentage
-    public fun check_percentage(_cap: &OwnerCap, vault: &mut SeaVault) {
+    public fun check_percentage(cap: &OwnerCap, vault: &mut SeaVault) {
+        assert!(object::id(vault) == cap.vaultID, ENotYourVault);
         let mut i: u8 = 0;
         let length = vault.cap_percentage.size() as u8;
         let mut totalPercentage = 0;
@@ -131,12 +135,14 @@ module SeaWallet::seaVault {
     }
 
     /// add non-coin asset to vault
-    public fun add_asset<Asset: key + store>(_cap: &OwnerCap, vault: &mut SeaVault, asset: Asset, name: vector<u8>, _ctx: &mut TxContext) {
+    public fun add_asset<Asset: key + store>(cap: &OwnerCap, vault: &mut SeaVault, asset: Asset, name: vector<u8>, _ctx: &mut TxContext) {
+        assert!(object::id(vault) == cap.vaultID, ENotYourVault);
         dof::add(&mut vault.id, name, asset);
     }
 
     /// add coin asset to vault (when the coinType isn't added before)
-    public fun add_coin<Asset>(_cap: &OwnerCap, vault: &mut SeaVault, asset_name: vector<u8>, asset: Coin<Asset>) {
+    public fun add_coin<Asset>(cap: &OwnerCap, vault: &mut SeaVault, asset_name: vector<u8>, asset: Coin<Asset>) {
+        assert!(object::id(vault) == cap.vaultID, ENotYourVault);
         // update table amount
         let amount = coin::value<Asset>(&asset);
         table::add(&mut vault.asset_sum, asset_name, amount);
@@ -147,7 +153,8 @@ module SeaWallet::seaVault {
     }
 
     /// add more coin asset to vault (when the coinType is already added before)
-    public fun organize_coin<Asset>(_cap: &OwnerCap, vault: &mut SeaVault, asset_name: vector<u8>, asset: Coin<Asset>) {
+    public fun organize_coin<Asset>(cap: &OwnerCap, vault: &mut SeaVault, asset_name: vector<u8>, asset: Coin<Asset>) {
+        assert!(object::id(vault) == cap.vaultID, ENotYourVault);
         // update table amount
         let added_amount = coin::value<Asset>(&asset);
         let amount_mut = table::borrow_mut<vector<u8>, u64>(&mut vault.asset_sum, asset_name);
@@ -159,7 +166,8 @@ module SeaWallet::seaVault {
     }
 
     /// for owner to reclaim asset (NFT or all coins at once)
-    public fun reclaim_asset<Asset: key + store>(_cap: &OwnerCap, vault: &mut SeaVault, asset_name: vector<u8>, ctx: &mut TxContext) {
+    public fun reclaim_asset<Asset: key + store>(cap: &OwnerCap, vault: &mut SeaVault, asset_name: vector<u8>, ctx: &mut TxContext) {
+        assert!(object::id(vault) == cap.vaultID, ENotYourVault);
         // remove from table
         if(vault.asset_sum.contains(asset_name)) {
             table::remove(&mut vault.asset_sum, asset_name);
@@ -172,7 +180,8 @@ module SeaWallet::seaVault {
 
     /// for owner to take a certain amount of coin
     #[allow(lint(self_transfer))]
-    public fun take_coin<Asset>(_cap: &OwnerCap, vault: &mut SeaVault, asset_name: vector<u8>, amount: u64, ctx: &mut TxContext) {
+    public fun take_coin<Asset>(cap: &OwnerCap, vault: &mut SeaVault, asset_name: vector<u8>, amount: u64, ctx: &mut TxContext) {
+        assert!(object::id(vault) == cap.vaultID, ENotYourVault);
         assert!(amount <= *table::borrow(&vault.asset_sum, asset_name), ENotEnough);
         // update table amount
         let amount_mut = table::borrow_mut<vector<u8>, u64>(&mut vault.asset_sum, asset_name);
@@ -186,7 +195,8 @@ module SeaWallet::seaVault {
 
     /// update the last update time
     /// if the vault is warned, reset the time left to 6 months, and set is_warned to false
-    public fun update_time(_cap: &OwnerCap, vault: &mut SeaVault, clock: &Clock) {
+    public fun update_time(cap: &OwnerCap, vault: &mut SeaVault, clock: &Clock) {
+        assert!(object::id(vault) == cap.vaultID, ENotYourVault);
         vault.last_update = clock.timestamp_ms();
         if (vault.is_warned) {
             vault.time_left = SIX_MONTHS;
@@ -195,7 +205,8 @@ module SeaWallet::seaVault {
     }
 
     /// grace period - 7 days grace period for owner to confirm their aliveness
-    fun grace_period(_cap: &MemberCap, vault: &mut SeaVault, clock: &Clock) {
+    fun grace_period(cap: &MemberCap, vault: &mut SeaVault, clock: &Clock) {
+        assert!(object::id(vault) == cap.vaultID, ENotYourVault);
         vault.last_update = clock.timestamp_ms();
         vault.time_left = SEVEN_DAYS;
         vault.is_warned = true;
@@ -211,11 +222,12 @@ module SeaWallet::seaVault {
         asset_name: vector<u8>,
         ctx: &mut TxContext
     ) {
+        assert!(object::id(vault) == cap.vaultID, ENotYourVault);
         // check if the vault is locked
         let current_time = clock.timestamp_ms();
         assert!(current_time - vault.last_update >= vault.time_left, ELocked);
         if (!vault.is_warned) {
-            return grace_period(cap, vault, clock); // do not add a fucking semicolon here
+            return grace_period(cap, vault, clock) // do not add a fucking semicolon here
         };
 
         // check if the member has already withdrawn
@@ -266,7 +278,7 @@ module SeaWallet::seaVault {
         yearlyDiscount: u8
     }
 
-    public fun createService<CoinType>(service: &Service<CoinType>, price: u64, name: String, serviceAddr: address, yDiscount: u8, ctx: &mut TxContext) {
+    public fun createService<CoinType>(price: u64, name: String, serviceAddr: address, yDiscount: u8, ctx: &mut TxContext) {
         let service = Service{
             id: object::new(ctx),
             price: price,
