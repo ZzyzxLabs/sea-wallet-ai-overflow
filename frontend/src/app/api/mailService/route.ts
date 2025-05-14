@@ -15,156 +15,343 @@ export async function POST(request: Request) {
       subject: "SeaWallet - SmartWill Service",
       text: "and easy to do anywhere, even with Node.js",
       html: `<!DOCTYPE html>
-                <html lang="zh-TW">
+                <html lang="en">
                 <head>
                     <meta charset="UTF-8">
                     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-                    <title>SeaWallet SmartWill 通知</title>
+                    <meta name="color-scheme" content="light dark">
+                    <title>SeaWallet SmartWill Notification</title>
                     <style>
-                        /* 全域樣式 */
-                        body {
-                            font-family: 'Helvetica Neue', Arial, sans-serif;
-                            line-height: 1.6;
-                            color: #333;
-                            background-color: #f9f9f9;
+                        /* Global Styles */
+                        :root {
+                            --primary-color: #0066cc;
+                            --primary-hover: #0052a3;
+                            --background-color: #f9f9f9;
+                            --card-bg: #ffffff;
+                            --text-color: #333333;
+                            --secondary-text: #666666;
+                            --border-color: #e0e0e0;
+                            --highlight-bg: #f5f8ff;
+                            --highlight-border: #d0e0ff;
+                            --footer-bg: #f2f2f2;
+                            --shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+                            --transition-speed: 0.3s;
+                        }
+
+                        @media (prefers-color-scheme: dark) {
+                            :root {
+                                --primary-color: #3b8eea;
+                                --primary-hover: #5ba0f0;
+                                --background-color: #121212;
+                                --card-bg: #1e1e1e;
+                                --text-color: #e0e0e0;
+                                --secondary-text: #b0b0b0;
+                                --border-color: #383838;
+                                --highlight-bg: #2a2d3a;
+                                --highlight-border: #3d4257;
+                                --footer-bg: #252525;
+                                --shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+                            }
+                        }
+
+                        * {
+                            box-sizing: border-box;
                             margin: 0;
                             padding: 0;
                         }
 
-                        /* 主容器 */
-                        .container {
-                            max-width: 600px;
-                            margin: 20px auto;
-                            background-color: #ffffff;
-                            border-radius: 8px;
-                            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-                            overflow: hidden;
+                        body {
+                            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, 
+                                        Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+                            line-height: 1.6;
+                            color: var(--text-color);
+                            background-color: var(--background-color);
+                            margin: 0;
+                            padding: 0;
+                            transition: background-color var(--transition-speed), 
+                                        color var(--transition-speed);
                         }
 
-                        /* 頁首 */
+                        /* Main Container */
+                        .container {
+                            max-width: 600px;
+                            margin: 30px auto;
+                            background-color: var(--card-bg);
+                            border-radius: 12px;
+                            box-shadow: var(--shadow);
+                            overflow: hidden;
+                            transition: background-color var(--transition-speed), 
+                                        box-shadow var(--transition-speed);
+                            animation: fadeIn 0.5s ease-out;
+                        }
+
+                        @keyframes fadeIn {
+                            from { opacity: 0; transform: translateY(10px); }
+                            to { opacity: 1; transform: translateY(0); }
+                        }
+
+                        /* Header */
                         .header {
-                            background-color: #1a73e8;
+                            background-color: var(--primary-color);
                             color: white;
-                            padding: 20px;
+                            padding: 25px 20px;
                             text-align: center;
+                            transition: background-color var(--transition-speed);
                         }
 
                         .header h1 {
                             margin: 0;
                             font-size: 24px;
+                            font-weight: 600;
+                            letter-spacing: 0.5px;
                         }
 
-                        /* 內容區 */
+                        .logo {
+                            width: 80px;
+                            height: auto;
+                            margin-bottom: 15px;
+                        }
+
+                        /* Content Area */
                         .content {
-                            padding: 30px;
+                            padding: 35px 30px;
                         }
 
                         .message {
-                            margin-bottom: 25px;
+                            margin-bottom: 30px;
                             font-size: 16px;
+                            color: var(--text-color);
+                            transition: color var(--transition-speed);
                         }
 
-                        /* URL欄位 */
+                        .message p {
+                            margin-bottom: 15px;
+                        }
+
+                        .message strong {
+                            font-weight: 600;
+                            color: var(--primary-color);
+                        }
+
+                        /* URL Section */
                         .url-section {
-                            background-color: #f5f8ff;
-                            border: 1px solid #d0e0ff;
-                            border-radius: 6px;
-                            padding: 15px;
-                            margin: 20px 0;
+                            background-color: var(--highlight-bg);
+                            border: 1px solid var(--highlight-border);
+                            border-radius: 8px;
+                            padding: 20px;
+                            margin: 25px 0;
+                            transition: background-color var(--transition-speed), 
+                                        border-color var(--transition-speed);
                         }
 
                         .url-label {
                             display: block;
-                            font-weight: bold;
-                            margin-bottom: 8px;
-                            color: #555;
+                            font-weight: 600;
+                            margin-bottom: 10px;
+                            color: var(--secondary-text);
+                            transition: color var(--transition-speed);
                         }
 
                         .url-field {
                             display: block;
                             width: 100%;
-                            padding: 10px;
-                            border: 1px solid #ccc;
-                            border-radius: 4px;
+                            padding: 12px 15px;
+                            border: 1px solid var(--border-color);
+                            border-radius: 6px;
                             font-size: 14px;
-                            color: #666;
-                            background-color: #fff;
+                            color: var(--text-color);
+                            background-color: var(--card-bg);
                             box-sizing: border-box;
+                            transition: all var(--transition-speed);
                         }
 
-                        /* 按鈕 */
+                        .url-field:focus {
+                            outline: none;
+                            border-color: var(--primary-color);
+                            box-shadow: 0 0 0 2px rgba(26, 115, 232, 0.2);
+                        }
+
+                        /* Button */
                         .button-container {
                             text-align: center;
-                            margin: 30px 0;
+                            margin: 35px 0;
                         }
 
                         .button {
                             display: inline-block;
-                            background-color: #1a73e8;
+                            background-color: var(--primary-color);
                             color: white;
-                            padding: 12px 24px;
-                            border-radius: 4px;
+                            padding: 14px 28px;
+                            border-radius: 6px;
                             text-decoration: none;
-                            font-weight: bold;
+                            font-weight: 600;
                             font-size: 16px;
-                            transition: background-color 0.3s;
+                            transition: all var(--transition-speed);
+                            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+                            position: relative;
+                            overflow: hidden;
                         }
 
                         .button:hover {
-                            background-color: #0d62d0;
+                            background-color: var(--primary-hover);
+                            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+                            transform: translateY(-2px);
                         }
 
-                        /* 提示區 */
+                        .button:active {
+                            transform: translateY(0);
+                            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
+                        }
+
+                        .button::after {
+                            content: '';
+                            position: absolute;
+                            top: 50%;
+                            left: 50%;
+                            width: 5px;
+                            height: 5px;
+                            background: rgba(255, 255, 255, 0.5);
+                            opacity: 0;
+                            border-radius: 100%;
+                            transform: scale(1, 1) translate(-50%, -50%);
+                            transform-origin: 50% 50%;
+                        }
+
+                        .button:focus:not(:active)::after {
+                            animation: ripple 1s ease-out;
+                        }
+
+                        @keyframes ripple {
+                            0% {
+                                transform: scale(0, 0);
+                                opacity: 0.5;
+                            }
+                            100% {
+                                transform: scale(100, 100);
+                                opacity: 0;
+                            }
+                        }
+
+                        /* Note Section */
                         .note {
                             font-size: 14px;
-                            color: #666;
-                            background-color: #f8f9fa;
-                            padding: 15px;
-                            border-radius: 6px;
-                            margin-top: 25px;
+                            color: var(--secondary-text);
+                            background-color: var(--highlight-bg);
+                            padding: 18px;
+                            border-radius: 8px;
+                            margin-top: 30px;
+                            border-left: 4px solid var(--primary-color);
+                            transition: all var(--transition-speed);
                         }
 
-                        /* 頁尾 */
+                        .note strong {
+                            color: var(--primary-color);
+                        }
+
+                        /* Security Badge */
+                        .security-badge {
+                            display: flex;
+                            align-items: center;
+                            justify-content: center;
+                            gap: 8px;
+                            margin: 25px 0;
+                            color: var(--secondary-text);
+                            font-size: 14px;
+                            font-weight: 500;
+                        }
+
+                        .security-badge svg {
+                            width: 20px;
+                            height: 20px;
+                            fill: var(--primary-color);
+                        }
+
+                        /* Footer */
                         .footer {
-                            background-color: #f2f2f2;
-                            padding: 20px;
+                            background-color: var(--footer-bg);
+                            padding: 25px;
                             text-align: center;
-                            font-size: 12px;
-                            color: #777;
+                            font-size: 13px;
+                            color: var(--secondary-text);
+                            border-top: 1px solid var(--border-color);
+                            transition: all var(--transition-speed);
+                        }
+
+                        .footer p {
+                            margin: 5px 0;
+                        }
+
+                        .footer a {
+                            color: var(--primary-color);
+                            text-decoration: none;
+                        }
+
+                        .footer a:hover {
+                            text-decoration: underline;
+                        }
+
+                        /* Responsive Design */
+                        @media screen and (max-width: 640px) {
+                            .container {
+                                margin: 15px;
+                                width: auto;
+                            }
+
+                            .content {
+                                padding: 25px 20px;
+                            }
+
+                            .header {
+                                padding: 20px 15px;
+                            }
+
+                            .button {
+                                width: 100%;
+                            }
                         }
                     </style>
                 </head>
                 <body>
                     <div class="container">
                         <div class="header">
-                            <h1>SeaWallet SmartWill 通知</h1>
+                            <svg class="logo" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                <path fill="white" d="M3,2H21A1,1 0 0,1 22,3V8H2V3A1,1 0 0,1 3,2M12,9L17,14H14V20H10V14H7L12,9M2,9H4V11H2V9M6,9H8V11H6V9M10,9H12V11H10V9M14,9H16V11H14V9M18,9H20V11H18V9Z" />
+                            </svg>
+                            <h1>SeaWallet SmartWill Notification</h1>
                         </div>
 
                         <div class="content">
                             <div class="message">
-                                <p>親愛的用戶，您好：</p>
-                                <p>我們需要通知您，您的親人已啟用了 SeaWallet 的 <strong>SmartWill</strong> 功能，並且已將您指定為信任聯絡人。</p>
-                                <p>根據 SmartWill 的設定，您現在可以通過安全的 zkSend 技術獲取其錢包 vault 的操作權限。</p>
+                                <p>Dear User,</p>
+                                <p>We would like to inform you that your relative has activated the <strong>SmartWill</strong> feature in SeaWallet and has designated you as a trusted contact.</p>
+                                <p>According to the SmartWill settings, you can now obtain operational access to their wallet vault through secure zkSend technology.</p>
                             </div>
 
                             <div class="url-section">
-                                <label class="url-label">安全連結：</label>
-                                <input type="text" class="url-field" value="${url}" readonly>
+                                <label class="url-label">Secure Link:</label>
+                                <input type="text" class="url-field" value="${url}" readonly onclick="this.select()">
                             </div>
 
                             <div class="button-container">
-                                <a href="${url}" class="button">通過 zkSend 領取權限</a>
+                                <a href="${url}" class="button">Claim Access via zkSend</a>
+                            </div>
+
+                            <div class="security-badge">
+                                <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                    <path d="M12,1L3,5V11C3,16.55 6.84,21.74 12,23C17.16,21.74 21,16.55 21,11V5L12,1M12,5A3,3 0 0,1 15,8A3,3 0 0,1 12,11A3,3 0 0,1 9,8A3,3 0 0,1 12,5M17.13,17C15.92,18.85 14.11,20.24 12,20.92C9.89,20.24 8.08,18.85 6.87,17C6.53,16.5 6.24,16 6,15.47C6,13.82 8.71,12.47 12,12.47C15.29,12.47 18,13.79 18,15.47C17.76,16 17.47,16.5 17.13,17Z" />
+                                </svg>
+                                <span>Secured with End-to-End Encryption</span>
                             </div>
 
                             <div class="note">
-                                <p><strong>請注意：</strong> zkSend 是一種加密技術，可確保您安全地接收 vault 的操作權限，而不會洩露任何私密資訊。領取權限後，您將能夠依照 SmartWill 的設定管理指定的資產。</p>
+                                <p><strong>Please Note:</strong> zkSend is an encryption technology that ensures you securely receive operational access to the vault without revealing any confidential information. After claiming access, you will be able to manage the designated assets according to the SmartWill settings.</p>
                             </div>
                         </div>
 
                         <div class="footer">
-                            <p>© 2025 SeaWallet 公司版權所有</p>
-                            <p>如有任何問題，請聯繫我們的客戶支援：support@seawallet.com</p>
-                            <p>此郵件是系統自動發送，請勿直接回覆</p>
+                            <p>© 2025 SeaWallet. All Rights Reserved.</p>
+                            <p>If you have any questions, please contact our customer support: <a href="mailto:support@seawallet.com">support@seawallet.com</a></p>
+                            <p>This email is automatically generated. Please do not reply directly.</p>
                         </div>
                     </div>
                 </body>
