@@ -14,13 +14,17 @@ export default function DashboardLayout({
       <DashboardSidebar />
       
       {/* 主內容區域始終佔據整個螢幕寬度 */}
-        {/* <DashboardHeader /> */}
       <div className="flex flex-col w-full">
-        <main className="flex-1 pl-10">
+        {/* <DashboardHeader /> */}
+        <main className="w-full pl-10 flex-grow">
           {/* pl-20 提供左側間距，確保內容不會被側邊欄覆蓋 */}
-          {children}
+          <div className="min-h-full">
+            {children}
+          </div>
         </main>
-        <DashboardFooter/>
+        <div className="mt-auto">
+          <DashboardFooter />
+        </div>
       </div>
     </div>
   );
