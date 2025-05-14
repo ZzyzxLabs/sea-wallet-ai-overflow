@@ -50,6 +50,8 @@
   font-family: var(--font-inter);
   
   /* 擴展顏色變量 */
+  --wallet-color: #5c60f5;
+  --wallet-gradient: linear-gradient(145deg, #5c60f5, #8a8dff);
   --ai-color: #2c77ef;
   --customer-color: #f07c00;
   --ai-gradient: linear-gradient(145deg, #2c77ef, #56a5ff);
@@ -977,6 +979,216 @@
 .nightMode .aiMessage:not(.systemMessage):hover,
 .nightMode .userMessage:hover {
   box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+}
+/* 錢包按鈕樣式 */
+.walletButton {
+  background: var(--wallet-gradient);
+  box-shadow: 0 6px 16px rgba(92, 96, 245, 0.3);
+}
+
+.walletButton:hover {
+  box-shadow: 0 8px 25px rgba(92, 96, 245, 0.4);
+}
+
+/* 錢包頭部樣式 */
+.walletHeader {
+  background: var(--wallet-gradient);
+}
+
+/* 錢包用戶訊息樣式 */
+.walletUserMessage {
+  background: var(--wallet-gradient);
+}
+
+/* 錢包發送按鈕樣式 */
+.walletSendButton {
+  background: var(--wallet-gradient);
+  box-shadow: 0 3px 8px rgba(92, 96, 245, 0.3);
+}
+
+.walletSendButton:not(:disabled):hover {
+  box-shadow: 0 5px 15px rgba(92, 96, 245, 0.4);
+}
+
+/* 錢包輸入框樣式 */
+.walletInput:focus {
+  border-color: var(--wallet-color);
+  box-shadow: 0 0 0 3px rgba(92, 96, 245, 0.15);
+}
+
+/* 錢包模式激活樣式 */
+.activeWalletMode {
+  background: var(--wallet-gradient);
+}
+
+/* 錢包指示器樣式 */
+.walletIndicator {
+  background: var(--wallet-gradient);
+}
+
+/* 錢包對話框內容樣式 */
+.walletDialogContent {
+  border-top: 5px solid var(--wallet-color);
+}
+
+/* 錢包模式開關 */
+.walletModeToggle {
+  display: flex;
+  align-items: center;
+  padding: 10px 15px;
+  background-color: #f7f7f7;
+  border-top: 1px solid #eaeaea;
+  transition: all 0.3s ease;
+}
+
+.nightMode .walletModeToggle {
+  background-color: rgba(0, 0, 0, 0.2);
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.toggleSwitch {
+  position: relative;
+  display: inline-block;
+  width: 40px;
+  height: 20px;
+  margin-right: 10px;
+}
+
+.toggleSwitch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.toggleSlider {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: #ccc;
+  transition: .4s;
+  border-radius: 34px;
+}
+
+.toggleSlider:before {
+  position: absolute;
+  content: "";
+  height: 16px;
+  width: 16px;
+  left: 2px;
+  bottom: 2px;
+  background-color: white;
+  transition: .4s;
+  border-radius: 50%;
+}
+
+input:checked + .toggleSlider {
+  background-color: var(--wallet-color);
+}
+
+input:focus + .toggleSlider {
+  box-shadow: 0 0 1px var(--wallet-color);
+}
+
+input:checked + .toggleSlider:before {
+  transform: translateX(20px);
+}
+
+.walletModeLabel {
+  font-size: 13px;
+  color: #666;
+  font-weight: 500;
+  flex: 1;
+}
+
+.nightMode .walletModeLabel {
+  color: #aaa;
+}
+
+/* 上傳按鈕 */
+.uploadButton {
+  background: none;
+  border: 1px solid rgba(92, 96, 245, 0.4);
+  color: var(--wallet-color);
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 16px;
+  transition: all 0.3s ease;
+}
+
+.uploadButton:hover {
+  background-color: rgba(92, 96, 245, 0.1);
+  transform: scale(1.1);
+}
+
+.uploadButton:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* 文件上傳對話框 */
+.fileDialogContent {
+  border-top: 5px solid var(--wallet-color);
+}
+
+.fileDialogBody {
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.fileInput {
+  display: none;
+}
+
+.fileUploadArea {
+  width: 100%;
+  height: 150px;
+  border: 2px dashed #ccc;
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  margin-top: 15px;
+  transition: all 0.3s ease;
+}
+
+.fileUploadArea:hover {
+  border-color: var(--wallet-color);
+  background-color: rgba(92, 96, 245, 0.05);
+}
+
+.uploadIcon {
+  font-size: 32px;
+  margin-bottom: 10px;
+}
+
+.fileUploadArea p {
+  margin: 5px 0;
+  font-weight: 600;
+}
+
+.fileUploadArea small {
+  color: #888;
+}
+
+.confirmUploadBtn {
+  background-color: var(--wallet-color);
+  color: white;
+}
+
+.confirmUploadBtn:hover {
+  background-color: #4a4ed8;
 }
 
 /* 對話框動畫 */
