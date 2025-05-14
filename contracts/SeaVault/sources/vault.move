@@ -17,6 +17,8 @@ module SeaWallet::seaVault {
         table::{Table, Self},
         event::emit,
     };
+    use SeaWallet::subscription::{Self, Service};
+    use sui::transfer::public_transfer;
     
     const EDeductDateNotPassed: u64 = 0;
     const EWrongVaultId: u64 = 1;
@@ -30,6 +32,8 @@ module SeaWallet::seaVault {
 
     const SIX_MONTHS: u64 = 6 * 30 * 24 * 60 * 60 * 1000;
     const SEVEN_DAYS: u64 = 7 * 24 * 60 * 60 * 1000;
+    const THIRTY_DAYS: u64 = 30 * 24 * 60 * 60 * 1000;
+    const THREE_SIX_FIVE_DAYS: u64 = 365 * 24 * 60 * 60 * 1000;
 
     public struct SeaVault has key {
         id: UID, // vault ID
@@ -55,7 +59,7 @@ module SeaWallet::seaVault {
 
     /// create a new SeaVault
     #[allow(lint(self_transfer))]
-    public fun createVault(ctx: &mut TxContext) {
+    public fun create_vault(ctx: &mut TxContext) {
         let vault = SeaVault {
             id: object::new(ctx),
             last_update: tx_context::epoch_timestamp_ms(ctx),
@@ -75,8 +79,8 @@ module SeaWallet::seaVault {
     }
 
     /// add multiple members by addresses vector
-    public fun addMemberByAddresses(cap: &OwnerCap, vault: &mut SeaVault, address_list: vector<address>, percentage_list: vector<u8>, ctx: &mut TxContext) {
-        assert!(object::id(vault) == cap.vaultID, ENotYourVault);
+    public fun add_member_by_addresses(cap: &OwnerCap, vault: &mut SeaVault, address_list: vector<address>, percentage_list: vector<u8>, ctx: &mut TxContext) {
+        assert!(cap.vaultID == object::id(vault), ENotYourVault);
         let mut i = 0;
         let mut capCount = (vault.cap_percentage.size() as u8);
         while (i < address_list.length()) {
@@ -96,8 +100,8 @@ module SeaWallet::seaVault {
     }
 
     /// add single member by an email string
-    public fun addMemberByEmail(cap: &OwnerCap, vault: &mut SeaVault, _email: String, percentage: u8, ctx: &mut TxContext): MemberCap {
-        assert!(object::id(vault) == cap.vaultID, ENotYourVault);
+    public fun add_member_by_email(cap: &OwnerCap, vault: &mut SeaVault, _email: String, percentage: u8, ctx: &mut TxContext): MemberCap {
+        assert!(cap.vaultID == object::id(vault), ENotYourVault);
         let capCount = (vault.cap_percentage.size() as u8);
         let emailCap = MemberCap {
             id: object::new(ctx),
@@ -110,8 +114,8 @@ module SeaWallet::seaVault {
     }
 
     /// modify percentage and activated status of a cap
-    public fun modifyMemberCap(cap: &OwnerCap, vault: &mut SeaVault, capID: u8, percentage: u8, activated: bool) {
-        assert!(object::id(vault) == cap.vaultID, ENotYourVault);
+    public fun modify_member_cap(cap: &OwnerCap, vault: &mut SeaVault, capID: u8, percentage: u8, activated: bool) {
+        assert!(cap.vaultID == object::id(vault), ENotYourVault);
         assert!(vec_map::contains(&vault.cap_percentage, &capID), ECapNotFound);
         let capPercentage_mut = vec_map::get_mut(&mut vault.cap_percentage, &capID);
         *capPercentage_mut = percentage;
@@ -122,7 +126,7 @@ module SeaWallet::seaVault {
     /// check if the total percentage of all caps is 100
     /// call everytime modifying caps percentage
     public fun check_percentage(cap: &OwnerCap, vault: &mut SeaVault) {
-        assert!(object::id(vault) == cap.vaultID, ENotYourVault);
+        assert!(cap.vaultID == object::id(vault), ENotYourVault);
         let mut i: u8 = 0;
         let length = vault.cap_percentage.size() as u8;
         let mut totalPercentage = 0;
@@ -136,13 +140,13 @@ module SeaWallet::seaVault {
 
     /// add non-coin asset to vault
     public fun add_asset<Asset: key + store>(cap: &OwnerCap, vault: &mut SeaVault, asset: Asset, name: vector<u8>, _ctx: &mut TxContext) {
-        assert!(object::id(vault) == cap.vaultID, ENotYourVault);
+        assert!(cap.vaultID == object::id(vault), ENotYourVault);
         dof::add(&mut vault.id, name, asset);
     }
 
     /// add coin asset to vault (when the coinType isn't added before)
     public fun add_coin<Asset>(cap: &OwnerCap, vault: &mut SeaVault, asset_name: vector<u8>, asset: Coin<Asset>) {
-        assert!(object::id(vault) == cap.vaultID, ENotYourVault);
+        assert!(cap.vaultID == object::id(vault), ENotYourVault);
         // update table amount
         let amount = coin::value<Asset>(&asset);
         table::add(&mut vault.asset_sum, asset_name, amount);
@@ -154,7 +158,7 @@ module SeaWallet::seaVault {
 
     /// add more coin asset to vault (when the coinType is already added before)
     public fun organize_coin<Asset>(cap: &OwnerCap, vault: &mut SeaVault, asset_name: vector<u8>, asset: Coin<Asset>) {
-        assert!(object::id(vault) == cap.vaultID, ENotYourVault);
+        assert!(cap.vaultID == object::id(vault), ENotYourVault);
         // update table amount
         let added_amount = coin::value<Asset>(&asset);
         let amount_mut = table::borrow_mut<vector<u8>, u64>(&mut vault.asset_sum, asset_name);
@@ -167,7 +171,7 @@ module SeaWallet::seaVault {
 
     /// for owner to reclaim asset (NFT or all coins at once)
     public fun reclaim_asset<Asset: key + store>(cap: &OwnerCap, vault: &mut SeaVault, asset_name: vector<u8>, ctx: &mut TxContext) {
-        assert!(object::id(vault) == cap.vaultID, ENotYourVault);
+        assert!(cap.vaultID == object::id(vault), ENotYourVault);
         // remove from table
         if(vault.asset_sum.contains(asset_name)) {
             table::remove(&mut vault.asset_sum, asset_name);
@@ -178,10 +182,23 @@ module SeaWallet::seaVault {
         transfer::public_transfer(asset, ctx.sender());
     }
 
+    /// for owner to use vault to pay (can only be used within seaVault)
+    fun pay_service<Asset>(cap: &OwnerCap, vault: &mut SeaVault, asset_name: vector<u8>, amount: u64, ctx: &mut TxContext) : Coin<Asset> {
+        assert!(cap.vaultID == object::id(vault), ENotYourVault);
+        assert!(amount <= *table::borrow(&vault.asset_sum, asset_name), ENotEnough);
+        // update table amount
+        let amount_mut = table::borrow_mut<vector<u8>, u64>(&mut vault.asset_sum, asset_name);
+        *amount_mut = *amount_mut - amount;
+
+        // pay from vault
+        let coin_from_vault = dof::borrow_mut<vector<u8>, Coin<Asset>>(&mut vault.id, asset_name);
+        coin::split(coin_from_vault, amount, ctx)
+    }
+
     /// for owner to take a certain amount of coin
     #[allow(lint(self_transfer))]
     public fun take_coin<Asset>(cap: &OwnerCap, vault: &mut SeaVault, asset_name: vector<u8>, amount: u64, ctx: &mut TxContext) {
-        assert!(object::id(vault) == cap.vaultID, ENotYourVault);
+        assert!(cap.vaultID == object::id(vault), ENotYourVault);
         assert!(amount <= *table::borrow(&vault.asset_sum, asset_name), ENotEnough);
         // update table amount
         let amount_mut = table::borrow_mut<vector<u8>, u64>(&mut vault.asset_sum, asset_name);
@@ -196,7 +213,7 @@ module SeaWallet::seaVault {
     /// update the last update time
     /// if the vault is warned, reset the time left to 6 months, and set is_warned to false
     public fun update_time(cap: &OwnerCap, vault: &mut SeaVault, clock: &Clock) {
-        assert!(object::id(vault) == cap.vaultID, ENotYourVault);
+        assert!(cap.vaultID == object::id(vault), ENotYourVault);
         vault.last_update = clock.timestamp_ms();
         if (vault.is_warned) {
             vault.time_left = SIX_MONTHS;
@@ -206,7 +223,7 @@ module SeaWallet::seaVault {
 
     /// grace period - 7 days grace period for owner to confirm their aliveness
     fun grace_period(cap: &MemberCap, vault: &mut SeaVault, clock: &Clock) {
-        assert!(object::id(vault) == cap.vaultID, ENotYourVault);
+        assert!(cap.vaultID == object::id(vault), ENotYourVault);
         vault.last_update = clock.timestamp_ms();
         vault.time_left = SEVEN_DAYS;
         vault.is_warned = true;
@@ -222,7 +239,7 @@ module SeaWallet::seaVault {
         asset_name: vector<u8>,
         ctx: &mut TxContext
     ) {
-        assert!(object::id(vault) == cap.vaultID, ENotYourVault);
+        assert!(cap.vaultID == object::id(vault), ENotYourVault);
         // check if the vault is locked
         let current_time = clock.timestamp_ms();
         assert!(current_time - vault.last_update >= vault.time_left, ELocked);
@@ -246,114 +263,99 @@ module SeaWallet::seaVault {
         transfer::public_transfer(coin, ctx.sender());
     }
 
-    public struct DeductCap has key, store {
-        id: UID,
-        serviceID: ID,
-        deductDate: u64,
-        vaultId: ID,
-        paddr: address
-    }
-
-    public struct AutoDeductSystemCap has key {
-        id: UID,
-    }
-
-    public struct SubControler has key {
-        id: UID,
-        serviceID: ID
-    }
-
-    public struct SubProof has key, store {
-        id: UID,
-        serviceID: ID,
-        expireDate: u64,
-    }
-
-    public struct Service<phantom CoinType> has key {
-        id: UID,
-        price: u64,
-        coin: Balance<CoinType>,
-        name: String,
-        serviceAddress: address,
-        yearlyDiscount: u8
-    }
-
-    public fun createService<CoinType>(price: u64, name: String, serviceAddr: address, yDiscount: u8, ctx: &mut TxContext) {
-        let service = Service{
-            id: object::new(ctx),
-            price: price,
-            coin: balance::zero<CoinType>(),
-            name: name,
-            serviceAddress: serviceAddr,
-            yearlyDiscount: yDiscount
-        };
-        transfer::share_object(service);
-    }
-
-    public fun subscribeMonthly<CoinType>(service: &Service<CoinType>, mut coin: Coin<CoinType>, vault: &SeaVault, ctx: &mut TxContext) {
-        let coin_to_service = coin::split<CoinType>(&mut coin, service.price, ctx);
-        transfer::public_transfer(coin_to_service, service.serviceAddress);
-        let deductCap = DeductCap {
-            id: object::new(ctx),
-            serviceID: object::id(service),
-            deductDate: tx_context::epoch_timestamp_ms(ctx) + 30 * 24 * 60 * 60 * 1000,
-            vaultId: object::id(vault),
-            paddr: ctx.sender()
-        };
-        let subproof = SubProof {
-            id: object::new(ctx),
-            serviceID: object::id(service),
-            expireDate: tx_context::epoch_timestamp_ms(ctx) + 30 * 24 * 60 * 60 * 1000
-        };
-        transfer::public_transfer(subproof, ctx.sender());
-        transfer::public_transfer(deductCap, service.serviceAddress);
-        transfer::public_transfer(coin,service.serviceAddress);
-    }
-
-    public fun subscribeYearly<CoinType>(service: &Service<CoinType>, mut coin: Coin<CoinType>, vault: &SeaVault, ctx: &mut TxContext) {
-        let coin_to_service = coin::split<CoinType>(&mut coin, service.price * 12 * (service.yearlyDiscount as u64) / 100, ctx);
-        transfer::public_transfer(coin_to_service, service.serviceAddress);
-        let deductCap = DeductCap {
-            id: object::new(ctx),
-            serviceID: object::id(service),
-            deductDate: tx_context::epoch_timestamp_ms(ctx) + 365 * 24 * 60 * 60 * 1000,
-            vaultId: object::id(vault),
-            paddr: ctx.sender()
-        };
-        let subproof = SubProof {
-            id: object::new(ctx),
-            serviceID: object::id(service),
-            expireDate: tx_context::epoch_timestamp_ms(ctx) + 365 * 24 * 60 * 60 * 1000
-        };
-        transfer::public_transfer(subproof, ctx.sender());
-        transfer::public_transfer(deductCap, service.serviceAddress);
-        transfer::public_transfer(coin, service.serviceAddress);
-    }
-
-    public fun deduct<CoinType>(service: &mut Service<CoinType>, cap: &mut DeductCap, vault: &mut SeaVault, asset_name: vector<u8>, ctx: &mut TxContext) {
-        assert!(cap.deductDate < tx_context::epoch_timestamp_ms(ctx), EDeductDateNotPassed);
-        assert!(object::id(vault) == cap.vaultId, EWrongVaultId);
-        assert!(object::id(service) == cap.serviceID, EWrongVaultId);
-        let coin_from_vault = dof::borrow_mut<vector<u8>, Coin<CoinType>>(&mut vault.id, asset_name);
-        let coin_splited = coin::split<CoinType>(coin_from_vault, service.price, ctx);
-        balance::join<CoinType>(&mut service.coin, coin::into_balance(coin_splited));
-        cap.deductDate = tx_context::epoch_timestamp_ms(ctx) + 30 * 24 * 60 * 60 * 1000;
-        let subproof = SubProof {
-            id: object::new(ctx),
-            serviceID: object::id(service),
-            expireDate: tx_context::epoch_timestamp_ms(ctx) + 30 * 24 * 60 * 60 * 1000
-        };
-        transfer::public_transfer(subproof, cap.paddr);
-    }
-
     /// getter functions
-    public fun vaultID(vault: &SeaVault): ID {
-        let id = object::id(vault);
-        id
+    public fun get_vaultID(vault: &SeaVault): ID {
+        object::id(vault)
     }
 
     #[test_only]
     public fun is_warned(vault: &SeaVault): bool {
         vault.is_warned
     }
+
+    public struct DeductCap has key, store {
+        id: UID,
+        vaultID: ID,
+        serviceID: ID,
+        deduct_date: u64,
+        subscriber: address,
+    }
+
+    public struct Receipt has key, store {
+        id: UID,
+        serviceID: ID,
+        expireDate: u64,
+    }
+
+    /// subscribe to a service
+    public fun subscribeMonthly<CoinType>(cap: &OwnerCap, vault: &mut SeaVault, service: &Service<CoinType>, ctx: &mut TxContext) {
+        assert!(cap.vaultID == object::id(vault), ENotYourVault);
+
+        // pay frist month
+        let monthly_payment: Coin<CoinType> = pay_service(cap, vault, *service.get_asset_name().as_bytes(), service.get_service_price(), ctx);
+        public_transfer(monthly_payment, service.get_service_owner());
+
+        // create DeductCap for service owner
+        let deductCap = DeductCap {
+            id: object::new(ctx),
+            vaultID: object::id(vault),
+            serviceID: object::id(service),
+            deduct_date: ctx.epoch_timestamp_ms() + THIRTY_DAYS,
+            subscriber: ctx.sender()
+        };
+        transfer::public_transfer(deductCap, service.get_service_owner());
+
+        // create Receipt for user
+        let receipt = Receipt {
+            id: object::new(ctx),
+            serviceID: object::id(service),
+            expireDate: ctx.epoch_timestamp_ms() + THIRTY_DAYS
+        };
+        transfer::public_transfer(receipt, ctx.sender());
+    }
+
+    public fun subscribeYearly<CoinType>(cap: &OwnerCap, vault: &mut SeaVault, service: &Service<CoinType>, ctx: &mut TxContext) {
+        assert!(cap.vaultID == object::id(vault), ENotYourVault);
+
+        // calculate yearly price with discount and pay
+        let yearly_price = service.get_service_price() * 12 * (service.get_yearly_discount() as u64) / 100;
+        let yearly_payment: Coin<CoinType> = pay_service(cap, vault, *service.get_asset_name().as_bytes(), yearly_price, ctx);
+        public_transfer(yearly_payment, service.get_service_owner());
+
+        // create DeductCap for service owner
+        let deductCap = DeductCap {
+            id: object::new(ctx),
+            vaultID: object::id(vault),
+            serviceID: object::id(service),
+            deduct_date: ctx.epoch_timestamp_ms() + THREE_SIX_FIVE_DAYS,
+            subscriber: ctx.sender()
+        };
+        transfer::public_transfer(deductCap, service.get_service_owner());
+
+        // create Receipt for user
+        let receipt = Receipt {
+            id: object::new(ctx),
+            serviceID: object::id(service),
+            expireDate: ctx.epoch_timestamp_ms() + THREE_SIX_FIVE_DAYS
+        };
+        transfer::public_transfer(receipt, ctx.sender());
+    }
+
+    // public fun deduct<CoinType>(cap: &mut DeductCap, service: &mut Service<CoinType>, vault: &mut SeaVault, asset_name: vector<u8>, ctx: &mut TxContext) {
+    //     assert!(ctx.epoch_timestamp_ms() > cap.deduct_date, EDeductDateNotPassed);
+    //     assert!(cap.serviceID == object::id(service), EWrongVaultId);
+    //     assert!(cap.vaultID == object::id(vault), EWrongVaultId);
+        
+    //     let coin_from_vault = dof::borrow_mut<vector<u8>, Coin<CoinType>>(&mut vault.id, asset_name);
+    //     let coin_splited = coin::split<CoinType>(coin_from_vault, service.price, ctx);
+    //     balance::join<CoinType>(&mut service.coin, coin::into_balance(coin_splited));
+    //     cap.deductDate = tx_context::epoch_timestamp_ms(ctx) + THIRTY_DAYS;
+    //     let subproof = SubProof {
+    //         id: object::new(ctx),
+    //         serviceID: object::id(service),
+    //         expireDate: tx_context::epoch_timestamp_ms(ctx) + 30 * 24 * 60 * 60 * 1000
+    //     };
+    //     transfer::public_transfer(subproof, cap.paddr);
+    // }
+
 }
