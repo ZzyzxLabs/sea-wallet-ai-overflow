@@ -1,5 +1,7 @@
 "use client";
 import { useState } from 'react';
+import { ConnectButton } from "@mysten/dapp-kit";
+import "@mysten/dapp-kit/dist/index.css";
 
 // Sample data based on the screenshot
 const subscriberData = [
@@ -76,23 +78,14 @@ export default function Subscribers() {
     <div className="p-6 ml-8 mx-auto bg-white text-black">
       <div className="mb-8 flex justify-between items-center">
         <div>
-          <h1 className="text-3xl font-bold mb-2">Subscription</h1>
+          <h1 className="text-3xl font-bold mb-2 text-gray-900">Subscription</h1>
           <p className="text-gray-600">
             Manage your active service subscriptions and collect monthly fees from your subscribers
           </p>
         </div>
-        <button className="flex items-center space-x-2 border border-gray-300 rounded-lg px-4 py-2 bg-white">
-          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <rect x="2" y="4" width="20" height="16" rx="2"></rect>
-            <path d="M12 12h4"></path>
-            <path d="M12 16h4"></path>
-            <path d="M12 8h4"></path>
-            <path d="M6 16h.01"></path>
-            <path d="M6 12h.01"></path>
-            <path d="M6 8h.01"></path>
-          </svg>
-          <span>Wallet</span>
-        </button>
+        <div className="overflow-hidden rounded-lg">
+          <ConnectButton />
+        </div>
       </div>
       
       <div className="mb-6">        <div className="flex space-x-4 mb-6">
@@ -166,14 +159,12 @@ export default function Subscribers() {
             </div>
           </div>
         </div>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      </div>      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {filteredSubscribers.map((subscriber, index) => (
           <div key={index} className="bg-white rounded-lg shadow-md overflow-hidden">
             <div className="p-5 flex justify-between items-start">
               <div>
-                <h3 className="font-bold text-lg">{subscriber.name}</h3>
+                <h3 className="font-bold text-lg text-gray-900">{subscriber.name}</h3>
                 <p className="text-gray-600 text-sm">{subscriber.email}</p>
               </div>
               <button 
