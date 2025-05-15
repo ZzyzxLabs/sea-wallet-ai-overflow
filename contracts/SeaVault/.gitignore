@@ -1,1 +1,4 @@
 build/*
+sui-debug
+.coverage_map.mvcov
+.trace
