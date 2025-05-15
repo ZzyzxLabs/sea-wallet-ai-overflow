@@ -67,12 +67,12 @@ module SeaWallet::subscription {
         service.yearly_discount
     }
 
-    public fun subscribe<CoinType>(service: &Service<CoinType>, mut coin: Coin<CoinType>, vault: &SeaVault, ctx: &mut TxContext) {
-        let receipt = Receipt{
-            id: object::new(ctx),
-            serviceID: service.id,
-            expireDate: clock::now() + 365 * 24 * 60 * 60,
-        };
-        transfer::share_object(receipt);
-    }
+    // public fun subscribe<CoinType>(service: &Service<CoinType>, mut coin: Coin<CoinType>, vault: &SeaVault, ctx: &mut TxContext) {
+    //     let receipt = Receipt{
+    //         id: object::new(ctx),
+    //         serviceID: service.id,
+    //         expireDate: clock::now() + 365 * 24 * 60 * 60,
+    //     };
+    //     transfer::share_object(receipt);
+    // }
 }

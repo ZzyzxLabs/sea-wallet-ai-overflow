@@ -288,19 +288,28 @@ module SeaWallet::seaVault {
     }
 
     /// subscribe to a service
-    public fun subscribeMonthly<CoinType>(cap: &OwnerCap, vault: &mut SeaVault, service: &Service<CoinType>, ctx: &mut TxContext) {
+    public fun subscribe<CoinType>(cap: &OwnerCap, vault: &mut SeaVault, service: &Service<CoinType>, is_year: bool, ctx: &mut TxContext) {
         assert!(cap.vaultID == object::id(vault), ENotYourVault);
 
-        // pay frist month
-        let monthly_payment: Coin<CoinType> = pay_service(cap, vault, *service.get_asset_name().as_bytes(), service.get_service_price(), ctx);
-        public_transfer(monthly_payment, service.get_service_owner());
+        // pay frist month or first year
+        let mut payment_amount: u64 = 0;
+        let mut deduct_date: u64 = ctx.epoch_timestamp_ms();
+        if (is_year) {
+            payment_amount = service.get_service_price() * (service.get_yearly_discount() as u64) / 100;
+            deduct_date = THREE_SIX_FIVE_DAYS;
+        } else {
+            payment_amount = service.get_service_price();
+            deduct_date = THIRTY_DAYS;
+        };
+        let payment: Coin<CoinType> = pay_service(cap, vault, *service.get_asset_name().as_bytes(), payment_amount, ctx);
+        public_transfer(payment, service.get_service_owner());
 
         // create DeductCap for service owner
         let deductCap = DeductCap {
             id: object::new(ctx),
             vaultID: object::id(vault),
             serviceID: object::id(service),
-            deduct_date: ctx.epoch_timestamp_ms() + THIRTY_DAYS,
+            deduct_date: deduct_date,
             subscriber: ctx.sender()
         };
         transfer::public_transfer(deductCap, service.get_service_owner());
@@ -309,34 +318,7 @@ module SeaWallet::seaVault {
         let receipt = Receipt {
             id: object::new(ctx),
             serviceID: object::id(service),
-            expireDate: ctx.epoch_timestamp_ms() + THIRTY_DAYS
-        };
-        transfer::public_transfer(receipt, ctx.sender());
-    }
-
-    public fun subscribeYearly<CoinType>(cap: &OwnerCap, vault: &mut SeaVault, service: &Service<CoinType>, ctx: &mut TxContext) {
-        assert!(cap.vaultID == object::id(vault), ENotYourVault);
-
-        // calculate yearly price with discount and pay
-        let yearly_price = service.get_service_price() * 12 * (service.get_yearly_discount() as u64) / 100;
-        let yearly_payment: Coin<CoinType> = pay_service(cap, vault, *service.get_asset_name().as_bytes(), yearly_price, ctx);
-        public_transfer(yearly_payment, service.get_service_owner());
-
-        // create DeductCap for service owner
-        let deductCap = DeductCap {
-            id: object::new(ctx),
-            vaultID: object::id(vault),
-            serviceID: object::id(service),
-            deduct_date: ctx.epoch_timestamp_ms() + THREE_SIX_FIVE_DAYS,
-            subscriber: ctx.sender()
-        };
-        transfer::public_transfer(deductCap, service.get_service_owner());
-
-        // create Receipt for user
-        let receipt = Receipt {
-            id: object::new(ctx),
-            serviceID: object::id(service),
-            expireDate: ctx.epoch_timestamp_ms() + THREE_SIX_FIVE_DAYS
+            expireDate: deduct_date
         };
         transfer::public_transfer(receipt, ctx.sender());
     }
