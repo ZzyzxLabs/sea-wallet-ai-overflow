@@ -266,7 +266,7 @@ module SeaWallet::seaVault {
         yearlyDiscount: u8
     }
 
-    public fun createService<CoinType>(service: &Service<CoinType>, price: u64, name: String, serviceAddr: address, yDiscount: u8, ctx: &mut TxContext) {
+    public fun createService<CoinType>(price: u64, name: String, serviceAddr: address, yDiscount: u8, ctx: &mut TxContext) {
         let service = Service{
             id: object::new(ctx),
             price: price,

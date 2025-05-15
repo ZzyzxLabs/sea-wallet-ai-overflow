@@ -81,7 +81,7 @@ const useMoveStore = create<MoveStore>((set, get) => ({
     const nameBC = stringToUint8Array(name.toString());
     // Step 3: use goods as asset input into addToVault
     tx.moveCall({
-      target: `${get().packageName}::seaVault::organize_trust_asset`,
+      target: `${get().packageName}::seaVault::organize_coin`,
       arguments: [tx.object(capId), tx.object(vaultId), tx.pure(nameBC), goods],
       typeArguments: [coinType],
     });
@@ -113,7 +113,7 @@ const useMoveStore = create<MoveStore>((set, get) => ({
       .serialize(stringToUint8Array(name.toString()));
     // Step 3: use goods as asset input into addToVault
     tx.moveCall({
-      target: `${get().packageName}::seaVault::add_trust_asset_coin`,
+      target: `${get().packageName}::seaVault::add_coin`,
       arguments: [tx.object(capId), tx.object(vaultId), goods, tx.pure(nameBC)],
       typeArguments: [coinType || "unknown_coin_type"],
     });
