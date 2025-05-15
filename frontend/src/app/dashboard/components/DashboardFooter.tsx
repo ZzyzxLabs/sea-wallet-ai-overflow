@@ -8,19 +8,19 @@ const socialLinks = [
   {
     name: "X",
     icon: "/iconFooter/X.svg",
-    url: "https://x.com",
+    url: "https://x.com/SeaWallet_ai",
     color: "#1DA1F2",
   },
   {
     name: "Discord",
     icon: "/iconFooter/discord.svg",
-    url: "https://discord.gg",
+    url: "https://discord.gg/bQyqMJgCjA",
     color: "#5865F2",
   },
   {
     name: "GitHub",
     icon: "/iconFooter/github.svg",
-    url: "https://github.com",
+    url: "https://github.com/ZzyzxLabs",
     color: "#C06EFF",
   },
   {
