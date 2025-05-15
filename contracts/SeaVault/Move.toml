@@ -1,5 +1,5 @@
 [package]
-name = "smartwill"
+name = "SeaWallet"
 edition = "2024.beta" # edition = "legacy" to use legacy (pre-2024) Move
 # license = ""           # e.g., "MIT", "GPL", "Apache 2.0"
 # authors = ["..."]      # e.g., ["Joe Smith (joesmith@noemail.com)", "John Snow (johnsnow@noemail.com)"]
@@ -8,10 +8,10 @@ edition = "2024.beta" # edition = "legacy" to use legacy (pre-2024) Move
 Sui = { git = "https://github.com/MystenLabs/sui.git", subdir = "crates/sui-framework/packages/sui-framework", rev = "framework/testnet", override = true }
 usdc = { git = "https://github.com/circlefin/stablecoin-sui.git", subdir = "packages/usdc", rev = "master" }
 
-[dependencies.ScallopProtocol]
-git = "https://github.com/scallop-io/sui-lending-protocol.git"
-subdir = "contracts/protocol"
-rev = "mainnet"
+# [dependencies.ScallopProtocol]
+# git = "https://github.com/scallop-io/sui-lending-protocol.git"
+# subdir = "contracts/protocol"
+# rev = "mainnet"
 # For remote import, use the `{ git = "...", subdir = "...", rev = "..." }`.
 # Revision can be a branch, a tag, and a commit hash.
 # MyRemotePackage = { git = "https://some.remote/host.git", subdir = "remote/path", rev = "main" }
@@ -24,7 +24,7 @@ rev = "mainnet"
 # Override = { local = "../conflicting/version", override = true }
 
 [addresses]
-smartwill = "0x0"
+SeaWallet = "0x0"
 
 # Named addresses will be accessible in Move as `@name`. They're also exported:
 # for example, `std = "0x1"` is exported by the Standard Library.

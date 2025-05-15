@@ -249,18 +249,18 @@ export default function Subscriptions() {
               {" "}
               <div className="px-4 pt-4 pb-2 text-white">
                 <h3 className="text-lg font-semibold">{service.name}</h3>
-                <p className="text-sm text-white/90">{service.description}</p>
+                <p className="text-sm my-2 text-white/90">{service.description}</p>
               </div>
               <div className="flex justify-between items-center px-4 py-3">
                 {isActive
                   ? service.nextPaymentDate && (
-                      <div className="px-4 pb-3 text-white">
+                      <div className=" items-start text-white">
                         <p className="text-xs opacity-80">Next Payment Date:</p>
                         <p className="text-sm">{service.nextPaymentDate}</p>
                       </div>
                     )
                   : service.nextPaymentDate && (
-                      <div className="px-4 pb-3 text-white">
+                      <div className=" items-start text-white">
                         <p className="text-xs opacity-80">Last Payment Date:</p>
                         <p className="text-sm">
                           {service.nextPaymentDate || "Apr 14, 2025"}
