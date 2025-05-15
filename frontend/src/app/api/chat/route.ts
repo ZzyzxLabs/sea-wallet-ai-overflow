@@ -3,7 +3,7 @@ import { QdrantClient } from "@qdrant/js-client-rest";
 import { OllamaEmbeddings } from "@langchain/ollama";
 import { RecursiveCharacterTextSplitter } from "@langchain/textsplitters";
 
-// 初始化 Qdrant 客戶端
+//Initialize Qdrant client
 const qdrant = new QdrantClient({
   url: "http://localhost:6333",
   timeout: 10_000,
@@ -31,12 +31,12 @@ export async function POST(request: Request) {
           encoder.encode(
             `data: ${JSON.stringify({
               type: "text",
-              content: "您的訊息已收到。客服人員將儘快回覆您。",
+              content: "Message received, please wait clerk to reply.",
             })}\n\n`
           )
         );
       } else if (mode === "ai") {
-        const systemPrompt = `你是 SeaWallet 的專業 AI 客服助手。回答以下問題：${message}`;
+        const systemPrompt = `You are SeaWallet AI assistant, answer ${message}`;
         await streamLlamaResponse(systemPrompt, writer, encoder);
       } else if (mode === "wallet") {
         const collectionName = `temp_user_${userId}`;
@@ -150,7 +150,7 @@ async function streamLlamaResponse(
           );
         }
       } catch {
-        // 忽略非 JSON 行
+        // Ignore parsing errors
       }
     }
   }
