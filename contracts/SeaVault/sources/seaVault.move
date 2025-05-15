@@ -19,7 +19,6 @@ module SeaWallet::seaVault {
     };
     use SeaWallet::subscription::{Service, Receipt, create_receipt, get_service_price};
     use SeaWallet::subscription;
-    use sui::pay;
     
     const EChargeDateNotPassed: u64 = 0;
     const EWrongVaultId: u64 = 1;
@@ -43,8 +42,8 @@ module SeaWallet::seaVault {
         is_warned: bool, // is warned for inactivity
         cap_percentage: VecMap<u8, u8>, // capID: percentage
         cap_activated: VecMap<u8, bool>, // capID: isActivated
-        asset_sum: Table<vector<u8>, u64>, // asset_name: amount
-        asset_withdrawn: Table<vector<u8>, vector<u8>>// asset_name: withdrawn capIDs
+        asset_sum: Table<String, u64>, // asset_name: amount
+        asset_withdrawn: Table<String, vector<u8>>// asset_name: withdrawn capIDs
     }
     
     public struct OwnerCap has key, store {
@@ -62,7 +61,7 @@ module SeaWallet::seaVault {
         id: UID,
         vaultID: ID,
         serviceID: ID,
-        next_date: u64,
+        charge_date: u64,
         is_year: bool,
         subscriber: address,
     }
@@ -77,8 +76,8 @@ module SeaWallet::seaVault {
             is_warned: false,
             cap_percentage: vec_map::empty<u8, u8>(),
             cap_activated: vec_map::empty<u8, bool>(),
-            asset_sum: table::new<vector<u8>, u64>(ctx),
-            asset_withdrawn: table::new<vector<u8>, vector<u8>>(ctx),
+            asset_sum: table::new<String, u64>(ctx),
+            asset_withdrawn: table::new<String, vector<u8>>(ctx),
         };
         let ownerCap = OwnerCap {
             id: object::new(ctx),
@@ -149,13 +148,13 @@ module SeaWallet::seaVault {
     }
 
     /// add non-coin asset to vault
-    public fun add_asset<Asset: key + store>(cap: &OwnerCap, vault: &mut SeaVault, asset: Asset, name: vector<u8>, _ctx: &mut TxContext) {
+    public fun add_asset<Asset: key + store>(cap: &OwnerCap, vault: &mut SeaVault, asset: Asset, name: String, _ctx: &mut TxContext) {
         assert!(cap.vaultID == object::id(vault), ENotYourVault);
         dof::add(&mut vault.id, name, asset);
     }
 
     /// add coin asset to vault (when the coinType isn't added before)
-    public fun add_coin<Asset>(cap: &OwnerCap, vault: &mut SeaVault, asset_name: vector<u8>, asset: Coin<Asset>) {
+    public fun add_coin<Asset>(cap: &OwnerCap, vault: &mut SeaVault, asset_name: String, asset: Coin<Asset>) {
         assert!(cap.vaultID == object::id(vault), ENotYourVault);
         // update table amount
         let amount = coin::value<Asset>(&asset);
@@ -167,35 +166,35 @@ module SeaWallet::seaVault {
     }
 
     /// add more coin asset to vault (when the coinType is already added before)
-    public fun organize_coin<Asset>(cap: &OwnerCap, vault: &mut SeaVault, asset_name: vector<u8>, asset: Coin<Asset>) {
+    public fun organize_coin<Asset>(cap: &OwnerCap, vault: &mut SeaVault, asset_name: String, asset: Coin<Asset>) {
         assert!(cap.vaultID == object::id(vault), ENotYourVault);
         // update table amount
         let added_amount = coin::value<Asset>(&asset);
-        let amount_mut = table::borrow_mut<vector<u8>, u64>(&mut vault.asset_sum, asset_name);
+        let amount_mut = table::borrow_mut<String, u64>(&mut vault.asset_sum, asset_name);
         *amount_mut = *amount_mut + added_amount;
 
         // add coin to vault
-        let coin_from_vault = dof::borrow_mut<vector<u8>, Coin<Asset>>(&mut vault.id, asset_name);
+        let coin_from_vault = dof::borrow_mut<String, Coin<Asset>>(&mut vault.id, asset_name);
         coin::join<Asset>(coin_from_vault, asset);
     }
 
     /// for owner to take a certain amount of coin
     #[allow(lint(self_transfer))]
-    public fun take_coin<Asset>(cap: &OwnerCap, vault: &mut SeaVault, asset_name: vector<u8>, amount: u64, ctx: &mut TxContext) {
+    public fun take_coin<CoinType>(cap: &OwnerCap, vault: &mut SeaVault, asset_name: String, amount: u64, ctx: &mut TxContext) {
         assert!(cap.vaultID == object::id(vault), ENotYourVault);
         assert!(amount <= *table::borrow(&vault.asset_sum, asset_name), ENotEnough);
         // update table amount
-        let amount_mut = table::borrow_mut<vector<u8>, u64>(&mut vault.asset_sum, asset_name);
+        let amount_mut = table::borrow_mut<String, u64>(&mut vault.asset_sum, asset_name);
         *amount_mut = *amount_mut - amount;
 
         // take coin from vault
-        let coin_from_vault = dof::borrow_mut<vector<u8>, Coin<Asset>>(&mut vault.id, asset_name);
+        let coin_from_vault = dof::borrow_mut<String, Coin<CoinType>>(&mut vault.id, asset_name);
         let coin = coin::split(coin_from_vault, amount, ctx);
         transfer::public_transfer(coin, ctx.sender());
     }
 
     /// for owner to reclaim asset (NFT or all coins at once)
-    public fun reclaim_asset<Asset: key + store>(cap: &OwnerCap, vault: &mut SeaVault, asset_name: vector<u8>, ctx: &mut TxContext) {
+    public fun reclaim_asset<Asset: key + store>(cap: &OwnerCap, vault: &mut SeaVault, asset_name: String, ctx: &mut TxContext) {
         assert!(cap.vaultID == object::id(vault), ENotYourVault);
         // remove from table
         if(vault.asset_sum.contains(asset_name)) {
@@ -203,7 +202,7 @@ module SeaWallet::seaVault {
         };
 
         // remove from vault
-        let asset = dof::remove<vector<u8>, Asset>(&mut vault.id, asset_name);
+        let asset = dof::remove<String, Asset>(&mut vault.id, asset_name);
         transfer::public_transfer(asset, ctx.sender());
     }
 
@@ -225,7 +224,7 @@ module SeaWallet::seaVault {
         vault: &mut SeaVault,
 
         clock: &Clock,
-        asset_name: vector<u8>,
+        asset_name: String,
         ctx: &mut TxContext
     ) {
         assert!(cap.vaultID == object::id(vault), ENotYourVault);
@@ -247,7 +246,7 @@ module SeaWallet::seaVault {
         let amount = full_amount * percentage / 100;
         
         // transfer the asset
-        let asset = dof::borrow_mut<vector<u8>, Coin<CoinType>>(&mut vault.id, asset_name);
+        let asset = dof::borrow_mut<String, Coin<CoinType>>(&mut vault.id, asset_name);
         let coin = coin::split(asset, amount, ctx);
         transfer::public_transfer(coin, ctx.sender());
     }
@@ -267,14 +266,14 @@ module SeaWallet::seaVault {
 
     /// for owner to use vault to pay (can only be used within seaVault)
     /// coin need to be processed within the vault
-    public(package) fun sea_pay<CoinType>(vault: &mut SeaVault, asset_name: vector<u8>, amount: u64, ctx: &mut TxContext) : Coin<CoinType> {
+    public(package) fun sea_pay<CoinType>(vault: &mut SeaVault, asset_name: String, amount: u64, ctx: &mut TxContext) : Coin<CoinType> {
         assert!(amount <= *table::borrow(&vault.asset_sum, asset_name), ENotEnough);
         // update table amount
-        let amount_mut = table::borrow_mut<vector<u8>, u64>(&mut vault.asset_sum, asset_name);
+        let amount_mut = table::borrow_mut<String, u64>(&mut vault.asset_sum, asset_name);
         *amount_mut = *amount_mut - amount;
 
         // pay from vault
-        let coin_from_vault = dof::borrow_mut<vector<u8>, Coin<CoinType>>(&mut vault.id, asset_name);
+        let coin_from_vault = dof::borrow_mut<String, Coin<CoinType>>(&mut vault.id, asset_name);
         coin::split(coin_from_vault, amount, ctx)
     }
 
@@ -292,7 +291,7 @@ module SeaWallet::seaVault {
         } else {
             next_date = next_date + THIRTY_DAYS;
         };
-        let payment: Coin<CoinType> = sea_pay(vault, *service.get_service_asset_name().as_bytes(), payment_amount, ctx);
+        let payment: Coin<CoinType> = sea_pay(vault, service.get_service_asset_name(), payment_amount, ctx);
         transfer::public_transfer(payment, service.get_service_owner());
 
         // create ChargeCap for service owner
@@ -300,7 +299,7 @@ module SeaWallet::seaVault {
             id: object::new(ctx),
             vaultID: object::id(vault),
             serviceID: object::id(service),
-            next_date: next_date,
+            charge_date: next_date,
             is_year: is_year,
             subscriber: ctx.sender(),
         };
@@ -312,24 +311,23 @@ module SeaWallet::seaVault {
     }
 
     /// for service owner to charge fee
-    public fun charge_fee<CoinType>(chargeCap: &mut ChargeCap, service: & Service<CoinType>, vault: &mut SeaVault, asset_name: vector<u8>, ctx: &mut TxContext) {
-        assert!(ctx.epoch_timestamp_ms() > chargeCap.next_date, EChargeDateNotPassed);
-        assert!(chargeCap.serviceID == object::id(service), EWrongServiceId);
+    public fun charge_fee<CoinType>(chargeCap: &mut ChargeCap, vault: &mut SeaVault, service: & Service<CoinType>, ctx: &mut TxContext) {
+        assert!(ctx.epoch_timestamp_ms() > chargeCap.charge_date, EChargeDateNotPassed);
         assert!(chargeCap.vaultID == object::id(vault), ENotYourVault);
+        assert!(chargeCap.serviceID == object::id(service), EWrongServiceId);
 
         let mut payment_amount = service.get_service_price();
-        let mut next_date: u64 = chargeCap.next_date;
         if (chargeCap.is_year) {
             payment_amount = payment_amount * 12 * (service.get_yearly_discount() as u64) / 100;
-            next_date = next_date + THREE_SIX_FIVE_DAYS;
+            chargeCap.charge_date = chargeCap.charge_date + THREE_SIX_FIVE_DAYS;
         } else {
-            next_date = next_date + THIRTY_DAYS;
+            chargeCap.charge_date = chargeCap.charge_date + THIRTY_DAYS;
         };
 
-        let payment = sea_pay<CoinType>(vault, asset_name, payment_amount,ctx);
+        let payment: Coin<CoinType> = sea_pay(vault, service.get_service_asset_name(), payment_amount,ctx);
         transfer::public_transfer(payment, service.get_service_owner());
         
-        let receipt: Receipt<CoinType> = subscription::create_receipt(service, service.get_service_price(), next_date, ctx);
+        let receipt: Receipt<CoinType> = subscription::create_receipt(service, service.get_service_price(), chargeCap.charge_date, ctx);
         transfer::public_transfer(receipt, chargeCap.subscriber);
     }
 

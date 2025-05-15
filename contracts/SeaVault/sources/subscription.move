@@ -77,12 +77,14 @@ module SeaWallet::subscription {
     }
 
     /// refund
-    public fun refund_receipt<CoinType>(receipt: &mut Receipt<CoinType>, coin: Coin<CoinType>) {
-        assert!(receipt.is_active, EChargeDateNotPassed);
-        assert!(coin.value() >= receipt.paid_amount, EWrongServiceId);
-        receipt.is_active = false;
-        transfer::public_transfer(coin, receipt.receipt_owner);
-    }
+    // public fun refund_receipt<CoinType>(receipt: &mut Receipt<CoinType>, coin: Coin<CoinType>) {
+    //     assert!(receipt.is_active, EChargeDateNotPassed);
+    //     assert!(coin.value() >= receipt.paid_amount, EWrongServiceId);
+    //     receipt.is_active = false;
+    //     transfer::public_transfer(coin, receipt.receipt_owner);
+    // }
+
+    /// confirm subscription
 
     public fun get_service_price<CoinType>(service: &Service<CoinType>): u64 {
         service.price
