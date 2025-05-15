@@ -319,13 +319,13 @@ export default function TestingP() {
               const vaultObject = result.objectChanges.find(
                 (obj) =>
                   obj.type === "created" &&
-                  obj.objectType.includes("::vault::Vault")
+                  obj.objectType.includes("::seaVault::Vault")
               );
 
               const ownerCapObject = result.objectChanges.find(
                 (obj) =>
                   obj.type === "created" &&
-                  obj.objectType.includes("::vault::OwnerCap")
+                  obj.objectType.includes("::seaVault::OwnerCap")
               );
 
               if (vaultObject && ownerCapObject) {
@@ -367,10 +367,13 @@ export default function TestingP() {
   };
 
   // Call useSuiClientQuery at the top of the component and pass the result to needed functions
+  // Get the packageName from moveStore
+  const { packageName } = useMoveStore();
+  
   const ownedObjectsQuery = useSuiClientQuery('getOwnedObjects', {
     owner: account?.address,
     filter: {
-      StructType: '0x9622fd64681280dc61eecf7fbc2e756bb7614cf5662f220044f573758f922c71::vault::OwnerCap',
+      StructType: `${packageName}::seaVault::OwnerCap`,
     },
     options:{
       showType: true,

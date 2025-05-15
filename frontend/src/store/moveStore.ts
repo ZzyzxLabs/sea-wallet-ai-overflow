@@ -45,9 +45,9 @@ interface MoveStore {
 const useMoveStore = create<MoveStore>((set, get) => ({
   // main
   packageName:
-    "0xfa7f043a4fb3399ba9668d311bdbb0fe728d6f0ed6c53675a66170a0f801b7da",
+    "0x025fcbe4c2d5566fd28677e4d31f4e8bc51ff16d4cf4a740cad5f6014df02de6",
   walletOnwer:
-    "0x9fcc44605f6b702244d32ff43852eb1a13938f9afbc5f5329e87709c52cfbf75",
+    "0x93b236ec83f8b308e077a09c77394d642e15f42d5f3c92b121723eac2045adac",
   createVaultTx: () => {
     const vaultTx = new Transaction();
     vaultTx.moveCall({

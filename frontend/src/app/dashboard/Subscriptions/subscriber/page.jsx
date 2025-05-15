@@ -1,53 +1,58 @@
 "use client";
 import { useState } from 'react';
-import { ConnectButton, useSuiClientQuery } from "@mysten/dapp-kit";
+import { ConnectButton, useSuiClientQuery, useSuiClient } from "@mysten/dapp-kit";
 import "@mysten/dapp-kit/dist/index.css";
 import { useSubscribeStore } from '../../../../store/subscribeStore';
 import { useSignAndExecuteTransaction } from "@mysten/dapp-kit";
-// Sample data based on the screenshot
+// Service-focused data without person information or payment times
 const subscriberData = [
   {
-    name: 'Alex Johnson',
-    email: 'alex@example.com',
     service: 'Web3 CRM',
-    subscribedOn: 'Jan 15, 2025',
-    price: '$5.99/mo',
+    serviceDescription: 'Manage your blockchain customers with advanced analytics and engagement tools',
+    coinType: '0x2::sui::SUI',
+    price: 5.99,
+    yearlyDiscount: 5,
+    serviceAddress: '0x5af480c231096193acd5a899574dff93116ed254b5202f25a2347d0ec34be2e7',
     tier: 'Starter',
     status: 'active',
   },
   {
-    name: 'Sara Williams',
-    email: 'sarah@example.com',
     service: 'Web3 CRM',
-    subscribedOn: 'Sep 6, 2024',
-    price: '$9.99/mo',
+    serviceDescription: 'Manage your blockchain customers with advanced analytics and engagement tools',
+    coinType: '0x2::sui::SUI',
+    price: 9.99,
+    yearlyDiscount: 10,
+    serviceAddress: '0x5af480c231096193acd5a899574dff93116ed254b5202f25a2347d0ec34be2e7',
     tier: 'Team',
     status: 'collected',
   },
   {
-    name: 'Mike Brown',
-    email: 'michael@example.com',
     service: 'Multi-Signature Security',
-    subscribedOn: 'Jan 15, 2025',
-    price: '$14.99/mo',
+    serviceDescription: 'Enhanced wallet protection requiring multiple approvals for transactions',
+    coinType: '0x2::sui::SUI',
+    price: 14.99,
+    yearlyDiscount: 15,
+    serviceAddress: '0x93b236ec83f8b308e077a09c77394d642e15f42d5f3c92b121723eac2045adac',
     tier: 'Enterprise',
     status: 'active',
   },
   {
-    name: 'Alex Johnson',
-    email: 'alex@example.com',
-    service: 'Web3 CRM',
-    subscribedOn: 'Jan 15, 2025',
-    price: '$5.99/mo',
-    tier: 'Starter',
+    service: 'Cold Storage Protection',
+    serviceDescription: 'Securely manage your offline digital assets with automated monitoring',
+    coinType: '0x2::sui::SUI',
+    price: 10.99,
+    yearlyDiscount: 15,
+    serviceAddress: '0x72bb5dd7274e56da0315b6b6167147b7914eaa20f336db83ea57a4724679c15d',
+    tier: 'Professional',
     status: 'active',
   },
   {
-    name: 'Sara Williams',
-    email: 'sarah@example.com',
     service: 'ShitCoin Generator',
-    subscribedOn: 'Sep 6, 2024',
-    price: '$5.99/mo',
+    serviceDescription: 'Create and deploy custom tokens with automated liquidity management',
+    coinType: '0x2::sui::SUI',
+    price: 5.99,
+    yearlyDiscount: 0,
+    serviceAddress: '0x93b236ec83f8b308e077a09c77394d642e15f42d5f3c92b121723eac2045adac',
     tier: 'Starter',
     status: 'collected',
   },
@@ -59,10 +64,16 @@ const formatAddress = (address) => {
   return `${address.substring(0, 7)}...${address.substring(address.length - 5)}`;
 };
 
-export default function Subscribers() {
+// Format price with currency symbol
+const formatPrice = (price) => {
+  return `$${price.toFixed(2)}/mo`;
+};
+
+export default function ServiceDirectory() {
+	const client = useSuiClient();
   const { mutate: signAndExecuteTransaction } = useSignAndExecuteTransaction({
       execute: async ({ bytes, signature }) =>
-        await suiClient.executeTransactionBlock({
+        await client.executeTransactionBlock({
           transactionBlock: bytes,
           signature,
           options: {
@@ -73,10 +84,13 @@ export default function Subscribers() {
             showRawEffects: true,
           },
         }),
-    }); 
-  const [filter, setFilter] = useState('All');
+    });   const [filter, setFilter] = useState('All');
   const [searchQuery, setSearchQuery] = useState('');
-  const [showModal, setShowModal] = useState(false);  const [newService, setNewService] = useState({
+  const [showModal, setShowModal] = useState(false);  
+  const [errorr, setErrorr] = useState('');
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [transactionDigest, setTransactionDigest] = useState('');
+  const [newService, setNewService] = useState({
     name: '',
     coinType: '0x2::sui::SUI',
     price: '',
@@ -98,27 +112,40 @@ export default function Subscribers() {
     }
   );
   // Get unique service types for filtering
-  const services = ['All', ...new Set(subscriberData.map(sub => sub.service))];
-
-  // Filter subscribers based on selected service type and search query
-  const filteredSubscribers = subscriberData.filter(subscriber => {
-    const matchesFilter = filter === 'All' || subscriber.service === filter;
+  const services = ['All', ...new Set(subscriberData.map(sub => sub.service))];  // Filter services based on selected service type and search query
+  const filteredSubscribers = subscriberData.filter(service => {
+    const matchesFilter = filter === 'All' || service.service === filter;
     const matchesSearch = searchQuery === '' || 
-      subscriber.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      subscriber.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      subscriber.service.toLowerCase().includes(searchQuery.toLowerCase());
+      service.service.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      service.serviceDescription.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      service.coinType.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      service.tier.toLowerCase().includes(searchQuery.toLowerCase());
     
     return matchesFilter && matchesSearch;
   });
-  
-  // Handle input changes for the new service form
+    // Handle input changes for the new service form
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setNewService(prev => ({ ...prev, [name]: value }));
   };
-    // Handle form submission
+  
+  // Function to close the modal with animation
+  const closeModal = () => {
+    // Clear any error messages
+    setErrorr('');
+    setTransactionDigest('');
+    setIsProcessing(false);
+    
+    // Close the modal
+    setShowModal(false);
+  };    // Handle form submission
   const handleSubmit = async (e) => {
     e.preventDefault();
+    
+    // Clear previous errors and set processing state
+    setErrorr('');
+    setIsProcessing(true);
+    setTransactionDigest('');
     
     try {
       // Get the decimals for the selected coin type
@@ -141,6 +168,7 @@ export default function Subscribers() {
         newService.serviceAddress, 
         parseInt(newService.yearlyDiscount)
       );
+      
       signAndExecuteTransaction(
         {
           transaction: tx,
@@ -150,45 +178,42 @@ export default function Subscribers() {
           onSuccess: (result) => {
             console.log("Transaction executed successfully", result);
             setTransactionDigest(result.digest);
-            setTransactionStatus("Success");
-            setErrorr("");
+            setIsProcessing(false);
+            
+            // Reset form values
+            setNewService({
+              name: '',
+              coinType: '0x2::sui::SUI',
+              price: '',
+              serviceAddress: '',
+              yearlyDiscount: '0'
+            });
+
             // Don't close modal immediately to show the transaction digest
-        setTimeout(() => {
-          closeModal();
-        }, 5000); // Show transaction result for 5 seconds before closing
-            // You can do additional operations with the result here
-            // Such as showing transaction details or refreshing data
+            setTimeout(() => {
+              closeModal();
+            }, 5000); // Show transaction result for 5 seconds before closing
           },
           onError: (error) => {
             console.error("Transaction error:", error);
-            setTransactionStatus("Failed");
             setErrorr("Transaction failed: " + (error.message || "Unknown error"));
             setIsProcessing(false);
           }
         }
       );
-      // Reset form and close modal
-      setNewService({
-        name: '',
-        coinType: '0x2::sui::SUI',
-        price: '',
-        serviceAddress: '',
-        yearlyDiscount: '0'
-      });
-      setShowModal(false);
     } catch (error) {
       console.error("Error creating service:", error);
-      // You could add error handling UI here
+      setErrorr("Error: " + (error.message || "An unexpected error occurred"));
+      setIsProcessing(false);
     }
   };
   
   return (
-    <div className="p-6 ml-8 mx-auto bg-white text-black">      {/* Header */}
-      <div className="mb-8 flex justify-between items-center">
+    <div className="p-6 ml-8 mx-auto bg-white text-black">      {/* Header */}      <div className="mb-8 flex justify-between items-center">
         <div>
-          <h1 className="text-3xl font-bold mb-2">Subscription</h1>
+          <h1 className="text-3xl font-bold mb-2">Service Directory</h1>
           <p className="text-gray-600">
-            Manage your active service subscriptions and collect monthly fees from your subscribers
+            Browse available services and manage subscriptions
           </p>
         </div>
         <ConnectButton />
@@ -203,20 +228,18 @@ export default function Subscribers() {
           <button 
             className="px-4 py-1.5 border-b-2 border-black font-medium"
           >
-            My Subscribers
+            Available Services
           </button>
-        </div>        {/* Filter and Search */}
+        </div>{/* Filter and Search */}
         <div className="flex justify-between items-center">
-          <div className="flex flex-wrap gap-2">
-            <select
-              className="w-32 border border-gray-300 rounded-md py-2 px-3 text-sm"
+          <div className="flex flex-wrap gap-2">            <select
+              className="w-40 border border-gray-300 rounded-md py-2 px-3 text-sm"
               value={filter}
               onChange={(e) => setFilter(e.target.value)}
             >
-              <option value="All">All</option>
-              <option value="ShitCoin Generator">ShitCoin Generator</option>
-              <option value="Multi-Signature Security">Multi-sign Security</option>
-              <option value="Web3 CRM">Web3 CRM</option>
+              {services.map((service, index) => (
+                <option key={index} value={service}>{service}</option>
+              ))}
             </select>
           </div>
           
@@ -251,34 +274,48 @@ export default function Subscribers() {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 pb-20">
         {filteredSubscribers.map((subscriber, index) => {
           const isActive = subscriber.status === 'active';
-          return (
-            <div key={index} 
+          return (            <div key={index} 
             className={`rounded-lg overflow-hidden shadow-md ${
               isActive 
                 ? "bg-gradient-to-br from-blue-400 to-blue-600" 
                 : "bg-gradient-to-br from-gray-400 to-gray-600"
             }`}>
               <div className="px-4 pt-4 pb-2 text-white">
-                <h3 className="text-lg font-semibold">{subscriber.name}</h3>
-                <p className="text-sm text-white/90">{subscriber.email}</p>
+                <h3 className="text-lg font-semibold">{subscriber.service}</h3>
+                <p className="text-sm text-white/90">{subscriber.serviceDescription}</p>
               </div>
               
-              <div className="px-4 py-2">
-                <p className="text-sm font-medium text-white">{subscriber.service}</p>
+              <div className="px-4 py-3">
+                <div className="flex items-center space-x-2">
+                  <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center text-white">
+                    <span className="text-xs">S</span>
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-white">Service Address:</p>
+                    <p className="text-xs text-white/80">{formatAddress(subscriber.serviceAddress)}</p>
+                  </div>
+                </div>
               </div>
               
               <div className="flex justify-between items-center px-4 py-3">
-                <div className="px-0 pb-1 text-white">
-                  <p className="text-xs opacity-80">Subscribed on</p>
-                  <p className="text-sm">{subscriber.subscribedOn}</p>
+                <div className="flex flex-col gap-1 text-white">
+                  <div className="items-start">
+                    <p className="text-xs opacity-80">Coin Type:</p>
+                    <p className="text-sm">{subscriber.coinType.split('::').pop()}</p>
+                  </div>
                 </div>
                 <div className="text-sm flex flex-col font-medium items-end">
                   <span
-                    className="inline-block py-1 rounded text-xs font-light text-white"
+                    className={`inline-block py-1 px-2 rounded-full text-xs font-medium bg-white/20 text-white`}
                   >
                     {subscriber.tier}
                   </span>
-                  <div className="text-white font-bold">{subscriber.price}</div>
+                  <div className="text-white font-bold">{formatPrice(subscriber.price)}</div>
+                  {subscriber.yearlyDiscount > 0 && (
+                    <div className="text-xs text-white/80">
+                      {subscriber.yearlyDiscount}% yearly discount
+                    </div>
+                  )}
                   <button 
                     className={`mt-2 px-4 py-1 rounded-md ${
                       subscriber.status === 'collected' 
@@ -316,23 +353,22 @@ export default function Subscribers() {
             <p className="text-sm mt-2 text-white/80">Create a new subscription service</p>
           </div>
         </div>
-      </div>
-        {/* Empty state */}
+      </div>      {/* Empty state */}
       {filteredSubscribers.length === 0 && (
         <div className="text-center py-12 bg-gray-50 rounded-lg shadow-sm">
-          <p className="text-gray-500">No subscribers found matching your criteria.</p>
+          <p className="text-gray-500">No services found matching your criteria.</p>
         </div>
       )}
 
       {/* Modal for Add New Service */}
       {showModal && (
         <div className="fixed inset-0 bg-black/60 bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 w-full max-w-md mx-4">
-            <div className="flex justify-between items-center mb-4">
+          <div className="bg-white rounded-lg p-6 w-full max-w-md mx-4">            <div className="flex justify-between items-center mb-4">
               <h2 className="text-xl font-bold">Add New Service</h2>
               <button 
-                onClick={() => setShowModal(false)}
-                className="text-gray-500 hover:text-gray-700"
+                onClick={closeModal}
+                disabled={isProcessing}
+                className={`text-gray-500 hover:text-gray-700 ${isProcessing ? 'cursor-not-allowed opacity-50' : ''}`}
               >
                 <svg 
                   xmlns="http://www.w3.org/2000/svg" 
@@ -345,6 +381,21 @@ export default function Subscribers() {
                 </svg>
               </button>
             </div>
+            
+            {errorr && (
+              <div className="mb-4 p-2 bg-red-100 text-red-700 rounded-md text-sm">
+                {errorr}
+              </div>
+            )}
+            
+            {transactionDigest && (
+              <div className="mb-4 p-3 bg-green-100 text-green-700 rounded-md">
+                <p className="font-medium">Transaction successful!</p>
+                <p className="text-xs break-all mt-1">
+                  Digest: {transactionDigest}
+                </p>
+              </div>
+            )}
             
             <form onSubmit={handleSubmit}>
               <div className="mb-4">
@@ -435,20 +486,32 @@ export default function Subscribers() {
                   max="100"
                 />
               </div>
-              
-              <div className="flex justify-end space-x-3">
+                <div className="flex justify-end space-x-3">
                 <button
                   type="button"
-                  onClick={() => setShowModal(false)}
-                  className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-100"
+                  onClick={closeModal}
+                  disabled={isProcessing}
+                  className={`px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-100 ${
+                    isProcessing ? 'opacity-50 cursor-not-allowed' : ''
+                  }`}
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+                  disabled={isProcessing}
+                  className={`px-4 py-2 bg-blue-600 text-white rounded-md ${
+                    isProcessing ? 'opacity-70 cursor-wait' : 'hover:bg-blue-700'
+                  }`}
                 >
-                  Create Service
+                  {isProcessing ? (
+                    <>
+                      <span className="inline-block animate-spin mr-2">↻</span>
+                      Processing...
+                    </>
+                  ) : (
+                    'Create Service'
+                  )}
                 </button>
               </div>
             </form>
