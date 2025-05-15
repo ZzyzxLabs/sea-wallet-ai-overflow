@@ -19,17 +19,7 @@ module SeaWallet::subscription {
     };
 
     const EChargeDateNotPassed: u64 = 0;
-    const EWrongVaultId: u64 = 1;
-    const EWrongServiceId: u64 = 2;
-
-    // public struct AutoChargeSystemCap has key {
-    //     id: UID,
-    // }
-
-    // public struct SubControler has key {
-    //     id: UID,
-    //     serviceID: ID
-    // }
+    const EWrongServiceId: u64 = 1;
 
     public struct Service<phantom CoinType> has key {
         id: UID,
@@ -51,6 +41,7 @@ module SeaWallet::subscription {
         coin_type: Balance<CoinType>,
     }
 
+    /// create a subscription service
     public fun create_service<CoinType>(price: u64, service_name: String, asset_name: String, service_owner: address, yearly_discount: u8, ctx: &mut TxContext) {
         let service = Service{
             id: object::new(ctx),
@@ -64,14 +55,14 @@ module SeaWallet::subscription {
         transfer::share_object(service);
     }
 
-    // cancel service
-    public fun cancel_service<CoinType>(service: Service<CoinType>, ctx: &mut TxContext) {
-        let Service<CoinType> {id, price: _, coin_type: coin_type, asset_name: _, service_name: _, service_owner: _, yearly_discount: _} = service;
-        balance::destroy_zero(coin_type);
-        object::delete(id);
-    }
+    // /// cancel service
+    // public fun cancel_service<CoinType>(service: Service<CoinType>) {
+    //     let Service<CoinType> {id, price: _, coin_type: coin_type, asset_name: _, service_name: _, service_owner: _, yearly_discount: _} = service;
+    //     balance::destroy_zero(coin_type);
+    //     object::delete(id);
+    // }
 
-    // create receipt
+    /// create receipt
     public(package) fun create_receipt<CoinType>(service: & Service<CoinType>, paid_amount: u64, expire_date: u64, ctx: &mut TxContext): Receipt<CoinType> {
         let receipt = Receipt<CoinType>{
             id: object::new(ctx),
@@ -85,7 +76,7 @@ module SeaWallet::subscription {
         receipt
     }
 
-    // refund
+    /// refund
     public fun refund_receipt<CoinType>(receipt: &mut Receipt<CoinType>, coin: Coin<CoinType>) {
         assert!(receipt.is_active, EChargeDateNotPassed);
         assert!(coin.value() >= receipt.paid_amount, EWrongServiceId);
