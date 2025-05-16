@@ -1,3 +1,5 @@
+"use client";
+
 import { ReactNode } from 'react';
 import DashboardSidebar from './components/DashboardSidebar';
 import DashboardHeader from './components/DashboardHeader';
@@ -8,7 +10,8 @@ export default function DashboardLayout({
   children,
 }: {
   children: ReactNode
-}) {  return (
+}) {
+  return (
     <div className="flex min-h-screen">
       {/* 側邊欄會使用fixed定位，因此不會推擠其他元素 */}
       <DashboardSidebar />
@@ -25,7 +28,9 @@ export default function DashboardLayout({
         <div className="mt-auto">
           <DashboardFooter />
         </div>
-      </div>      {/* ChatSupport component positioned at the bottom left */}
+      </div>
+      
+      {/* ChatSupport component positioned at the bottom left */}
       <DashboardChatSupport />
     </div>
   );

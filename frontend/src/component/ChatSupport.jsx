@@ -3,36 +3,33 @@
 import { useState, useRef, useEffect } from 'react';
 import styles from '../styles/ChatSupport.module.css';
 
-const ChatSupport = () => {
-  const [isOpen, setIsOpen] = useState(false);
-  const [mode, setMode] = useState('ai'); // 'customer_service' 或 'ai'
-  const [walletModeEnabled, setWalletModeEnabled] = useState(false); // 控制 Wallet 模式的開關
-  const [userId, setUserId] = useState(''); // 為每個會話生成唯一 ID
-  const [uploadedDocs, setUploadedDocs] = useState(null); // 儲存上傳的文檔
-  
-  // 生成唯一ID
+const ChatSupport = () => {  const [isOpen, setIsOpen] = useState(false);
+  const [mode, setMode] = useState('ai'); // 'customer_service' or 'ai'
+  const [walletModeEnabled, setWalletModeEnabled] = useState(false); // Toggle for Wallet mode
+  const [userId, setUserId] = useState(''); // Generate unique ID for each session
+  const [uploadedDocs, setUploadedDocs] = useState(null); // Store uploaded documents
+    // Generate unique ID
   const generateUniqueId = () => {
     return Math.random().toString(36).substring(2, 15) + 
            Math.random().toString(36).substring(2, 15) + 
            '_' + Date.now().toString(36);
   };
 
-  // 初始化用戶ID
+  // Initialize user ID
   useEffect(() => {
     if (!userId) {
       setUserId(generateUniqueId());
     }
   }, []);
-
-  // 對話框相關狀態
+  // Dialog-related states
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedMessage, setSelectedMessage] = useState(null);
 
-  // 文件上傳對話框
+  // File upload dialog
   const [fileDialogOpen, setFileDialogOpen] = useState(false);
   const fileInputRef = useRef(null);
 
-  // 修改系統訊息類型
+  // Handle system message
   const handleSystemMessage = (text) => {
     const systemMessage = { 
       id: generateUniqueId(), 
@@ -42,20 +39,18 @@ const ChatSupport = () => {
     };
     setMessages(prev => [...prev, systemMessage]);
   };
-
   const [messages, setMessages] = useState([
-    { id: 'initial_msg_1', text: '您好！我是 SeaWallet 的 AI 助手，有什麼我能幫助您的嗎？', isAI: true }
+    { id: 'initial_msg_1', text: 'Hello! I am the SeaWallet AI assistant. How can I help you today?', isAI: true }
   ]);
   const [newMessage, setNewMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
   const [isDarkMode, setIsDarkMode] = useState(false);
-  const [isTypingEffect, setIsTypingEffect] = useState(true);
-  const [quickReplies, setQuickReplies] = useState([
-    '如何充值？',
-    '忘記密碼',
-    '費用與手續費',
-    '聯繫客服'
+  const [isTypingEffect, setIsTypingEffect] = useState(true);  const [quickReplies, setQuickReplies] = useState([
+    'How to deposit?',
+    'Forgot password',
+    'Fees and charges',
+    'Contact support'
   ]);
 
   const messagesEndRef = useRef(null);
@@ -63,14 +58,13 @@ const ChatSupport = () => {
   const chatBoxRef = useRef(null);
   const dialogRef = useRef(null);
   const fileDialogRef = useRef(null);
-
-  // 初始化
+  // Initialize
   useEffect(() => {
-    // 檢查用戶偏好的主題模式
+    // Check user's preferred theme mode
     const prefersDarkMode = window.matchMedia('(prefers-color-scheme: dark)').matches;
     setIsDarkMode(prefersDarkMode);
     
-    // 添加動畫結束監聽器
+    // Add animation end listener
     const handleAnimationEnd = () => {
       if (messagesEndRef.current) {
         messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
@@ -79,7 +73,7 @@ const ChatSupport = () => {
     
     document.addEventListener('animationend', handleAnimationEnd);
     
-    // 點擊聊天框外區域關閉對話框
+    // Close dialog when clicking outside chat box
     const handleClickOutside = (event) => {
       if (dialogRef.current && !dialogRef.current.contains(event.target)) {
         setDialogOpen(false);
@@ -96,30 +90,28 @@ const ChatSupport = () => {
       document.removeEventListener('mousedown', handleClickOutside);
     };
   }, []);
-
-  // 開啟訊息對話框
+  // Open message dialog
   const openMessageDialog = (message) => {
-    if (message.isSystem) return; // 系統訊息不顯示對話框
+    if (message.isSystem) return; // System messages don't show dialog
     setSelectedMessage(message);
     setDialogOpen(true);
   };
 
-  // 關閉訊息對話框
+  // Close message dialog
   const closeMessageDialog = () => {
     setDialogOpen(false);
   };
 
-  // 開啟文件上傳對話框
+  // Open file upload dialog
   const openFileDialog = () => {
     setFileDialogOpen(true);
   };
 
-  // 關閉文件上傳對話框
+  // Close file upload dialog
   const closeFileDialog = () => {
     setFileDialogOpen(false);
   };
-
-  // 處理文件上傳
+  // Handle file upload
   const handleFileUpload = (e) => {
     const file = e.target.files[0];
     if (!file) return;
@@ -133,22 +125,21 @@ const ChatSupport = () => {
     reader.readAsText(file);
   };
 
-  // 複製訊息文字
+  // Copy message text
   const copyMessageText = () => {
     if (selectedMessage) {
       navigator.clipboard.writeText(selectedMessage.text)
         .then(() => {
-          handleSystemMessage('已複製訊息至剪貼簿');
+          handleSystemMessage('Message copied to clipboard');
         })
         .catch(err => {
-          console.error('複製訊息失敗:', err);
-          handleSystemMessage('複製訊息失敗，請重試');
+          console.error('Failed to copy message:', err);
+          handleSystemMessage('Failed to copy message. Please try again.');
         });
     }
     closeMessageDialog();
   };
-
-  // 標記訊息為重要
+  // Mark message as important
   const markAsImportant = () => {
     if (selectedMessage) {
       setMessages(prev => 
@@ -160,35 +151,34 @@ const ChatSupport = () => {
       );
       
       const actionText = selectedMessage.isImportant 
-        ? '已取消標記重要訊息' 
-        : '已標記為重要訊息';
+        ? 'Unmarked as important' 
+        : 'Marked as important';
       
       handleSystemMessage(actionText);
     }
     closeMessageDialog();
   };
 
-  // 刪除訊息
+  // Delete message
   const deleteMessage = () => {
     if (selectedMessage) {
       setMessages(prev => prev.filter(msg => msg.id !== selectedMessage.id));
-      handleSystemMessage('已刪除訊息');
+      handleSystemMessage('Message deleted');
     }
     closeMessageDialog();
   };
 
-  // 控制對話框顯示/隱藏
+  // Toggle chat display/hide
   const toggleChat = () => {
     setIsOpen(!isOpen);
   };
 
-  // 切換 Wallet 模式
+  // Toggle Wallet mode
   const toggleWalletMode = () => {
     setWalletModeEnabled(!walletModeEnabled);
-    handleSystemMessage(`${!walletModeEnabled ? '已啟用' : '已停用'} Wallet 模式`);
+    handleSystemMessage(`Wallet mode ${!walletModeEnabled ? 'enabled' : 'disabled'}`);
   };
-
-  // 獲取實際使用的模式
+  // Get the effective mode in use
   const getEffectiveMode = () => {
     if (mode === 'customer_service') {
       return 'customer_service';
@@ -199,7 +189,7 @@ const ChatSupport = () => {
     }
   };
 
-  // 處理流式回應的函數
+  // Handle streaming response
   const handleStreamResponse = async (message, currentMode) => {
     // 顯示加載狀態
     setIsLoading(true);
@@ -294,77 +284,73 @@ const ChatSupport = () => {
             }
           }
         }
-      }
-    } catch (error) {
-      console.error('聊天 API 錯誤:', error);
-      // 處理錯誤
+      }    } catch (error) {
+      console.error('Chat API error:', error);
+      // Handle error
       setMessages(prev => 
         prev.map(msg => 
           msg.id === loadingMsgId 
-            ? { id: loadingMsgId, text: '抱歉，發生了一個錯誤。請稍後再試。', isAI: true, isStreaming: false } 
+            ? { id: loadingMsgId, text: 'Sorry, an error occurred. Please try again later.', isAI: true, isStreaming: false } 
             : msg
         )
       );
       setIsLoading(false);
     }
   };
-
-  // 根據AI回應生成快速回覆選項
+  // Generate quick replies based on AI response
   const generateQuickReplies = (text) => {
-    // 實際應用中可以使用更複雜的邏輯或從API獲取相關的快速回覆
-    // 這裡簡單示範：
-    if (text.includes('充值') || text.includes('付款')) {
-      setQuickReplies(['如何添加銀行卡？', '支持哪些支付方式？', '充值限額是多少？', '遇到充值問題']);
-    } else if (text.includes('密碼') || text.includes('登錄')) {
-      setQuickReplies(['重設密碼流程', '帳戶安全設置', '兩步驗證說明', '聯繫客服']);
+    // In a real application, you could use more complex logic or fetch related quick replies from an API
+    // Simple demonstration:
+    if (text.includes('deposit') || text.includes('payment')) {
+      setQuickReplies(['How to add a bank card?', 'Which payment methods are supported?', 'What are the deposit limits?', 'Deposit issues']);
+    } else if (text.includes('password') || text.includes('login')) {
+      setQuickReplies(['Password reset process', 'Account security settings', 'Two-factor authentication', 'Contact support']);
     } else if (walletModeEnabled) {
-      // 針對 Wallet 模式的快速回覆
-      setQuickReplies(['查詢餘額', '交易記錄', '添加新資產', '禁用 Wallet 模式']);
+      // Quick replies for Wallet mode
+      setQuickReplies(['Check balance', 'Transaction history', 'Add new asset', 'Disable Wallet mode']);
     } else {
-      // 預設的快速回覆
-      setQuickReplies(['產品功能介紹', '費用與手續費', '常見問題', '聯繫客服']);
+      // Default quick replies
+      setQuickReplies(['Product features', 'Fees and charges', 'FAQ', 'Contact support']);
     }
   };
-
-  // 傳送訊息
+  // Send message
   const sendMessage = async (e) => {
     e && e.preventDefault();
     if (newMessage.trim() === '' || isLoading) return;
 
-    // 添加使用者訊息
+    // Add user message
     const userMessage = { id: generateUniqueId(), text: newMessage, isAI: false };
     setMessages(prev => [...prev, userMessage]);
     
     const currentMessage = newMessage;
     setNewMessage('');
     
-    // 獲取實際使用的模式
+    // Get current effective mode
     const effectiveMode = getEffectiveMode();
     
-    // 根據模式處理回應
+    // Process response based on mode
     await handleStreamResponse(currentMessage, effectiveMode);
   };
 
-  // 處理快速回覆點擊
+  // Handle quick reply click
   const handleQuickReplyClick = (reply) => {
-    // 特殊快速回覆處理
-    if (reply === '轉至 AI 助手') {
+    // Special quick reply handling
+    if (reply === 'Switch to AI Assistant') {
       switchMode('ai');
       return;
-    } else if (reply === '禁用 Wallet 模式') {
+    } else if (reply === 'Disable Wallet mode') {
       toggleWalletMode();
       return;
-    }
-    
+    }    
     setNewMessage(reply);
-    // 稍微延遲以便看到輸入框中的文字
+    // Slight delay to see the text in the input field
     setTimeout(() => sendMessage(), 300);
   };
 
-  // 語音輸入功能
+  // Voice input functionality
   const toggleVoiceInput = async () => {
     if (isRecording) {
-      // 停止錄音
+      // Stop recording
       if (mediaRecorderRef.current) {
         mediaRecorderRef.current.stop();
       }
@@ -375,7 +361,7 @@ const ChatSupport = () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       
-      // 創建錄音機
+      // Create recorder
       const mediaRecorder = new MediaRecorder(stream);
       mediaRecorderRef.current = mediaRecorder;
       
@@ -384,27 +370,26 @@ const ChatSupport = () => {
       mediaRecorder.addEventListener('dataavailable', (event) => {
         audioChunks.push(event.data);
       });
-      
-      mediaRecorder.addEventListener('stop', async () => {
-        // 處理錄音結果
+        mediaRecorder.addEventListener('stop', async () => {
+        // Process recording result
         const audioBlob = new Blob(audioChunks);
         
-        // 這裡應該是發送錄音到語音識別 API 的邏輯
-        // 簡化示範：假設已轉文字
-        setNewMessage('這是一條由語音轉換的文字訊息...');
+        // Here should be logic to send the recording to speech recognition API
+        // Simplified demonstration: Assume text is already converted
+        setNewMessage('This is a message converted from voice input...');
         
-        // 關閉麥克風流
+        // Close microphone stream
         stream.getTracks().forEach(track => track.stop());
       });
       
-      // 開始錄音
+      // Start recording
       mediaRecorder.start();
       setIsRecording(true);
       
-      // 添加錄音提示
-      handleSystemMessage('正在聆聽您的聲音，請說話...');
+      // Add recording prompt
+      handleSystemMessage('Listening to your voice, please speak...');
       
-      // 設置錄音時間限制（例如 10 秒）
+      // Set recording time limit (e.g., 10 seconds)
       setTimeout(() => {
         if (isRecording && mediaRecorderRef.current) {
           mediaRecorderRef.current.stop();
@@ -413,38 +398,36 @@ const ChatSupport = () => {
       }, 10000);
       
     } catch (error) {
-      console.error('語音輸入錯誤:', error);
-      handleSystemMessage('無法訪問麥克風。請檢查權限設置。');
+      console.error('Voice input error:', error);
+      handleSystemMessage('Cannot access microphone. Please check permissions.');
     }
   };
-
-  // 切換主題模式
+  // Toggle theme mode
   const toggleTheme = () => {
     setIsDarkMode(!isDarkMode);
   };
 
-  // 切換聊天模式
+  // Switch chat mode
   const switchMode = (newMode) => {
     if (newMode !== mode && !isLoading) {
       setMode(newMode);
-      // 添加模式切換通知
-      handleSystemMessage(`您已切換至${newMode === 'customer_service' ? '客服人員' : 'AI 助手'}模式`);
+      // Add mode switch notification
+      handleSystemMessage(`You have switched to ${newMode === 'customer_service' ? 'Customer Service' : 'AI Assistant'} mode`);
       
-      // 如果從AI切換到客服，自動關閉錢包模式
+      // If switching from AI to customer service, automatically disable wallet mode
       if (newMode === 'customer_service' && walletModeEnabled) {
         setWalletModeEnabled(false);
       }
       
-      // 更新快速回覆
+      // Update quick replies
       if (newMode === 'customer_service') {
-        setQuickReplies(['申請緊急支援', '查看工單狀態', '預約回電', '轉至 AI 助手']);
+        setQuickReplies(['Request urgent support', 'Check ticket status', 'Schedule callback', 'Switch to AI Assistant']);
       } else {
-        setQuickReplies(['產品功能介紹', '費用與手續費', '常見問題', '聯繫客服']);
+        setQuickReplies(['Product features', 'Fees and charges', 'FAQ', 'Contact support']);
       }
     }
   };
-
-  // 添加淡入淡出動畫效果
+  // Add fade in/out animation effect
   const handleChatBoxAnimation = () => {
     if (chatBoxRef.current) {
       chatBoxRef.current.classList.add(styles.fadeIn);
@@ -456,14 +439,14 @@ const ChatSupport = () => {
     }
   };
 
-  // 自動捲動到最新訊息
+  // Auto scroll to the latest message
   useEffect(() => {
     if (messagesEndRef.current) {
       messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
     }
   }, [messages]);
 
-  // 打字機效果的組件
+  // Typewriter effect component
   const TypewriterText = ({ text, isActive }) => {
     if (!isActive) return text;
 
@@ -474,23 +457,21 @@ const ChatSupport = () => {
       </>
     );
   };
-
-  // 獲取基於當前模式的樣式
+  // Get button class name based on current mode
   const getButtonClassName = () => {
     if (mode === 'customer_service') {
       return `${styles.chatButton} ${styles.customerButton}`;
     } else if (walletModeEnabled) {
-      return `${styles.chatButton} ${styles.walletButton}`; // 新增錢包按鈕樣式
+      return `${styles.chatButton} ${styles.walletButton}`; // Wallet button style
     } else {
       return styles.chatButton;
     }
   };
-
   const getUserMessageClassName = () => {
     if (mode === 'customer_service') {
       return `${styles.message} ${styles.userMessage} ${styles.customerUserMessage}`;
     } else if (walletModeEnabled) {
-      return `${styles.message} ${styles.userMessage} ${styles.walletUserMessage}`; // 新增錢包用戶訊息樣式
+      return `${styles.message} ${styles.userMessage} ${styles.walletUserMessage}`; // Wallet user message style
     } else {
       return `${styles.message} ${styles.userMessage}`;
     }
@@ -500,7 +481,7 @@ const ChatSupport = () => {
     if (mode === 'customer_service') {
       return `${styles.sendButton} ${styles.customerSendButton}`;
     } else if (walletModeEnabled) {
-      return `${styles.sendButton} ${styles.walletSendButton}`; // 新增錢包發送按鈕樣式
+      return `${styles.sendButton} ${styles.walletSendButton}`; // Wallet send button style
     } else {
       return styles.sendButton;
     }
@@ -510,18 +491,17 @@ const ChatSupport = () => {
     if (mode === 'customer_service') {
       return `${styles.messageInput} ${styles.customerInput}`;
     } else if (walletModeEnabled) {
-      return `${styles.messageInput} ${styles.walletInput}`; // 新增錢包輸入框樣式
+      return `${styles.messageInput} ${styles.walletInput}`; // Wallet input style
     } else {
       return `${styles.messageInput} ${styles.aiInput}`;
     }
   };
-
   const getActiveModeClassName = (buttonMode) => {
     if (buttonMode === mode) {
       if (mode === 'customer_service') {
         return `${styles.optionButton} ${styles.activeMode} ${styles.activeCustomerMode}`;
       } else if (walletModeEnabled) {
-        return `${styles.optionButton} ${styles.activeMode} ${styles.activeWalletMode}`; // 新增錢包激活樣式
+        return `${styles.optionButton} ${styles.activeMode} ${styles.activeWalletMode}`; // Wallet active style
       } else {
         return `${styles.optionButton} ${styles.activeMode} ${styles.activeAiMode}`;
       }
@@ -533,40 +513,39 @@ const ChatSupport = () => {
     if (mode === 'customer_service') {
       return `${styles.indicatorSlider} ${styles.customerIndicator}`;
     } else if (walletModeEnabled) {
-      return `${styles.indicatorSlider} ${styles.walletIndicator}`; // 新增錢包指示器樣式
+      return `${styles.indicatorSlider} ${styles.walletIndicator}`; // Wallet indicator style
     } else {
       return `${styles.indicatorSlider} ${styles.aiIndicator}`;
     }
   };
-
-  // 獲取消息對話框的標題
+  // Get message dialog title
   const getMessageDialogTitle = () => {
     if (!selectedMessage) return '';
     if (selectedMessage.isAI) {
       if (mode === 'customer_service') {
-        return '客服人員的訊息';
+        return 'Customer Service Message';
       } else if (walletModeEnabled) {
-        return 'AI 錢包助手的訊息';
+        return 'AI Wallet Assistant Message';
       } else {
-        return 'AI 助手的訊息';
+        return 'AI Assistant Message';
       }
     } else {
-      return '您的訊息';
+      return 'Your Message';
     }
   };
 
-  // 獲取Header標題
+  // Get header title
   const getHeaderTitle = () => {
     if (mode === 'customer_service') {
-      return 'SeaWallet 客服人員';
+      return 'SeaWallet Customer Service';
     } else if (walletModeEnabled) {
-      return 'SeaWallet AI 錢包助手';
+      return 'SeaWallet AI Wallet Assistant';
     } else {
-      return 'SeaWallet AI 助手';
+      return 'SeaWallet AI Assistant';
     }
   };
 
-  // 獲取模式圖標
+  // Get mode icon
   const getModeIcon = () => {
     if (mode === 'customer_service') {
       return '👤';
@@ -579,11 +558,10 @@ const ChatSupport = () => {
 
   return (
     <div className={styles.chatSupportContainer}>
-      {/* 右下角的按鈕 */}
-      <button 
+      {/* 右下角的按鈕 */}      <button 
         className={getButtonClassName()} 
         onClick={toggleChat}
-        aria-label="客服支援"
+        aria-label="Support"
       >
         {isOpen ? '✕' : getModeIcon()}
       </button>
@@ -608,11 +586,10 @@ const ChatSupport = () => {
               <h3>{getHeaderTitle()}</h3>
             </div>
             
-            {/* 主題切換按鈕 */}
-            <button 
+            {/* 主題切換按鈕 */}            <button 
               className={styles.themeToggle} 
               onClick={toggleTheme}
-              aria-label={isDarkMode ? '切換到亮色模式' : '切換到暗色模式'}
+              aria-label={isDarkMode ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
             >
               {isDarkMode ? '☀️' : '🌙'}
             </button>
@@ -620,7 +597,7 @@ const ChatSupport = () => {
             <button 
               className={styles.closeButton} 
               onClick={toggleChat}
-              aria-label="關閉對話"
+              aria-label="Close Chat"
             >
               ✕
             </button>
@@ -660,7 +637,7 @@ const ChatSupport = () => {
           </div>
           
           {/* 快速回覆按鈕 */}
-          {!isLoading && messages.length > 0 && messages[messages.length - 1].isAI && (
+          {/* {!isLoading && messages.length > 0 && messages[messages.length - 1].isAI && (
             <div className={styles.quickReplies}>
               {quickReplies.map((reply, index) => (
                 <button
@@ -672,15 +649,14 @@ const ChatSupport = () => {
                 </button>
               ))}
             </div>
-          )}
+          )} */}
           
           <form className={styles.inputContainer} onSubmit={sendMessage}>
-            {/* 語音輸入按鈕 */}
-            <button
+            {/* 語音輸入按鈕 */}            <button
               type="button"
               className={`${styles.voiceButton} ${isRecording ? styles.recording : ''}`}
               onClick={toggleVoiceInput}
-              aria-label={isRecording ? '停止錄音' : '語音輸入'}
+              aria-label={isRecording ? 'Stop Recording' : 'Voice Input'}
             >
               {isRecording ? '🔴' : '🎤'}
             </button>
@@ -689,7 +665,7 @@ const ChatSupport = () => {
               type="text"
               value={newMessage}
               onChange={(e) => setNewMessage(e.target.value)}
-              placeholder="輸入您的訊息..."
+              placeholder="Type your message..."
               className={getInputClassName()}
               disabled={isLoading || isRecording}
             />
@@ -698,7 +674,7 @@ const ChatSupport = () => {
               className={getSendButtonClassName()}
               disabled={newMessage.trim() === '' || isLoading || isRecording}
             >
-              {isLoading ? '發送中' : '發送'} {isLoading ? '...' : '➤'}
+              {isLoading ? 'Sending' : 'Send'} {isLoading ? '...' : '➤'}
             </button>
           </form>
           
@@ -707,9 +683,8 @@ const ChatSupport = () => {
               className={getActiveModeClassName('customer_service')} 
               onClick={() => switchMode('customer_service')}
               disabled={isLoading || isRecording}
-            >
-              <span className={styles.optionIcon}>👤</span>
-              聯繫客服
+            >              <span className={styles.optionIcon}>👤</span>
+              Contact Support
             </button>
             <button 
               className={getActiveModeClassName('ai')}
@@ -719,7 +694,7 @@ const ChatSupport = () => {
               <span className={styles.optionIcon}>
                 {walletModeEnabled ? '💰' : '🤖'}
               </span>
-              AI 協助
+              AI Assistant
             </button>
           </div>
           
@@ -734,9 +709,8 @@ const ChatSupport = () => {
                   disabled={isLoading}
                 />
                 <span className={styles.toggleSlider}></span>
-              </label>
-              <span className={styles.walletModeLabel}>
-                {walletModeEnabled ? '錢包模式已啟用' : '錢包模式'}
+              </label>              <span className={styles.walletModeLabel}>
+                {walletModeEnabled ? 'Wallet Mode Enabled' : 'Wallet Mode'}
               </span>
               
               {/* 只在錢包模式啟用時顯示上傳文件按鈕 */}
@@ -759,14 +733,13 @@ const ChatSupport = () => {
               style={{ 
                 transform: `translateX(${mode === 'customer_service' ? '0' : '100%'})` 
               }}
-            />
-            <span className={styles.modeLabel}>
-              目前模式: {
+            />            <span className={styles.modeLabel}>
+              Current mode: {
                 mode === 'customer_service' 
-                  ? '客服人員' 
+                  ? 'Customer Service' 
                   : walletModeEnabled 
-                    ? 'AI 錢包助手' 
-                    : 'AI 助手'
+                    ? 'AI Wallet Assistant' 
+                    : 'AI Assistant'
               }
             </span>
           </div>
@@ -789,11 +762,10 @@ const ChatSupport = () => {
             }`}
           >
             <div className={styles.messageDialogHeader}>
-              <h4>{getMessageDialogTitle()}</h4>
-              <button 
+              <h4>{getMessageDialogTitle()}</h4>              <button 
                 className={styles.dialogCloseBtn}
                 onClick={closeMessageDialog}
-                aria-label="關閉訊息對話框"
+                aria-label="Close Message Dialog"
               >
                 ✕
               </button>
@@ -805,30 +777,28 @@ const ChatSupport = () => {
               </p>
               
               <div className={styles.messageDialogTime}>
-                <small>
-                  {new Date().toLocaleTimeString()} · {selectedMessage.isAI ? '由系統發送' : '由您發送'}
+                <small>                  {new Date().toLocaleTimeString()} · {selectedMessage.isAI ? 'Sent by system' : 'Sent by you'}
                 </small>
               </div>
             </div>
             
-            <div className={styles.messageDialogActions}>
-              <button 
+            <div className={styles.messageDialogActions}>              <button 
                 className={styles.dialogActionBtn}
                 onClick={copyMessageText}
               >
-                📋 複製
+                📋 Copy
               </button>
               <button 
                 className={styles.dialogActionBtn}
                 onClick={markAsImportant}
               >
-                {selectedMessage.isImportant ? '⭐ 取消標記' : '⭐ 標記重要'}
+                {selectedMessage.isImportant ? '⭐ Unmark' : '⭐ Mark as Important'}
               </button>
               <button 
                 className={`${styles.dialogActionBtn} ${styles.dialogDeleteBtn}`}
                 onClick={deleteMessage}
               >
-                🗑️ 刪除
+                🗑️ Delete
               </button>
             </div>
           </div>
@@ -842,12 +812,11 @@ const ChatSupport = () => {
             ref={fileDialogRef}
             className={`${styles.messageDialogContent} ${styles.fileDialogContent}`}
           >
-            <div className={styles.messageDialogHeader}>
-              <h4>上傳文件</h4>
+            <div className={styles.messageDialogHeader}>              <h4>Upload File</h4>
               <button 
                 className={styles.dialogCloseBtn}
                 onClick={closeFileDialog}
-                aria-label="關閉文件上傳對話框"
+                aria-label="Close File Upload Dialog"
               >
                 ✕
               </button>
@@ -872,13 +841,13 @@ const ChatSupport = () => {
                 className={styles.dialogActionBtn}
                 onClick={closeFileDialog}
               >
-                取消
+                Cancel
               </button>
               <button 
                 className={`${styles.dialogActionBtn} ${styles.confirmUploadBtn}`}
                 onClick={() => fileInputRef.current?.click()}
               >
-                選擇文件
+                Choose File
               </button>
             </div>
           </div>
