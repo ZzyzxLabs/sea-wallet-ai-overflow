@@ -31,21 +31,21 @@ export async function POST(request: Request) {
         const systemPrompt = `You are SeaWallet AI assistant, answer ${message}`;
         await streamLlamaResponse(systemPrompt, writer, encoder);
       } else if (mode === "wallet") {
-        // 獲取錢包狀態並存入向量數據庫
+        // Get wallet status and store in vector database
         const walletData = await fetchWalletStatus(userId);
         const collectionName = await storeWalletDataInVectorDB(userId, walletData);
         
-        // 從向量數據庫獲取與問題相關的錢包數據作為上下文
+        // Get wallet data related to the question from vector database as context
         const walletContext = await searchVectorDB(collectionName, message);
         
-        // 用戶上傳的文檔直接作為上下文，而不存入向量數據庫
-        const userDocsContext = docs ? `用戶上傳文檔內容：\n${docs}` : "";
+        // User uploaded documents are used directly as context, not stored in vector database
+        const userDocsContext = docs ? `User uploaded document content:\n${docs}` : "";
         
         const combinedContext = [walletContext, userDocsContext].filter(Boolean).join("\n\n");
         
-        const systemPrompt = `你是 SeaWallet 的 AI 助手。根據上下文回答：
-上下文：${combinedContext || "無相關上下文"}
-用戶提問：${message}`;
+        const systemPrompt = `You are the AI assistant for SeaWallet. Answer based on the context:
+Context: ${combinedContext || "No relevant context"}
+User question: ${message}`;
         await streamLlamaResponse(systemPrompt, writer, encoder);
       }
 
@@ -58,7 +58,7 @@ export async function POST(request: Request) {
         encoder.encode(
           `data: ${JSON.stringify({
             type: "error",
-            content: "處理錯誤，請稍後再試。",
+            content: "Processing error, please try again later.",
           })}\n\n`
         )
       );
