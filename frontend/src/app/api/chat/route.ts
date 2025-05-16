@@ -1,17 +1,9 @@
 import { NextResponse } from "next/server";
-import { QdrantClient } from "@qdrant/js-client-rest";
-import { OllamaEmbeddings } from "@langchain/ollama";
-import { RecursiveCharacterTextSplitter } from "@langchain/textsplitters";
-
-//Initialize Qdrant client
-const qdrant = new QdrantClient({
-  url: "http://localhost:6333",
-  timeout: 10_000,
-});
-
-const embeddingsModel = new OllamaEmbeddings({
-  model: "nomic-embed-text",
-});
+import { 
+  fetchWalletStatus, 
+  storeWalletDataInVectorDB, 
+  searchVectorDB 
+} from "./walletInfo";
 
 export const config = {
   runtime: "edge",
@@ -39,53 +31,21 @@ export async function POST(request: Request) {
         const systemPrompt = `You are SeaWallet AI assistant, answer ${message}`;
         await streamLlamaResponse(systemPrompt, writer, encoder);
       } else if (mode === "wallet") {
-        const collectionName = `temp_user_${userId}`;
-        let collectionExists = false;
-
-        try {
-          await qdrant.getCollection(collectionName);
-          collectionExists = true;
-        } catch (err) {
-          // 集合不存在
-        }
-
-        if (docs) {
-          if (collectionExists) {
-            await qdrant.deleteCollection(collectionName);
-          }
-          await qdrant.createCollection(collectionName, {
-            vectors: { size: 768, distance: "Cosine" },
-            timeout: 10_000
-          });
-
-          const splitter = new RecursiveCharacterTextSplitter({
-            chunkSize: 500,
-            chunkOverlap: 50,
-          });
-          const textChunks = await splitter.splitText(docs);
-          const vectors = await embeddingsModel.embedDocuments(textChunks);
-          const points = vectors.map((vector, idx) => ({
-            id: idx,
-            vector,
-            payload: { text: textChunks[idx] },
-          }));
-          await qdrant.upsert(collectionName, { points });
-          collectionExists = true;
-        }
-
-        let context = "";
-        if (collectionExists) {
-          const queryVec = await embeddingsModel.embedQuery(message);
-          const searchRes = await qdrant.search(collectionName, {
-            vector: queryVec,
-            limit: 3,
-          });
-          context = searchRes.map((r) => r.payload.text).join("\n");
-        }
-
-        const systemPrompt = `你是 SeaWallet 的 AI 助手。根據上下文回答：
-上下文：${context || "無相關上下文"}
-用戶提問：${message}`;
+        // Get wallet status and store in vector database
+        const walletData = await fetchWalletStatus(userId);
+        const collectionName = await storeWalletDataInVectorDB(userId, walletData);
+        
+        // Get wallet data related to the question from vector database as context
+        const walletContext = await searchVectorDB(collectionName, message);
+        
+        // User uploaded documents are used directly as context, not stored in vector database
+        const userDocsContext = docs ? `User uploaded document content:\n${docs}` : "";
+        
+        const combinedContext = [walletContext, userDocsContext].filter(Boolean).join("\n\n");
+        
+        const systemPrompt = `You are the AI assistant for SeaWallet. Answer based on the context:
+Context: ${combinedContext || "No relevant context"}
+User question: ${message}`;
         await streamLlamaResponse(systemPrompt, writer, encoder);
       }
 
@@ -98,7 +58,7 @@ export async function POST(request: Request) {
         encoder.encode(
           `data: ${JSON.stringify({
             type: "error",
-            content: "處理錯誤，請稍後再試。",
+            content: "Processing error, please try again later.",
           })}\n\n`
         )
       );

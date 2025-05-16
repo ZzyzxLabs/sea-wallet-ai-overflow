@@ -115,11 +115,11 @@ const ChatSupport = () => {  const [isOpen, setIsOpen] = useState(false);
   const handleFileUpload = (e) => {
     const file = e.target.files[0];
     if (!file) return;
-
+  
     const reader = new FileReader();
     reader.onload = (event) => {
       setUploadedDocs(event.target.result);
-      handleSystemMessage(`File uploaded: ${file.name}`);
+      handleSystemMessage(`File uploaded: ${file.name} (This file will be used directly for Q&A context and will not be stored in the database)`);
       closeFileDialog();
     };
     reader.readAsText(file);
@@ -820,9 +820,9 @@ const ChatSupport = () => {  const [isOpen, setIsOpen] = useState(false);
               >
                 ✕
               </button>
-            </div>
-            
-            <div className={styles.fileDialogBody}>              <p>Please select a file to upload to enhance the AI Wallet Assistant's capabilities.</p>
+            </div>            
+            <div className={styles.fileDialogBody}>
+              <p>Please upload files to enhance the AI Wallet Assistant functionality. The uploaded files will be used directly for Q&A context, and the system will automatically retrieve your wallet status information.</p>
               <input
                 type="file"
                 ref={fileInputRef}
@@ -835,9 +835,9 @@ const ChatSupport = () => {  const [isOpen, setIsOpen] = useState(false);
                 <p>Click or drag files here</p>
                 <small>Supports .txt, .csv, .json, .md formats</small>
               </div>
-            </div>
-            
-            <div className={styles.messageDialogActions}>              <button 
+            </div>    
+            <div className={styles.messageDialogActions}>
+              <button 
                 className={styles.dialogActionBtn}
                 onClick={closeFileDialog}
               >
