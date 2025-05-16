@@ -123,11 +123,11 @@ const ChatSupport = () => {
   const handleFileUpload = (e) => {
     const file = e.target.files[0];
     if (!file) return;
-
+  
     const reader = new FileReader();
     reader.onload = (event) => {
       setUploadedDocs(event.target.result);
-      handleSystemMessage(`已上傳文件: ${file.name}`);
+      handleSystemMessage(`文件已上傳：${file.name}（此文件將直接用於問答上下文，而不會儲存在資料庫中）`);
       closeFileDialog();
     };
     reader.readAsText(file);
@@ -851,10 +851,9 @@ const ChatSupport = () => {
               >
                 ✕
               </button>
-            </div>
-            
+            </div>            
             <div className={styles.fileDialogBody}>
-              <p>請選擇要上傳的文件，以增強 AI 錢包助手的回答能力。</p>
+              <p>請上傳文件以增強 AI 錢包助手的功能。上傳的文件將直接用於問答上下文，同時系統會自動獲取您的錢包狀態信息。</p>
               <input
                 type="file"
                 ref={fileInputRef}
@@ -864,11 +863,10 @@ const ChatSupport = () => {
               />
               <div className={styles.fileUploadArea} onClick={() => fileInputRef.current?.click()}>
                 <div className={styles.uploadIcon}>📄</div>
-                <p>點擊或拖放文件到此處</p>
+                <p>點擊或拖拽文件至此</p>
                 <small>支持 .txt, .csv, .json, .md 格式</small>
               </div>
-            </div>
-            
+            </div>    
             <div className={styles.messageDialogActions}>
               <button 
                 className={styles.dialogActionBtn}
