@@ -114,10 +114,10 @@ const ButtonInContractAlter = () => {
     let vaultID = null;
     if (vaultAndCap.data) {
       console.log("Vault and Cap Data:", vaultAndCap.data.data);
-      console.log(packageName + "::vault::OwnerCap")
+      console.log(packageName + "::seaVault::OwnerCap")
       // Search for smart will owner cap in the data
       ownerCapObjects = vaultAndCap.data.data.filter((obj) =>
-        obj.data?.type?.includes(packageName + "::vault::OwnerCap")
+        obj.data?.type?.includes(packageName + "::seaVault::OwnerCap")
       );
       vaultID = ownerCapObjects[0]?.data?.content?.fields?.vaultID;
     }

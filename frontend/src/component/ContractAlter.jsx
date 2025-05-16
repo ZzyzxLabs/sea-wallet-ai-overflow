@@ -32,7 +32,7 @@ const ContractAlter = () => {
     let vaultID = null;
     if (vaultAndCap.data) {
       ownerCapObjects = vaultAndCap.data.data.filter((obj) =>
-        obj.data?.type?.includes(packageName + "::vault::OwnerCap")
+        obj.data?.type?.includes(packageName + "::seaVault::OwnerCap")
       );
       vaultID = ownerCapObjects[0]?.data?.content?.fields?.vaultID;
     }

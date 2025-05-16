@@ -314,14 +314,12 @@ export default function TestingP() {
           {
             onSuccess: (result) => {
               console.log("executed transaction", result);
-              
-              // Extract vaultID and ownerCap from transaction result
+                // Extract vaultID and ownerCap from transaction result
               const vaultObject = result.objectChanges.find(
                 (obj) =>
                   obj.type === "created" &&
-                  obj.objectType.includes("::seaVault::Vault")
+                  obj.objectType.includes("::seaVault::SeaVault")
               );
-
               const ownerCapObject = result.objectChanges.find(
                 (obj) =>
                   obj.type === "created" &&
