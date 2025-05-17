@@ -114,7 +114,7 @@ const useMoveStore = create<MoveStore>((set, get) => ({
     // Step 3: use goods as asset input into addToVault
     tx.moveCall({
       target: `${get().packageName}::seaVault::add_coin`,
-      arguments: [tx.object(capId), tx.object(vaultId), goods, tx.pure(nameBC)],
+      arguments: [tx.object(capId), tx.object(vaultId), tx.pure(nameBC), goods],
       typeArguments: [coinType || "unknown_coin_type"],
     });
 
