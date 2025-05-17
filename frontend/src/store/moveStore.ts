@@ -3,6 +3,7 @@ import { create } from "zustand";
 import { ZkSendLinkBuilder } from "@mysten/zksend";
 import { BcsType, fromHex, toHex } from "@mysten/bcs";
 import { bcs } from "@mysten/sui/bcs";
+import { coinWithBalance } from "@mysten/sui/transactions";
 function VecMap<K extends BcsType<any>, V extends BcsType<any>>(K: K, V: V) {
   return bcs.struct(`VecMap<${K.name}, ${V.name}>`, {
     keys: bcs.vector(K),
@@ -23,8 +24,9 @@ interface MoveStore {
     vaultId: string,
     coinIds: string[],
     amount: number,
-    name: number,
-    coinType: string
+    name: string,
+    coinType: string,
+    senderAddress: string
   ) => Transaction;
   // coinSpTester: () => Transaction;
   mintCap: (
@@ -40,6 +42,13 @@ interface MoveStore {
   ) => Promise<{ urls: string[]; tx: any }>;
   resetState: () => void;
   sendEmail: (to: string, url: any) => Promise<any>;
+  takeCoinTx: (
+    capId: string,
+    vaultId: string,
+    assetName: string,
+    amount: number,
+    coinType: string
+  ) => Transaction;
 }
 
 const useMoveStore = create<MoveStore>((set, get) => ({
@@ -57,67 +66,171 @@ const useMoveStore = create<MoveStore>((set, get) => ({
     return vaultTx;
   },
 
-  alterTx: (capId, vaultId, coinIds, amount, name, coinType) => {
+   alterTx: (
+    capId: string,
+    vaultId: string,
+    coinIds: string[],
+    amount: number,
+    name: string,
+    coinType: string,
+    senderAddress: string
+  ) => {
     const tx = new Transaction();
-    // Basic validation
-    if (!Array.isArray(coinIds) || coinIds.length === 0) {
-      throw new Error("coinIds must be a non-empty array of object IDs");
-    }
-
-    // CRITICAL FIX: Create proper object references for all IDs
-    const coinObjects = coinIds.map((id) => tx.object(id));
-    console.log("coinObjects", coinObjects);
-
-    // Step 1: merge coins if needed
-    if (coinIds.length > 1) {
-      tx.mergeCoins(coinObjects[0], coinObjects.slice(1));
-    }
-    // Step 2: Split coins - USING OBJECT REFERENCE, NOT STRING
-    const [goods] = tx.splitCoins(coinObjects[0], [amount]);
-
+    console.log("senderAddress",senderAddress)
+    // when coinType is SUI, we need to set sender
     if (coinType === "0x2::sui::SUI") {
+      tx.setSender(senderAddress);
+      // construct a new SUI Coin, balance is in MIST (1 SUI = 10^9 MIST)
+      const suiCoinInput = coinWithBalance({
+        balance: amount,
+        useGasCoin: false,  // keep the original gas coin for fee
+      });
+      const nameBC = bcs
+        .vector(bcs.U8)
+        .serialize(stringToUint8Array(name));
+      tx.moveCall({
+        target: `${get().packageName}::seaVault::organize_coin`,
+        arguments: [
+          tx.object(capId),
+          tx.object(vaultId),
+          tx.pure(nameBC),
+          suiCoinInput,
+        ],
+        typeArguments: [coinType],
+      });
+    } else {
+      // for non-SUI coin, use merge + split logic
+      if (!Array.isArray(coinIds) || coinIds.length === 0) {
+        throw new Error("coinIds must be a non-empty array of object IDs");
+      }
+      const coinObjs = coinIds.map((id) => tx.object(id));
+      if (coinObjs.length > 1) {
+        tx.mergeCoins(coinObjs[0], coinObjs.slice(1));
+      }
+      const [goods] = tx.splitCoins(coinObjs[0], [amount]);
+      const nameBC = bcs
+        .vector(bcs.U8)
+        .serialize(stringToUint8Array(name));
+      tx.moveCall({
+        target: `${get().packageName}::seaVault::organize_coin`,
+        arguments: [
+          tx.object(capId),
+          tx.object(vaultId),
+          tx.pure(nameBC),
+          goods,
+        ],
+        typeArguments: [coinType],
+      });
     }
-    // const nameBC = bcs.vector(bcs.U8).serialize(stringToUint8Array(name.toString()));
-    const nameBC = stringToUint8Array(name.toString());
-    // Step 3: use goods as asset input into addToVault
-    tx.moveCall({
-      target: `${get().packageName}::seaVault::organize_coin`,
-      arguments: [tx.object(capId), tx.object(vaultId), tx.pure(nameBC), goods],
-      typeArguments: [coinType],
-    });
-
+  
     return tx;
   },
 
-  fuseTxFunctions: (capId, vaultId, coinIds, amount, name, coinType) => {
+  fuseTxFunctions: (
+    capId: string,
+    vaultId: string,
+    coinIds: string[],
+    amount: number,
+    name: string,
+    coinType: string,
+    senderAddress: string // required for coinWithBalance on SUI
+  ) => {
+    // Initialize a new transaction
     const tx = new Transaction();
-
-    // Basic validation
-    if (!Array.isArray(coinIds) || coinIds.length === 0) {
-      throw new Error("coinIds must be a non-empty array of object IDs");
+  
+    // If dealing with native SUI, use coinWithBalance to isolate the exact amount
+    if (coinType === '0x2::sui::SUI') {
+      // Specify which address is sending (so the SDK can pick coins)
+      tx.setSender(senderAddress);
+  
+      // Prepare the name as a BCS-encoded byte vector
+      const nameBC = bcs
+        .vector(bcs.U8)
+        .serialize(stringToUint8Array(name));
+  
+      // Create a "virtual" coin input of exactly `amount`, leaving gas coin intact
+      const suiInput = coinWithBalance({
+        balance: amount,    // amount in MIST (1 SUI = 10^9 MIST)
+        useGasCoin: false,  // keep the gas coin purely for fees
+      });
+  
+      // Call the Move function to add this coin into your vault
+      tx.moveCall({
+        target: `${get().packageName}::seaVault::add_coin`,
+        arguments: [
+          tx.object(capId),
+          tx.object(vaultId),
+          tx.pure(nameBC),
+          suiInput,
+        ],
+        typeArguments: [coinType],
+      });
+  
+    } else {
+      // ---- Non-SUI assets: manual merge & split workflow ----
+  
+      // Validate input
+      if (!Array.isArray(coinIds) || coinIds.length === 0) {
+        throw new Error("coinIds must be a non-empty array of object IDs");
+      }
+  
+      // Turn each ID string into an object reference
+      const coinObjects = coinIds.map((id) => tx.object(id));
+  
+      // If there are multiple coins, merge them into one
+      if (coinObjects.length > 1) {
+        tx.mergeCoins(coinObjects[0], coinObjects.slice(1));
+      }
+  
+      // Split out exactly `amount` from the merged coin
+      const [goods] = tx.splitCoins(coinObjects[0], [amount]);
+  
+      // BCS-serialize the `name` argument
+      const nameBC = bcs
+        .vector(bcs.U8)
+        .serialize(stringToUint8Array(name));
+  
+      // Call the Move function to add this asset into your vault
+      tx.moveCall({
+        target: `${get().packageName}::seaVault::add_coin`,
+        arguments: [
+          tx.object(capId),
+          tx.object(vaultId),
+          tx.pure(nameBC),
+          goods,
+        ],
+        typeArguments: [coinType || "unknown_coin_type"],
+      });
     }
-
-    // CRITICAL FIX: Create proper object references for all IDs
-    const coinObjects = coinIds.map((id) => tx.object(id));
-    console.log("coinObjects", coinObjects);
-
-    // Step 1: merge coins if needed
-    if (coinIds.length > 1) {
-      tx.mergeCoins(coinObjects[0], coinObjects.slice(1));
-    }
-
-    // Step 2: Split coins - USING OBJECT REFERENCE, NOT STRING
-    const [goods] = tx.splitCoins(coinObjects[0], [amount]);
+  
+    return tx;
+  },
+  takeCoinTx: (
+    capId: string,
+    vaultId: string,
+    assetName: string,
+    amount: number,
+    coinType: string
+  ) => {
+    const tx = new Transaction();
+    
+    // BCS-serialize the asset name string
     const nameBC = bcs
       .vector(bcs.U8)
-      .serialize(stringToUint8Array(name.toString()));
-    // Step 3: use goods as asset input into addToVault
+      .serialize(stringToUint8Array(assetName));
+      
+    // Call the Move function to take coin from vault
     tx.moveCall({
-      target: `${get().packageName}::seaVault::add_coin`,
-      arguments: [tx.object(capId), tx.object(vaultId), goods, tx.pure(nameBC)],
-      typeArguments: [coinType || "unknown_coin_type"],
+      target: `${get().packageName}::seaVault::take_coin`,
+      arguments: [
+        tx.object(capId),
+        tx.object(vaultId),
+        tx.pure(nameBC),
+        tx.pure.u64(amount)
+      ],
+      typeArguments: [coinType],
     });
-
+    
     return tx;
   },
 
@@ -175,7 +288,7 @@ const useMoveStore = create<MoveStore>((set, get) => ({
       });
 
       link.addClaimableObjectRef(
-        emailCap,
+        emailCapRef,
         `${get().packageName}::seaVault::MemberCap`
       );
       await link.createSendTransaction({

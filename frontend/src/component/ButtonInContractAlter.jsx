@@ -16,7 +16,7 @@ const formatAddress = (address) => {
   return `${address.slice(0, 8)}...${address.slice(-19)}`; 
 };
 
-const ButtonInContractAlter = () => {
+const ButtonInContractAlter = ({coinsInVault, onTransactionSuccess}) => {
   const account = useCurrentAccount();
   const autoConnectionStatus = useAutoConnectWallet();
   // Use the hook with custom execute function to get more detailed transaction results
@@ -280,14 +280,17 @@ const ButtonInContractAlter = () => {
         coinType: finalCoinType
       });
       let tx
-      if(!VaultNames || !Array.isArray(VaultNames) || !VaultNames.includes(selectedCoin[0])){
+      console.log("coinsInVault",coinsInVault)
+      console.log("condition",!coinsInVault || !Array.isArray(coinsInVault) || !coinsInVault.map(coin => coin[0]).includes(selectedCoin[0]))
+      if(!coinsInVault || !Array.isArray(coinsInVault) || !coinsInVault.map(coin => coin[0]).includes(selectedCoin[0])){
         tx = fuseTxFunctions(
           ownerCapObjects[0].data.objectId,
           vault.objectId, 
-          coinObjectIds,
+          [coinObjectIds[0]],
           amountInSmallestUnit,
           selectedCoin[0], // Using the coin name (first element in selectedCoin array)
-          finalCoinType
+          finalCoinType,
+          account?.address
         );
       }else{
         tx = alterTx(
@@ -296,7 +299,8 @@ const ButtonInContractAlter = () => {
           coinObjectIds,
           amountInSmallestUnit,
           selectedCoin[0], // Using the coin name (first element in selectedCoin array)
-          finalCoinType
+          finalCoinType,
+          account?.address
         )
       }
 
@@ -319,12 +323,13 @@ const ButtonInContractAlter = () => {
             setTransactionDigest(result.digest);
             setTransactionStatus("Success");
             setErrorr("");
+        
+            
             // Don't close modal immediately to show the transaction digest
-        setTimeout(() => {
-          closeModal();
-        }, 5000); // Show transaction result for 5 seconds before closing
-            // You can do additional operations with the result here
-            // Such as showing transaction details or refreshing data
+            setTimeout(() => {
+              closeModal();
+              onTransactionSuccess();
+            }, 1000); // Show transaction result for 5 seconds before closing
           },
           onError: (error) => {
             console.error("Transaction error:", error);
