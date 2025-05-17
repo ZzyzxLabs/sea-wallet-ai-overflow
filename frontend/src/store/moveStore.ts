@@ -56,7 +56,7 @@ const useMoveStore = create<MoveStore>((set, get) => ({
   packageName:
     "0x025fcbe4c2d5566fd28677e4d31f4e8bc51ff16d4cf4a740cad5f6014df02de6",
   walletOnwer:
-    "0xde2eecb0c5510724abeba5fd62448104bc5da78e2117724031ce201db2f4dc28",
+    "0x9fcc44605f6b702244d32ff43852eb1a13938f9afbc5f5329e87709c52cfbf75",
   createVaultTx: () => {
     const vaultTx = new Transaction();
     vaultTx.moveCall({
@@ -66,7 +66,7 @@ const useMoveStore = create<MoveStore>((set, get) => ({
     return vaultTx;
   },
 
-   alterTx: (
+  alterTx: (
     capId: string,
     vaultId: string,
     coinIds: string[],
@@ -76,18 +76,16 @@ const useMoveStore = create<MoveStore>((set, get) => ({
     senderAddress: string
   ) => {
     const tx = new Transaction();
-    console.log("senderAddress",senderAddress)
+    console.log("senderAddress", senderAddress);
     // when coinType is SUI, we need to set sender
     if (coinType === "0x2::sui::SUI") {
       tx.setSender(senderAddress);
       // construct a new SUI Coin, balance is in MIST (1 SUI = 10^9 MIST)
       const suiCoinInput = coinWithBalance({
         balance: amount,
-        useGasCoin: false,  // keep the original gas coin for fee
+        useGasCoin: true, // keep the original gas coin for fee
       });
-      const nameBC = bcs
-        .vector(bcs.U8)
-        .serialize(stringToUint8Array(name));
+      const nameBC = bcs.string().serialize(name).toBytes();
       tx.moveCall({
         target: `${get().packageName}::seaVault::organize_coin`,
         arguments: [
@@ -108,9 +106,7 @@ const useMoveStore = create<MoveStore>((set, get) => ({
         tx.mergeCoins(coinObjs[0], coinObjs.slice(1));
       }
       const [goods] = tx.splitCoins(coinObjs[0], [amount]);
-      const nameBC = bcs
-        .vector(bcs.U8)
-        .serialize(stringToUint8Array(name));
+      const nameBC = bcs.string().serialize(name).toBytes();
       tx.moveCall({
         target: `${get().packageName}::seaVault::organize_coin`,
         arguments: [
@@ -122,7 +118,7 @@ const useMoveStore = create<MoveStore>((set, get) => ({
         typeArguments: [coinType],
       });
     }
-  
+
     return tx;
   },
 
@@ -137,23 +133,21 @@ const useMoveStore = create<MoveStore>((set, get) => ({
   ) => {
     // Initialize a new transaction
     const tx = new Transaction();
-  
+
     // If dealing with native SUI, use coinWithBalance to isolate the exact amount
-    if (coinType === '0x2::sui::SUI') {
+    if (coinType === "0x2::sui::SUI") {
       // Specify which address is sending (so the SDK can pick coins)
       tx.setSender(senderAddress);
-  
+
       // Prepare the name as a BCS-encoded byte vector
-      const nameBC = bcs
-        .vector(bcs.U8)
-        .serialize(stringToUint8Array(name));
-  
+      const nameBC = bcs.string().serialize(name).toBytes();
+
       // Create a "virtual" coin input of exactly `amount`, leaving gas coin intact
       const suiInput = coinWithBalance({
-        balance: amount,    // amount in MIST (1 SUI = 10^9 MIST)
-        useGasCoin: false,  // keep the gas coin purely for fees
+        balance: amount, // amount in MIST (1 SUI = 10^9 MIST)
+        useGasCoin: true, // keep the gas coin purely for fees
       });
-  
+
       // Call the Move function to add this coin into your vault
       tx.moveCall({
         target: `${get().packageName}::seaVault::add_coin`,
@@ -165,31 +159,28 @@ const useMoveStore = create<MoveStore>((set, get) => ({
         ],
         typeArguments: [coinType],
       });
-  
     } else {
       // ---- Non-SUI assets: manual merge & split workflow ----
-  
+
       // Validate input
       if (!Array.isArray(coinIds) || coinIds.length === 0) {
         throw new Error("coinIds must be a non-empty array of object IDs");
       }
-  
+
       // Turn each ID string into an object reference
       const coinObjects = coinIds.map((id) => tx.object(id));
-  
+
       // If there are multiple coins, merge them into one
       if (coinObjects.length > 1) {
         tx.mergeCoins(coinObjects[0], coinObjects.slice(1));
       }
-  
+
       // Split out exactly `amount` from the merged coin
       const [goods] = tx.splitCoins(coinObjects[0], [amount]);
-  
+
       // BCS-serialize the `name` argument
-      const nameBC = bcs
-        .vector(bcs.U8)
-        .serialize(stringToUint8Array(name));
-  
+      const nameBC = bcs.string().serialize(name).toBytes();
+
       // Call the Move function to add this asset into your vault
       tx.moveCall({
         target: `${get().packageName}::seaVault::add_coin`,
@@ -202,7 +193,7 @@ const useMoveStore = create<MoveStore>((set, get) => ({
         typeArguments: [coinType || "unknown_coin_type"],
       });
     }
-  
+
     return tx;
   },
   takeCoinTx: (
@@ -213,12 +204,10 @@ const useMoveStore = create<MoveStore>((set, get) => ({
     coinType: string
   ) => {
     const tx = new Transaction();
-    
+
     // BCS-serialize the asset name string
-    const nameBC = bcs
-      .vector(bcs.U8)
-      .serialize(stringToUint8Array(assetName));
-      
+    const nameBC = bcs.string().serialize(assetName).toBytes();
+
     // Call the Move function to take coin from vault
     tx.moveCall({
       target: `${get().packageName}::seaVault::take_coin`,
@@ -226,11 +215,11 @@ const useMoveStore = create<MoveStore>((set, get) => ({
         tx.object(capId),
         tx.object(vaultId),
         tx.pure(nameBC),
-        tx.pure.u64(amount)
+        tx.pure.u64(amount),
       ],
       typeArguments: [coinType],
     });
-    
+
     return tx;
   },
 
