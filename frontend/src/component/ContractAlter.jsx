@@ -187,7 +187,7 @@ const ContractAlter = () => {
           const coinSymbol = fullCoinType.split("::").pop() || "Unknown";
           const amount = coinObj.data?.content?.fields?.balance || "0";
 
-          return [coinSymbol, formattedCoinType, amount];
+          return [coinSymbol, formattedCoinType, amount, fullCoinType]; // Store the full coin type too
         })
         .filter((coin) => coin !== null);
 
@@ -198,6 +198,11 @@ const ContractAlter = () => {
       setIsLoading(false);
     }
   }, [coinData.data]);
+
+  // Add a function to normalize coin type addresses
+  const normalizeType = useCallback((typeStr) => {
+    return typeStr.replace(/^0x0+/, "0x");
+  }, []);
 
   // 簡化 loading 邏輯
   useEffect(() => {
@@ -227,9 +232,12 @@ const ContractAlter = () => {
       
       // Get the name of asset in the vault - this should match the stored name in the vault
       const assetName = coin[0];
+      console.log("coin",coin)
       
-      // Get the coin type
-      const coinType = coin[1];
+      // Get the original full coin type, not the formatted one with ellipses
+      const coinType = normalizeType(coin[3] || coinTypes[index] || "");
+      
+      console.log("Using coin type for withdrawal:", coinType);
       
       // Create transaction
       const tx = takeCoinTx(
@@ -285,34 +293,39 @@ const ContractAlter = () => {
               Loading assets...
             </div>
           ) : coinsInVault.length > 0 ? (
-            coinsInVault.map((coin, index) => coin[2] > 0 && (
-              <React.Fragment key={index}>
-                <div className="py-2 border-t text-black dark:border-gray-700">
-                  {coin[0]}{" "}
-                  <span className="text-xs text-gray-500">{coin[1]}</span>
-                </div>
-                <div className="py-2 border-t text-black dark:border-gray-700">
-                  {coin[2]/Math.pow(10,coinMetadataQueries.data[index]?.decimals)}{" "}
-                </div>
-                <div className="py-2 border-t text-black dark:border-gray-700 flex items-center">
-                  <input
-                    type="number"
-                    placeholder="Amount"
-                    className="w-20 px-2 py-1 mr-2 text-sm border rounded"
-                    value={withdrawAmount[index] || ""}
-                    onChange={(e) => setWithdrawAmount({...withdrawAmount, [index]: e.target.value})}
-                    disabled={isWithdrawing}
-                  />
-                  <button
-                    className="px-2 py-1 bg-red-500 text-white text-sm rounded hover:bg-red-600 transition"
-                    onClick={() => handleWithdraw(coin, index)}
-                    disabled={isWithdrawing}
-                  >
-                    {isWithdrawing ? "..." : "Withdraw"}
-                  </button>
-                </div>
-              </React.Fragment>
-            ))
+            coinsInVault.map((coin, index) => {
+              // Only render if coin exists and has valid data
+              if (!coin || !coin[2]) return null;
+              
+              return (
+                <React.Fragment key={index}>
+                  <div className="py-2 border-t text-black dark:border-gray-700">
+                    {coin[0]}{" "}
+                    <span className="text-xs text-gray-500">{coin[1]}</span>
+                  </div>
+                  <div className="py-2 border-t text-black dark:border-gray-700">
+                    {coin[2]/Math.pow(10,coinMetadataQueries.data[index]?.decimals)}{" "}
+                  </div>
+                  <div className="py-2 border-t text-black dark:border-gray-700 flex items-center">
+                    <input
+                      type="number"
+                      placeholder="Amount"
+                      className="w-20 px-2 py-1 mr-2 text-sm border rounded"
+                      value={withdrawAmount[index] || ""}
+                      onChange={(e) => setWithdrawAmount({...withdrawAmount, [index]: e.target.value})}
+                      disabled={isWithdrawing}
+                    />
+                    <button
+                      className="px-2 py-1 bg-red-500 text-white text-sm rounded hover:bg-red-600 transition"
+                      onClick={() => handleWithdraw(coin, index)}
+                      disabled={isWithdrawing}
+                    >
+                      {isWithdrawing ? "..." : "Withdraw"}
+                    </button>
+                  </div>
+                </React.Fragment>
+              );
+            })
           ) : (
             <div className="col-span-3 py-4 text-center text-gray-500">
               No assets in your Vault
