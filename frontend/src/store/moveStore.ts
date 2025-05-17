@@ -4,6 +4,7 @@ import { ZkSendLinkBuilder } from "@mysten/zksend";
 import { BcsType, fromHex, toHex } from "@mysten/bcs";
 import { bcs } from "@mysten/sui/bcs";
 import { coinWithBalance } from "@mysten/sui/transactions";
+
 function VecMap<K extends BcsType<any>, V extends BcsType<any>>(K: K, V: V) {
   return bcs.struct(`VecMap<${K.name}, ${V.name}>`, {
     keys: bcs.vector(K),
@@ -18,6 +19,7 @@ function stringToUint8Array(str) {
 interface MoveStore {
   packageName: string;
   walletOnwer: string;
+  setAddress: (address: string) => void;
   createVaultTx: () => Transaction;
   fuseTxFunctions: (
     capId: string,
@@ -55,8 +57,10 @@ const useMoveStore = create<MoveStore>((set, get) => ({
   // main
   packageName:
     "0x025fcbe4c2d5566fd28677e4d31f4e8bc51ff16d4cf4a740cad5f6014df02de6",
-  walletOnwer:
-    "0x9fcc44605f6b702244d32ff43852eb1a13938f9afbc5f5329e87709c52cfbf75",
+  walletOnwer: "",
+  setAddress: (address: string) => {
+    set({ walletOnwer: address });
+  },
   createVaultTx: () => {
     const vaultTx = new Transaction();
     vaultTx.moveCall({

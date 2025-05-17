@@ -10,7 +10,8 @@ import useMoveStore from "../store/moveStore";
 import { bcs, BcsType } from '@mysten/bcs';
 import HeirCard from "./HeirCard";
 import Image from "next/image";
-
+import  setAddress from "../store/moveStore"
+import moveStore from "../store/moveStore";
 // VecMap 函數用於序列化鍵值對 (保持不變)
 function VecMap<K extends BcsType<any>, V extends BcsType<any>>(K: K, V: V) {
   return bcs.struct(
@@ -111,6 +112,7 @@ export default function InitializeContract() {
   const account = useCurrentAccount();
   const router = useRouter();
   const client = useSuiClient();
+  const setAddress = useMoveStore((s) => s.setAddress);
   const { mutate: signAndExecuteTransaction } = useSignAndExecuteTransaction({
     execute: async ({ bytes, signature }) =>
       await client.executeTransactionBlock({
@@ -170,6 +172,12 @@ export default function InitializeContract() {
       }, 100);
     }
   }, [account, isConnecting]);
+
+  useEffect(() => {
+    if (account) {
+      setAddress(account.address); 
+    }
+  }, [account, setAddress]);
 
   // 監控帳戶狀態變化，控制動畫序列
   useEffect(() => {
