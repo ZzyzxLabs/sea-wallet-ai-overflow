@@ -83,7 +83,7 @@ const useMoveStore = create<MoveStore>((set, get) => ({
       // construct a new SUI Coin, balance is in MIST (1 SUI = 10^9 MIST)
       const suiCoinInput = coinWithBalance({
         balance: amount,
-        useGasCoin: false, // keep the original gas coin for fee
+        useGasCoin: true, // keep the original gas coin for fee
       });
       const nameBC = bcs.string().serialize(name).toBytes();
       tx.moveCall({
@@ -145,7 +145,7 @@ const useMoveStore = create<MoveStore>((set, get) => ({
       // Create a "virtual" coin input of exactly `amount`, leaving gas coin intact
       const suiInput = coinWithBalance({
         balance: amount, // amount in MIST (1 SUI = 10^9 MIST)
-        useGasCoin: false, // keep the gas coin purely for fees
+        useGasCoin: true, // keep the gas coin purely for fees
       });
 
       // Call the Move function to add this coin into your vault
