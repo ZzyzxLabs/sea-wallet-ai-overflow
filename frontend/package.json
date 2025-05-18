@@ -17,7 +17,7 @@
     "@mysten/bcs": "^1.6.0",
     "@mysten/dapp-kit": "^0.16.2",
     "@mysten/mvr-static": "^0.1.8",
-    "@mysten/seal": "^0.4.2",
+    "@mysten/seal": "^0.4.3",
     "@mysten/sui": "1.29.1",
     "@mysten/zksend": "^0.12.28",
     "@qdrant/js-client-rest": "^1.14.0",
