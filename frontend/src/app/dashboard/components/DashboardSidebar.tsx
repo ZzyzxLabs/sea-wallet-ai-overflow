@@ -15,7 +15,11 @@ const sidebarItems = [
   { 
     icon: '/iconSidebar/RMBGSmartWillwhite.png', 
     label: 'SmartWill', 
-    href: '/dashboard/SmartWill' 
+    href: '/dashboard/SmartWill' ,
+    submenu: [
+      { label: 'My Will', href: '/dashboard/SmartWill/will' },
+      { label: 'My Heir', href: '/dashboard/SmartWill/heir' },
+    ]
   },
   { 
     icon: '/iconSidebar/RMBGsubscription.png', 

@@ -51,12 +51,27 @@ interface MoveStore {
     amount: number,
     coinType: string
   ) => Transaction;
+  alterTx: (
+    capId: string,
+    vaultId: string,
+    coinIds: string[],
+    amount: number,
+    name: string,
+    coinType: string,
+    senderAddress: string
+  ) => Transaction;
+  memberWithdrawTx: (
+    capId: string,
+    vaultId: string,
+    assetNames: string[],
+    coinTypes: string[]
+  ) => Transaction;
 }
 
 const useMoveStore = create<MoveStore>((set, get) => ({
   // main
   packageName:
-    "0x025fcbe4c2d5566fd28677e4d31f4e8bc51ff16d4cf4a740cad5f6014df02de6",
+    "0xbcd418e03c096fb1d52b8446c6148caf5e26c885714d0a79b76e4a15cd22f0bf",
   walletOnwer: "",
   setAddress: (address: string) => {
     set({ walletOnwer: address });
@@ -64,7 +79,7 @@ const useMoveStore = create<MoveStore>((set, get) => ({
   createVaultTx: () => {
     const vaultTx = new Transaction();
     vaultTx.moveCall({
-      target: `${get().packageName}::seaVault::createVault`,
+      target: `${get().packageName}::seaVault::create_vault`,
       arguments: [],
     });
     return vaultTx;
@@ -253,7 +268,7 @@ const useMoveStore = create<MoveStore>((set, get) => ({
 
     // handle addresses
     tx.moveCall({
-      target: `${get().packageName}::seaVault::addMemberByAddresses`,
+      target: `${get().packageName}::seaVault::add_member_by_addresses`,
       arguments: [
         tx.object(cap),
         tx.object(vault),
@@ -339,6 +354,45 @@ const useMoveStore = create<MoveStore>((set, get) => ({
     set({
       packageName: "0",
     }),
+
+  // Add memberWithdrawTx implementation
+  memberWithdrawTx: (
+    capId: string,
+    vaultId: string,
+    assetNames: string[],
+    coinTypes: string[]
+  ) => {
+    // Verify arrays have same length
+    if (assetNames.length !== coinTypes.length) {
+      throw new Error("Asset names and coin types arrays must have the same length");
+    }
+    
+    const tx = new Transaction();
+    
+    // Get system clock object ID
+    const clockObjectId = "0x6";
+    
+    // Process each asset withdrawal
+    for (let i = 0; i < assetNames.length; i++) {
+      // BCS-serialize the asset name string
+      
+      const nameBC = bcs.string().serialize(assetNames[i]).toBytes();
+      
+      // Call the Move function to withdraw coins as an heir
+      tx.moveCall({
+        target: `${get().packageName}::seaVault::member_withdraw`,
+        arguments: [
+          tx.object(capId),
+          tx.object(vaultId),
+          tx.object(clockObjectId),
+          tx.pure(nameBC),
+        ],
+        typeArguments: [coinTypes[i]],
+      });
+    }
+    
+    return tx;
+  },
 }));
 
 export default useMoveStore;
