@@ -10,8 +10,6 @@ import useMoveStore from "../store/moveStore";
 import { bcs, BcsType } from '@mysten/bcs';
 import HeirCard from "./HeirCard";
 import Image from "next/image";
-import  setAddress from "../store/moveStore"
-import moveStore from "../store/moveStore";
 import "../styles/InitializeContract.css"; // 引入 CSS 樣式
 
 // VecMap 函數用於序列化鍵值對 (保持不變)
