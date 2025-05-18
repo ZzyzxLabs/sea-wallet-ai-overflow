@@ -32,11 +32,11 @@ interface FeedData {
   blobIds: string[];
 }
 
-function constructMoveCall(packageId: string, allowlistId: string) {
+function constructMoveCall(packageId: string, allowlistId: string, cap_id: string) {
   return (tx: Transaction, id: string) => {
     tx.moveCall({
       target: `${packageId}::will::seal_approve`,
-      arguments: [tx.pure.vector('u8', fromHex(id)), tx.object(allowlistId)],
+      arguments: [tx.pure.vector('u8', fromHex(id)), tx.object(cap_id), tx.object(allowlistId)],
     });
   };
 }
@@ -48,7 +48,7 @@ const OceanCard = ({
 }: { 
   item: CardItem; 
   index: number;
-  onViewDetails: (willlistId: string) => void;
+  onViewDetails: (capId: string, willlistId: string) => void;
 }) => {
   // 海洋風格的漸層色
   const gradients = [
@@ -159,7 +159,7 @@ const OceanCard = ({
               color: 'white',
               border: '1px solid rgba(255, 255, 255, 0.3)',
             }}
-            onClick={() => onViewDetails(item.willlist_id)}
+            onClick={() => onViewDetails(item.cap_id, item.willlist_id)}
           >
             <Eye size={16} style={{ marginRight: '8px' }} />
             查看詳情
@@ -246,7 +246,7 @@ export const WillListDisplay = () => {
     getCapObj();
   }, [getCapObj]);
 
-  const handleViewDetails = async (willlistId: string) => {
+  const handleViewDetails = async (capId: string, willlistId: string) => {
     setSelectedWillId(willlistId);
     setIsDialogOpen(true);
     setDecryptedTexts([]);
@@ -268,7 +268,7 @@ export const WillListDisplay = () => {
       
       // 自動開始解密
       if (encryptedObjects.length > 0) {
-        await onView(encryptedObjects, willlistId);
+        await onView(encryptedObjects, willlistId, capId);
       }
     } catch (error) {
       console.error('獲取加密資料時發生錯誤:', error);
@@ -276,12 +276,12 @@ export const WillListDisplay = () => {
     }
   };
 
-  const onView = async (blobIds: string[], allowlistId: string) => {
+  const onView = async (blobIds: string[], allowlistId: string, capId: string) => {
     setDecrypting(true);
     
     // 確保有效的 sessionKey
     if (currentSessionKey && !currentSessionKey.isExpired() && currentSessionKey.getAddress() === currentAccount?.address) {
-      await handleDecrypt(blobIds, allowlistId, currentSessionKey);
+      await handleDecrypt(blobIds, allowlistId, currentSessionKey, capId);
       return;
     }
     
@@ -292,7 +292,7 @@ export const WillListDisplay = () => {
       {
         onSuccess: async result => {
           await sessionKey.setPersonalMessageSignature(result.signature);
-          await handleDecrypt(blobIds, allowlistId, sessionKey);
+          await handleDecrypt(blobIds, allowlistId, sessionKey, capId);
           setCurrentSessionKey(sessionKey);
         },
         onError: () => {
@@ -303,8 +303,8 @@ export const WillListDisplay = () => {
     );
   };
 
-  const handleDecrypt = async (blobIds: string[], allowlistId: string, sessionKey: SessionKey) => {
-    const moveCallConstructor = constructMoveCall(packageId, allowlistId);
+  const handleDecrypt = async (blobIds: string[], allowlistId: string, sessionKey: SessionKey, capId: string) => {
+    const moveCallConstructor = constructMoveCall(packageId, allowlistId, capId);
     await downloadAndDecrypt(
       blobIds,
       sessionKey,

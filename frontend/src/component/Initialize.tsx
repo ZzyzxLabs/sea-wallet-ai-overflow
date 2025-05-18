@@ -12,6 +12,8 @@ import HeirCard from "./HeirCard";
 import Image from "next/image";
 import  setAddress from "../store/moveStore"
 import moveStore from "../store/moveStore";
+import "../styles/InitializeContract.css"; // 引入 CSS 樣式
+
 // VecMap 函數用於序列化鍵值對 (保持不變)
 function VecMap<K extends BcsType<any>, V extends BcsType<any>>(K: K, V: V) {
   return bcs.struct(
@@ -366,144 +368,73 @@ export default function InitializeContract() {
     showWarningMessage("金庫創建成功！正在為您導航到儀表板...");
   };
 
-  // 自定義連接按鈕樣式
   const CustomConnectButton = () => (
-    <div className="relative group">
-      <ConnectButton className="relative z-10" />
-      <div className="absolute inset-0 bg-gradient-to-r from-cyan-300 to-teal-400 rounded-md blur opacity-75 group-hover:opacity-100 transition-opacity duration-300"></div>
+    <div className="connect-button">
+      <ConnectButton />
     </div>
   );
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen bg-gradient-to-b from-blue-800 to-blue-900 overflow-hidden relative">
+    <div className="container">
       {/* 海洋背景元素 */}
-      <div className="absolute inset-0 w-full h-full overflow-hidden pointer-events-none">
-        {/* 浮動泡泡 */}
-        <div className="absolute h-20 w-20 rounded-full bg-white opacity-5 blur-lg animate-float-slow" style={{top: '15%', left: '10%'}}></div>
-        <div className="absolute h-14 w-14 rounded-full bg-white opacity-5 blur-lg animate-float-medium" style={{top: '45%', left: '20%'}}></div>
-        <div className="absolute h-10 w-10 rounded-full bg-white opacity-5 blur-lg animate-float-fast" style={{top: '70%', left: '15%'}}></div>
-        <div className="absolute h-16 w-16 rounded-full bg-white opacity-5 blur-lg animate-float-medium" style={{top: '20%', right: '15%'}}></div>
-        <div className="absolute h-12 w-12 rounded-full bg-white opacity-5 blur-lg animate-float-slow" style={{top: '60%', right: '12%'}}></div>
-        
-        {/* 波浪效果 */}
-        <div className="absolute bottom-0 left-0 right-0 h-64">
-          <div 
-            className="absolute inset-0 bg-[url('/images/wave-1.svg')] bg-repeat-x h-24" 
-            style={{backgroundPosition: `${wavesPosition}% bottom`, backgroundSize: '100px 100%'}}
-          ></div>
-          <div 
-            className="absolute inset-0 bg-[url('/images/wave-2.svg')] bg-repeat-x h-32 mt-4" 
-            style={{backgroundPosition: `${100 - wavesPosition}% bottom`, backgroundSize: '120px 100%'}}
-          ></div>
+      <div className="ocean-background">
+        <div className="bubble bubble1"></div>
+        <div className="bubble bubble2"></div>
+        <div className="bubble bubble3"></div>
+        <div className="waves">
+          <div className="wave1"></div>
+          <div className="wave2"></div>
         </div>
       </div>
 
       {/* 主標題 */}
-      <div className="absolute top-10 left-0 right-0 text-center pointer-events-none">
-        <h1 className="text-5xl font-bold text-white mb-2 tracking-wide">
-          <span className="inline-block mr-2">
-            <Image src="/RMBGlogo.png" width={40} height={40} alt="Anchor" className="inline-block" />
-          </span>
-          SeaVault
+      <div className="header">
+        <h1 className="title">
+          <Image src="/RMBGlogo.png" width={36} height={36} alt="Anchor" className="title-logo" />
+          <span className="title-text">SeaVault</span>
         </h1>
-        <p className="text-blue-200 text-xl">保護您的數字資產，守護您的航程</p>
+        <p className="subtitle">保護您的數字資產，守護您的航程</p>
       </div>
 
-      {/* 連接卡片 - 未連接狀態 */}
-      <div
-        className={`bg-gradient-to-br from-white/90 to-white/80 backdrop-blur-md p-10 rounded-2xl shadow-[0_10px_50px_rgba(8,107,181,0.5)] transition-all duration-700 ease-in-out transform relative z-10
-                    ${
-                      isConnecting
-                        ? "opacity-0 -translate-y-20 pointer-events-none"
-                        : "opacity-100 translate-y-0"
-                    }`}
-      >
-        <div className="absolute -top-6 left-1/2 transform -translate-x-1/2 bg-gradient-to-r from-cyan-500 to-blue-500 p-3 rounded-full shadow-lg">
-          <div className="w-10 h-10 flex items-center justify-center">
-            <Image src="/RMBGlogo.png" width={24} height={24} alt="Wallet" />
-          </div>
+      {/* 連接卡片 */}
+      <div className={`connect-card ${isConnecting ? 'hidden' : ''}`}>
+        <div className="icon">
+          <Image src="/RMBGlogo.png" width={24} height={24} alt="Wallet" />
         </div>
-        
-        <h1 className="text-4xl text-gray-800 font-bold mb-6 text-center mt-4">
-          建立您的數字遺產
-        </h1>
-        <p className="text-xl text-gray-600 mb-8 text-center">連接您的錢包，開始規劃您的數字資產傳承</p>
-        <div className="flex justify-center mt-2" onClick={handleConnect}>
+        <h1>建立您的數字遺產</h1>
+        <p>連接您的錢包，開始規劃您的數字資產傳承</p>
+        <div className="connect-button" onClick={handleConnect}>
           <CustomConnectButton />
         </div>
-        
-        <div className="mt-8 flex justify-center items-center">
-          <div className="flex space-x-3 text-sm text-gray-500">
-            <div className="flex items-center">
-              <div className="w-5 h-5 mr-2 flex items-center justify-center">
-                <Image src="/RMBGlogo.png" width={16} height={16} alt="Security" />
-              </div>
-              <span>安全加密</span>
-            </div>
-            <div className="flex items-center">
-              <div className="w-5 h-5 mr-2 flex items-center justify-center">
-                <Image src="/RMBGlogo.png" width={16} height={16} alt="Privacy" />
-              </div>
-              <span>私密保護</span>
-            </div>
-            <div className="flex items-center">
-              <div className="w-5 h-5 mr-2 flex items-center justify-center">
-                <Image src="/RMBGlogo.png" width={16} height={16} alt="Blockchain" />
-              </div>
-              <span>區塊鏈技術</span>
-            </div>
-          </div>
-        </div>
       </div>
 
-      {/* 歡迎卡片 - 已連接狀態 */}
-      <div
-        className={`bg-gradient-to-br from-white/90 to-white/80 backdrop-blur-md p-10 rounded-2xl shadow-[0_10px_50px_rgba(8,107,181,0.5)] transition-all duration-700 ease-in-out transform relative z-10
-                    ${
-                      account && showWelcome
-                        ? "opacity-100 translate-y-0"
-                        : "opacity-0 translate-y-20 pointer-events-none"
-                    }`}
-      >
-        <div className="absolute -top-6 left-1/2 transform -translate-x-1/2 bg-gradient-to-r from-teal-500 to-cyan-500 p-3 rounded-full shadow-lg">
-          <div className="w-10 h-10 flex items-center justify-center">
-            <Image src="/RMBGlogo.png" width={24} height={24} alt="Welcome" />
-          </div>
+      {/* 歡迎卡片 */}
+      <div className={`welcome-card ${account && showWelcome ? '' : 'hidden'}`}>
+        <div className="icon">
+          <Image src="/RMBGlogo.png" width={24} height={24} alt="Welcome" />
         </div>
-        
-        <h1 className="text-4xl text-gray-800 font-bold mb-6 text-center mt-4">
-          歡迎，{formatAddress(account?.address)}
-        </h1>
-        <div className="text-center mb-4">
-          <div className="inline-block p-2 px-4 bg-blue-100 rounded-full text-blue-800 text-sm font-medium">
-            錢包已連接
-          </div>
+        <h1>歡迎，{formatAddress(account?.address)}</h1>
+        <div className="status">
+          <div>錢包已連接</div>
         </div>
-        <p className="text-xl text-gray-600 text-center">準備開始您的數字遺產規劃之旅</p>
-
-        {/* 進度指示器 */}
-        <div className="mt-8 flex justify-center">
-          <div className="relative w-64 h-2 bg-gray-200 rounded-full overflow-hidden">
-            <div className="absolute left-0 top-0 h-full w-1/3 bg-gradient-to-r from-cyan-500 to-blue-500 rounded-full">
-              <div className="absolute inset-0 bg-gradient-to-r from-transparent to-white/30 animate-pulse"></div>
+        <p>準備開始您的數字遺產規劃之旅</p>
+        <div className="progress">
+          <div className="progress-bar">
+            <div className="fill">
+              <div className="pulse"></div>
             </div>
           </div>
         </div>
-        <div className="mt-2 text-xs text-center text-gray-500">
-          資料正在加載中...
-        </div>
+        <div className="progress-text">資料正在加載中...</div>
       </div>
 
-      {/* 第三張卡片 - 設置繼承人 */}
+      {/* 設置繼承人卡片 */}
       {showNextCard && (
-        <div className="w-full max-w-2xl px-4">
-          <div className="relative transform transition-all duration-500 ease-in-out z-10">
-            <div className="absolute -top-6 left-1/2 transform -translate-x-1/2 bg-gradient-to-r from-blue-600 to-cyan-600 p-3 rounded-full shadow-lg">
-              <div className="w-10 h-10 flex items-center justify-center">
-                <Image src="/RMBGlogo.png" width={24} height={24} alt="Heirs" />
-              </div>
+        <div className="heir-card">
+          <div className="container">
+            <div className="icon">
+              <Image src="/RMBGlogo.png" width={24} height={24} alt="Heirs" />
             </div>
-            
             <HeirCard
               heirs={heirs}
               addHeir={addHeir}
@@ -512,36 +443,30 @@ export default function InitializeContract() {
               getTotalRatio={getTotalRatio}
               handleVerify={executeTransaction}
               isProcessing={isProcessing}
-              // 傳遞額外屬性以支持新的海洋主題樣式
               theme={{
-                cardClassName: "bg-gradient-to-br from-white/90 to-white/80 backdrop-blur-md p-8 rounded-2xl shadow-[0_10px_50px_rgba(8,107,181,0.5)]",
-                buttonClassName: "bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 text-white font-medium py-2 px-6 rounded-lg transition-all duration-300 shadow-md hover:shadow-lg",
-                inputClassName: "w-full px-4 py-3 border border-blue-200 focus:border-blue-500 rounded-lg bg-white/90 backdrop-blur-sm focus:ring-2 focus:ring-blue-200 transition-all duration-300",
-                heirItemClassName: "bg-gradient-to-r from-white/60 to-white/40 backdrop-blur-sm rounded-xl p-5 mb-4 border border-blue-100 shadow-sm hover:shadow-md transition-all duration-300",
-                removeButtonClassName: "text-red-500 hover:text-red-700 transition-colors duration-300",
-                titleClassName: "text-3xl text-gray-800 font-bold text-center mb-8 mt-4"
+                cardClassName: "card",
+                buttonClassName: "button",
+                inputClassName: "input",
+                heirItemClassName: "heir-item",
+                removeButtonClassName: "remove-button",
+                titleClassName: "title"
               }}
             />
           </div>
         </div>
       )}
 
-      {/* 改進後的警告/消息對話框 */}
+      {/* 警告對話框 */}
       {showWarning && (
-        <div className="fixed inset-0 bg-blue-900/70 backdrop-blur-sm flex items-center justify-center z-50 animate-fadeIn">
-          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-0 overflow-hidden transform animate-scaleIn">
-            <div className="bg-gradient-to-r from-blue-600 to-cyan-600 p-4">
-              <h3 className="text-xl font-bold text-white">系統消息</h3>
+        <div className="warning-dialog">
+          <div className="content">
+            <div className="header">
+              <h3>系統消息</h3>
             </div>
-            <div className="p-6">
-              <p className="text-gray-700 mb-6">{warningMessage}</p>
-              <div className="flex justify-end">
-                <button
-                  className="px-6 py-2 bg-gradient-to-r from-blue-600 to-cyan-600 text-white rounded-lg hover:from-blue-700 hover:to-cyan-700 transition-all duration-300 shadow-md hover:shadow-lg"
-                  onClick={closeWarning}
-                >
-                  確定
-                </button>
+            <div className="body">
+              <p>{warningMessage}</p>
+              <div className="footer">
+                <button className="button" onClick={closeWarning}>確定</button>
               </div>
             </div>
           </div>
@@ -549,8 +474,8 @@ export default function InitializeContract() {
       )}
 
       {/* 頁腳 */}
-      <div className="absolute bottom-4 left-0 right-0 text-center text-blue-200 text-xs">
-        <p>© 2025 SeaVault. 守護您的數字海域。 帶著信任航行。</p>
+      <div className="footer">
+        <p>© 2025 SeaVault. 守護您的數字海域。帶著信任航行。</p>
       </div>
     </div>
   );
