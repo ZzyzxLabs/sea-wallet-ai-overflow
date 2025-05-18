@@ -474,6 +474,137 @@ body {
     font-size: 0.75rem;
   }
   
+  @keyframes wave-gradient {
+    0% { background-position: 0% 0%; }
+    50% { background-position: 0% 100%; }
+    100% { background-position: 0% 0%; }
+  }
+  
+  @keyframes glow-pulse {
+    0% { box-shadow: 0 0 0 rgba(79, 70, 229, 0); }
+    50% { box-shadow: 0 0 15px rgba(79, 70, 229, 0.3); }
+    100% { box-shadow: 0 0 0 rgba(79, 70, 229, 0); }
+  }
+  
+  /* 繼承人項目增強樣式 */
+  .heir-item {
+    position: relative;
+    overflow: hidden;
+  }
+  
+  .heir-item::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(120deg, rgba(255,255,255,0) 30%, rgba(255,255,255,0.08) 50%, rgba(255,255,255,0) 70%);
+    background-size: 200% 100%;
+    animation: shine 3s infinite linear;
+    pointer-events: none;
+  }
+  
+  .heir-item:hover::before {
+    animation: shine 1.5s infinite linear;
+  }
+  
+  @keyframes shine {
+    0% { background-position: -100% 0; }
+    100% { background-position: 200% 0; }
+  }
+  
+  /* 輸入欄位聚焦效果 */
+  .input {
+    transition: all 0.3s ease-in-out !important;
+  }
+  
+  .input:focus {
+    border-color: #4f46e5 !important;
+    box-shadow: 0 0 0 2px rgba(79, 70, 229, 0.3), 0 0 10px rgba(79, 70, 229, 0.2) !important;
+    background: rgba(15, 23, 42, 0.7) !important;
+  }
+  
+  /* 改進的按鈕效果 */
+  .button {
+    position: relative;
+    overflow: hidden;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  }
+  
+  .button::after {
+    content: '';
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background: linear-gradient(rgba(255,255,255,0.2), rgba(255,255,255,0));
+    transform: rotate(30deg);
+    opacity: 0;
+    transition: opacity 0.5s;
+  }
+  
+  .button:hover::after {
+    opacity: 1;
+  }
+  
+  .button:active {
+    transform: scale(0.97);
+  }
+  
+  /* 卡片容器效果 */
+  .card {
+    position: relative;
+    background: rgba(30, 41, 59, 0.8) !important;
+    backdrop-filter: blur(15px) !important;
+    transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  }
+  
+  .card::before {
+    content: '';
+    position: absolute;
+    top: -1px;
+    left: 20%;
+    right: 20%;
+    height: 1px;
+    background: linear-gradient(90deg, 
+                               rgba(79, 70, 229, 0), 
+                               rgba(79, 70, 229, 0.5),
+                               rgba(79, 70, 229, 0));
+  }
+  
+  .card::after {
+    content: '';
+    position: absolute;
+    bottom: -1px;
+    left: 20%;
+    right: 20%;
+    height: 1px;
+    background: linear-gradient(90deg, 
+                               rgba(79, 70, 229, 0), 
+                               rgba(79, 70, 229, 0.5),
+                               rgba(79, 70, 229, 0));
+  }
+  
+  /* 水波紋圖示效果 */
+  .icon {
+    position: relative;
+  }
+  
+  .icon::after {
+    content: '';
+    position: absolute;
+    top: -4px;
+    left: -4px;
+    right: -4px;
+    bottom: -4px;
+    border-radius: 50%;
+    background: rgba(79, 70, 229, 0.3);
+    z-index: -1;
+    animation: glow-pulse 2s infinite;
+  }
+  
   /* 動畫 */
   @keyframes float {
     0% { transform: translateY(0); }
