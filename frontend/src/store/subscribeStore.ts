@@ -17,10 +17,11 @@ export const useSubscribeStore = create<SubscribeState>((set, get) => ({
         // Extract the base coin type without module::struct part
         const tx = new Transaction();
         tx.moveCall({
-            target: `${get().packageName}::subscription::createService`,
+            target: `${get().packageName}::subscription::create_service`,
             arguments: [
                 tx.pure.u64(price),
                 tx.pure.string(name),
+                tx.pure.string(coinType),
                 tx.pure.address(serviceAddr),
                 tx.pure.u8(yDiscount)
             ],
