@@ -1,13 +1,27 @@
-'use client'
-
 import { useState, useRef, useEffect } from 'react';
 import styles from '../styles/ChatSupport.module.css';
+import {
+  useCurrentAccount,
+  useSignAndExecuteTransaction,
+  useSuiClientQuery,
+  useAutoConnectWallet,
+  useSuiClient,
+} from "@mysten/dapp-kit";
+import useCoinStore from '@/store/coinStore';
 
 const ChatSupport = () => {  const [isOpen, setIsOpen] = useState(false);
   const [mode, setMode] = useState('ai'); // 'customer_service' or 'ai'
   const [walletModeEnabled, setWalletModeEnabled] = useState(false); // Toggle for Wallet mode
   const [userId, setUserId] = useState(''); // Generate unique ID for each session
   const [uploadedDocs, setUploadedDocs] = useState(null); // Store uploaded documents
+  const [walletStatus, setWalletStatus] = useState(null); // 新增: 存儲錢包狀態
+  const [isLoadingWallet, setIsLoadingWallet] = useState(false); // 新增: 錢包加載狀態
+
+  const account = useCurrentAccount();
+  const suiClient = useSuiClient();
+  const [selectedCoin, setSelectedCoin] = useState(null);
+  const [formattedCoins, setFormattedCoins] = useState("");
+
     // Generate unique ID
   const generateUniqueId = () => {
     return Math.random().toString(36).substring(2, 15) + 
@@ -21,6 +35,73 @@ const ChatSupport = () => {  const [isOpen, setIsOpen] = useState(false);
       setUserId(generateUniqueId());
     }
   }, []);
+
+  function normalizeType(typeStr) {
+    return typeStr.replace(/^0x0+/, "0x");
+  }
+
+  /**
+   * 獲取用戶錢包狀態
+   * @param userId 用戶ID
+   * @returns 用戶錢包狀態數據
+   */
+  const fetchWalletStatus = async (userId) => {
+    setIsLoadingWallet(true);
+    
+    try {
+      // 如果沒有賬戶，返回錯誤信息
+      if (!account) {
+        return "No wallet account found. Please connect your wallet.";
+      }
+      
+      // 獲取所有餘額
+      const AllBLN = await suiClient.getAllBalances({
+        owner: account.address,
+      });
+      
+      // 處理代幣數據
+      const processedCoins = [];
+      
+      for (const coin of AllBLN) {
+        // 標準化代幣類型
+        const normalizedCoinType = normalizeType(coin.coinType);
+        
+        // 獲取此代幣的元數據
+        const metadata = await suiClient.getCoinMetadata({
+          coinType: normalizedCoinType
+        });
+        
+        // 使用代幣的實際小數位數，如果無法獲取則默認為 9
+        const decimals = metadata?.decimals || 9;
+        
+        // 計算正確的餘額
+        const balance = parseInt(coin.totalBalance) / Math.pow(10, decimals);
+        
+        // 從 coinType 路徑提取代幣名稱
+        const coinPath = coin.coinType.split("::");
+        const coinName = coinPath.length > 2 ? coinPath[2] : coinPath[1];
+        
+        // 添加到處理後的代幣列表
+        processedCoins.push({ coin: coinName, amount: balance });
+      }
+      
+      // 生成格式化的輸出
+      let formattedOutput = "usercoin:\n";
+      processedCoins.forEach(item => {
+        formattedOutput += `coin: ${item.coin}, amount: ${item.amount}\n`;
+      });
+      
+      setFormattedCoins(formattedOutput);
+      return formattedOutput;
+    } catch (error) {
+      console.error("Error fetching wallet status:", error);
+      return "Error retrieving wallet information. Please try again.";
+    } finally {
+      setIsLoadingWallet(false);
+    }
+  };
+
+
   // Dialog-related states
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedMessage, setSelectedMessage] = useState(null);
@@ -174,10 +255,28 @@ const ChatSupport = () => {  const [isOpen, setIsOpen] = useState(false);
   };
 
   // Toggle Wallet mode
-  const toggleWalletMode = () => {
-    setWalletModeEnabled(!walletModeEnabled);
+  const toggleWalletMode = async () => {
+    const newWalletModeState = !walletModeEnabled;
+    setWalletModeEnabled(newWalletModeState);
     handleSystemMessage(`Wallet mode ${!walletModeEnabled ? 'enabled' : 'disabled'}`);
+    
+    if (newWalletModeState) {
+      handleSystemMessage(`Wallet mode enabled. Fetching your wallet information...`);
+      
+      try {
+        const walletData = await fetchWalletStatus(userId);
+        setWalletStatus(walletData);
+        handleSystemMessage(`Wallet information retrieved successfully.`);
+      } catch (error) {
+        console.error("Error fetching wallet status:", error);
+        handleSystemMessage(`Error retrieving wallet information. Please try again.`);
+      }
+    } else {
+      handleSystemMessage(`Wallet mode disabled.`);
+      setWalletStatus(null);
+    }
   };
+
   // Get the effective mode in use
   const getEffectiveMode = () => {
     if (mode === 'customer_service') {
@@ -214,6 +313,7 @@ const ChatSupport = () => {  const [isOpen, setIsOpen] = useState(false);
       if (currentMode === 'wallet') {
         requestData.userId = userId;
         requestData.docs = uploadedDocs;
+        requestData.walletStatus = walletStatus; 
       }
       
       // 使用 fetch 進行流式請求

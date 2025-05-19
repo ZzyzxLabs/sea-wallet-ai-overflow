@@ -9,11 +9,11 @@ import {
 import ButtonInContractAlter from "./ButtonInContractAlter";
 import useMoveStore from "../store/moveStore";
 import useHeirStore from "../store/heirStore";
+import useCoinStore from "../store/coinStore";
+
 
 const ContractAlter = () => {
   const account = useCurrentAccount();
-  const [coinsInVault, setCoinsInVault] = useState([]);
-  const [isLoading, setIsLoading] = useState(true);
   const packageName = useMoveStore((state) => state.packageName);
   const takeCoinTx = useMoveStore((state) => state.takeCoinTx);
   const { setVaultName } = useHeirStore(); // Get setter function at component level
@@ -21,7 +21,7 @@ const ContractAlter = () => {
   const [withdrawAmount, setWithdrawAmount] = useState({});
   const [isWithdrawing, setIsWithdrawing] = useState(false);
   const [toggle, setToggle] = useState(false);
-
+  const { coinsInVault, isLoading, setCoinsInVault, setLoading } = useCoinStore();
   // Query vault and owner cap
   const vaultAndCap = useSuiClientQuery(
     "getOwnedObjects",
@@ -196,10 +196,10 @@ const ContractAlter = () => {
         .filter((coin) => coin !== null);
 
       setCoinsInVault(processedCoins);
-      setIsLoading(false);
+      setLoading(false); // 使用全局狀態的設置器
     } catch (error) {
       console.error("Error processing token data:", error);
-      setIsLoading(false);
+      setLoading(false); // 使用全局狀態的設置器
     }
   }, [coinData.data]);
 
@@ -212,7 +212,7 @@ const ContractAlter = () => {
   useEffect(() => {
     const isDataLoading = !coinData.data && objectIds.length > 0;
     if (isLoading !== isDataLoading) {
-      setIsLoading(isDataLoading);
+      setLoading(isDataLoading);
     }
   }, [coinData.data, objectIds, isLoading]);
 

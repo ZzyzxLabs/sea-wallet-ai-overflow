@@ -1,16 +1,12 @@
 import { NextResponse } from "next/server";
-import { 
-  fetchWalletStatus, 
-  storeWalletDataInVectorDB, 
-  searchVectorDB 
-} from "./walletInfo";
+import { storeWalletDataInVectorDB, searchVectorDB } from "./walletInfo";
 
 export const config = {
   runtime: "edge",
 };
 
 export async function POST(request: Request) {
-  const { message, mode, userId, docs } = await request.json();
+  const { message, mode, userId, docs, walletStatus } = await request.json();
 
   const encoder = new TextEncoder();
   const { readable, writable } = new TransformStream();
@@ -31,14 +27,22 @@ export async function POST(request: Request) {
         const systemPrompt = `You are SeaWallet AI assistant, answer ${message}`;
         await streamLlamaResponse(systemPrompt, writer, encoder);
       } else if (mode === "wallet") {
-        // Get wallet status and store in vector database
-        const walletData = await fetchWalletStatus(userId);
-        const collectionName = await storeWalletDataInVectorDB(userId, walletData);
+        // 使用前端傳入的錢包信息，而不是後端獲取
+        const walletData = walletStatus || "";
+        console.log("walletData", walletData);
+        // 只有當有錢包數據時才存入向量數據庫
+        let collectionName = `wallet_data_${userId}`;
+        let walletContext = "No wallet data available";
         
-        // Get wallet data related to the question from vector database as context
-        const walletContext = await searchVectorDB(collectionName, message);
+        if (walletData && walletData.trim() !== "") {
+          // 儲存錢包數據到向量數據庫
+          collectionName = await storeWalletDataInVectorDB(userId, walletData);
+          
+          // 從向量數據庫獲取與問題相關的錢包數據作為上下文
+          walletContext = await searchVectorDB(collectionName, message);
+        }
         
-        // User uploaded documents are used directly as context, not stored in vector database
+        // 用戶上傳的文檔直接作為上下文使用，不儲存在向量數據庫中
         const userDocsContext = docs ? `User uploaded document content:\n${docs}` : "";
         
         const combinedContext = [walletContext, userDocsContext].filter(Boolean).join("\n\n");
