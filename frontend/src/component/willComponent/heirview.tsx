@@ -13,7 +13,7 @@ import { downloadAndDecrypt } from './utils_download';
 
 const TTL_MIN = 10;
 
-// 定義型別
+// Define types
 interface Cap {
   id: string;
   service_id: string;
@@ -50,7 +50,7 @@ const OceanCard = ({
   index: number;
   onViewDetails: (capId: string, willlistId: string) => void;
 }) => {
-  // 海洋風格的漸層色
+  // Ocean style gradient colors
   const gradients = [
     'linear-gradient(135deg, #1e3c72 0%, #2a5298 100%)',
     'linear-gradient(135deg, #0077be 0%, #0099cc 100%)',
@@ -58,7 +58,7 @@ const OceanCard = ({
     'linear-gradient(135deg, #0d47a1 0%, #42a5f5 100%)',
   ];
 
-  // 波浪動畫樣式
+  // Wave animation style
   const waveAnimation = {
     animation: `waves ${3 + index * 0.5}s ease-in-out infinite`,
   };
@@ -78,7 +78,7 @@ const OceanCard = ({
       }}
       className="ocean-card"
     >
-      {/* 波浪背景裝飾 */}
+      {/* Wave background decoration */}
       <Box
         style={{
           position: 'absolute',
@@ -93,7 +93,7 @@ const OceanCard = ({
       />
 
       <Box p="5">
-        {/* 標題區域 */}
+        {/* Title area */}
         <Flex align="center" gap="3" mb="4">
           <Box
             style={{
@@ -108,13 +108,13 @@ const OceanCard = ({
             <Anchor size={24} color="white" />
           </Box>
           <Heading size="4" style={{ color: 'white', textShadow: '0 2px 4px rgba(0,0,0,0.2)' }}>
-            {item.name || '未命名遺囑'}
+            {item.name || 'Unnamed Will'}
           </Heading>
         </Flex>
 
         <Separator size="4" style={{ background: 'rgba(255, 255, 255, 0.3)' }} mb="4" />
 
-        {/* 內容區域 */}
+        {/* Content area */}
         <Box
           style={{
             background: 'rgba(255, 255, 255, 0.1)',
@@ -142,14 +142,14 @@ const OceanCard = ({
               <Flex align="center" gap="2">
                 <Waves size={16} color="white" />
                 <Text size="2" style={{ color: 'rgba(255, 255, 255, 0.9)' }}>
-                  清單項目數: {item.list.length}
+                  Number of list items: {item.list.length}
                 </Text>
               </Flex>
             )}
           </Flex>
         </Box>
 
-        {/* 操作按鈕 */}
+        {/* Action buttons */}
         <Flex gap="2" mt="4">
           <Button
             variant="soft"
@@ -162,7 +162,7 @@ const OceanCard = ({
             onClick={() => onViewDetails(item.cap_id, item.willlist_id)}
           >
             <Eye size={16} style={{ marginRight: '8px' }} />
-            查看詳情
+            View Details
           </Button>
         </Flex>
       </Box>
@@ -236,7 +236,7 @@ export const WillListDisplay = () => {
       );
       setCardItems(cardItems);
     } catch (error) {
-      console.error('獲取資料時發生錯誤:', error);
+      console.error('Error while fetching data:', error);
     } finally {
       setLoading(false);
     }
@@ -251,7 +251,7 @@ export const WillListDisplay = () => {
     setIsDialogOpen(true);
     setDecryptedTexts([]);
     
-    // 獲取加密物件
+    // Get encrypted objects
     try {
       const allowlist = await suiClient.getObject({ id: willlistId, options: { showContent: true } });
       const encryptedObjects = await suiClient.getDynamicFields({ parentId: willlistId }).then(res =>
@@ -266,20 +266,20 @@ export const WillListDisplay = () => {
       };
       setFeedData(feed);
       
-      // 自動開始解密
+      // Automatically start decryption
       if (encryptedObjects.length > 0) {
         await onView(encryptedObjects, willlistId, capId);
       }
     } catch (error) {
-      console.error('獲取加密資料時發生錯誤:', error);
-      setError('無法獲取加密資料');
+      console.error('Error while retrieving encrypted data:', error);
+      setError('Unable to retrieve encrypted data');
     }
   };
 
   const onView = async (blobIds: string[], allowlistId: string, capId: string) => {
     setDecrypting(true);
     
-    // 確保有效的 sessionKey
+    // Ensure valid sessionKey
     if (currentSessionKey && !currentSessionKey.isExpired() && currentSessionKey.getAddress() === currentAccount?.address) {
       await handleDecrypt(blobIds, allowlistId, currentSessionKey, capId);
       return;
@@ -297,7 +297,7 @@ export const WillListDisplay = () => {
         },
         onError: () => {
           setDecrypting(false);
-          setError('簽名失敗');
+          setError('Signature failed');
         }
       }
     );
@@ -328,27 +328,27 @@ export const WillListDisplay = () => {
         padding: '24px',
       }}
     >
-      {/* 標題區域 */}
+      {/* Title area */}
       <Flex direction="column" align="center" mb="6">
         <Heading size="8" mb="2" style={{ color: '#0d47a1', textAlign: 'center' }}>
-          海洋遺囑管理系統
+          Ocean Will Management System
         </Heading>
         <Text size="3" style={{ color: '#1976d2' }}>
-          守護您的數位遺產，如海洋般深邃永恆
+          Protecting your digital legacy, as deep and eternal as the ocean
         </Text>
       </Flex>
 
-      {/* 載入中狀態 */}
+      {/* Loading state */}
       {loading && (
         <Flex align="center" justify="center" p="8">
           <Spinner size="3" />
           <Text ml="3" size="3" style={{ color: '#0d47a1' }}>
-            正在載入資料...
+            Loading data...
           </Text>
         </Flex>
       )}
 
-      {/* 卡片網格 */}
+      {/* Card grid */}
       {!loading && cardItems.length > 0 && (
         <Box
           style={{
@@ -370,7 +370,7 @@ export const WillListDisplay = () => {
         </Box>
       )}
 
-      {/* 空狀態 */}
+      {/* Empty state */}
       {!loading && cardItems.length === 0 && (
         <Flex
           direction="column"
@@ -387,15 +387,15 @@ export const WillListDisplay = () => {
         >
           <Waves size={64} color="#0d47a1" />
           <Text size="5" mt="4" style={{ color: '#0d47a1', textAlign: 'center' }}>
-            尚無遺囑資料
+            No will data yet
           </Text>
           <Text size="3" mt="2" style={{ color: '#1976d2', textAlign: 'center' }}>
-            您的數位遺產將在這裡安全保存
+            Your digital legacy will be safely stored here
           </Text>
         </Flex>
       )}
 
-      {/* 詳情對話框 */}
+      {/* Details dialog */}
       <Dialog.Root open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <Dialog.Content 
           maxWidth="600px"
@@ -415,21 +415,21 @@ export const WillListDisplay = () => {
             }}
           >
             <Anchor size={24} />
-            {feedData?.allowlistName || '遺囑詳情'}
+            {feedData?.allowlistName || 'Will Details'}
           </Dialog.Title>
           
           <Box mt="4">
             {decrypting && (
               <Flex align="center" justify="center" p="4">
                 <Spinner size="3" />
-                <Text ml="3" style={{ color: '#0d47a1' }}>正在解密資料...</Text>
+                <Text ml="3" style={{ color: '#0d47a1' }}>Decrypting data...</Text>
               </Flex>
             )}
             
             {!decrypting && decryptedTexts.length > 0 && (
               <Box>
                 <Text size="3" mb="3" style={{ color: '#1565c0' }}>
-                  解密內容：
+                  Decrypted content:
                 </Text>
                 <Box
                   style={{
@@ -468,7 +468,7 @@ export const WillListDisplay = () => {
             
             {!decrypting && feedData?.blobIds.length === 0 && (
               <Text style={{ color: '#757575', textAlign: 'center', padding: '32px' }}>
-                此遺囑沒有加密檔案
+                This will has no encrypted files
               </Text>
             )}
           </Box>
@@ -486,29 +486,29 @@ export const WillListDisplay = () => {
                   setFeedData(null);
                 }}
               >
-                關閉
+                Close
               </Button>
             </Dialog.Close>
           </Flex>
         </Dialog.Content>
       </Dialog.Root>
 
-      {/* 錯誤對話框 */}
+      {/* Error dialog */}
       <AlertDialog.Root open={!!error} onOpenChange={() => setError(null)}>
         <AlertDialog.Content maxWidth="450px">
-          <AlertDialog.Title style={{ color: '#d32f2f' }}>錯誤</AlertDialog.Title>
+          <AlertDialog.Title style={{ color: '#d32f2f' }}>Error</AlertDialog.Title>
           <AlertDialog.Description size="2">{error}</AlertDialog.Description>
           <Flex gap="3" mt="4" justify="end">
             <AlertDialog.Action>
               <Button variant="solid" color="red" onClick={() => setError(null)}>
-                關閉
+                Close
               </Button>
             </AlertDialog.Action>
           </Flex>
         </AlertDialog.Content>
       </AlertDialog.Root>
 
-      {/* CSS 動畫 */}
+      {/* CSS animation */}
       <style jsx>{`
         @keyframes waves {
           0%, 100% {

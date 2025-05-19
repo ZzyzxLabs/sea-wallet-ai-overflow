@@ -21,6 +21,11 @@ module SeaWallet::subscription {
     const EChargeDateNotPassed: u64 = 0;
     const EWrongServiceId: u64 = 1;
 
+    public struct ServiceCap has key, store {
+        id: UID,
+        service_id: ID
+    }
+
     public struct Service<phantom CoinType> has key {
         id: UID,
         price: u64,
@@ -52,6 +57,11 @@ module SeaWallet::subscription {
             service_owner: service_owner,
             yearly_discount: yearly_discount
         };
+        let service_cap = ServiceCap{ 
+            id: object::new(ctx),
+            service_id: object::id(&service)
+        };
+        transfer::public_transfer(service_cap, service_owner);
         transfer::share_object(service);
     }
 

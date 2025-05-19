@@ -309,7 +309,7 @@ function WalrusUploader({ willlistId, capId }: { willlistId: string; capId: stri
     const file = event.target.files[0];
     // Max 10 MiB size
     if (file.size > 10 * 1024 * 1024) {
-      alert('檔案大小必須小於 10 MiB');
+      alert('File must less than 10 MiB');
       return;
     }
     setFile(file);
@@ -319,7 +319,7 @@ function WalrusUploader({ willlistId, capId }: { willlistId: string; capId: stri
   // 文字轉檔案並上傳
   const handleTextUpload = () => {
     if (!textInput.trim()) {
-      alert('請輸入要上傳的文字');
+      alert('pLease input text');
       return;
     }
 
@@ -368,18 +368,18 @@ function WalrusUploader({ willlistId, capId }: { willlistId: string; capId: stri
                 handleUploadRetry(fileToUpload, encryptedBytes);
               }
             } catch (error) {
-              console.error('加密過程中發生錯誤:', error);
+              console.error('error:', error);
               setIsUploading(false);
             }
           } else {
-            console.error('意外的結果類型:', typeof result);
+            console.error('unexpected type', typeof result);
             setIsUploading(false);
           }
         }
       };
       reader.readAsArrayBuffer(fileToUpload);
     } else {
-      console.error('未選擇檔案');
+      console.error('file is null');
       setIsUploading(false);
     }
   };
@@ -391,7 +391,7 @@ function WalrusUploader({ willlistId, capId }: { willlistId: string; capId: stri
       const nextServiceIndex = (services.findIndex(s => s.id === selectedService) + 1) % services.length;
       const nextService = services[nextServiceIndex];
       
-      console.log(`上傳失敗，正在重試... (${currentRetry + 1}/${maxRetries}) 嘗試服務: ${nextService.name}`);
+      console.log(`upload failed... (${currentRetry + 1}/${maxRetries}) try: ${nextService.name}`);
       setSelectedService(nextService.id);
       setCurrentRetry(prev => prev + 1);
       
@@ -407,7 +407,7 @@ function WalrusUploader({ willlistId, capId }: { willlistId: string; capId: stri
         }
       }, 500); // 短暫延遲以確保狀態更新
     } else {
-      alert('已達到最大重試次數，上傳失敗。請稍後再試。');
+      alert('Reach the max retries, please try again later.');
       setIsUploading(false);
       setCurrentRetry(0);
     }
@@ -417,7 +417,7 @@ function WalrusUploader({ willlistId, capId }: { willlistId: string; capId: stri
     let info;
     if ('alreadyCertified' in storage_info) {
       info = {
-        status: '已認證',
+        status: 'Already Certified',
         blobId: storage_info.alreadyCertified.blobId,
         endEpoch: storage_info.alreadyCertified.endEpoch,
         suiRefType: 'Previous Sui Certified Event',
@@ -429,7 +429,7 @@ function WalrusUploader({ willlistId, capId }: { willlistId: string; capId: stri
       };
     } else if ('newlyCreated' in storage_info) {
       info = {
-        status: '新建立',
+        status: 'New Created',
         blobId: storage_info.newlyCreated.blobObject.blobId,
         endEpoch: storage_info.newlyCreated.blobObject.storage.endEpoch,
         suiRefType: 'Associated Sui Object',
@@ -440,7 +440,7 @@ function WalrusUploader({ willlistId, capId }: { willlistId: string; capId: stri
         isImage: media_type.startsWith('image'),
       };
     } else {
-      throw Error('未處理的成功回應！');
+      throw Error('failed response！');
     }
     setInfo(info);
   };
@@ -458,10 +458,10 @@ function WalrusUploader({ willlistId, capId }: { willlistId: string; capId: stri
           return { info };
         });
       } else {
-        throw new Error('存儲 blob 時發生錯誤');
+        throw new Error('Error occur when uploading to walrus');
       }
     } catch (error) {
-      console.error('Walrus 存儲錯誤:', error);
+      console.error('Walrus error:', error);
       throw error; // 重新拋出錯誤以便重試邏輯捕獲
     }
   };
@@ -480,12 +480,12 @@ function WalrusUploader({ willlistId, capId }: { willlistId: string; capId: stri
       },
       {
         onSuccess: async (result) => {
-          console.log('交易結果', result);
-          alert('Blob 已成功關聯，現在您可以分享連結或上傳更多內容。');
+          console.log('result:', result);
+          alert('Blob have successfully published to Sui and walrus');
         },
         onError: (error) => {
-          console.error('發布交易失敗:', error);
-          alert('發布失敗，請稍後再試');
+          console.error('tx failed:', error);
+          alert('tx failed');
         }
       },
     );
@@ -507,7 +507,7 @@ function WalrusUploader({ willlistId, capId }: { willlistId: string; capId: stri
             fontWeight: '600'
           }}>
             <Upload size={16} style={{ marginRight: '8px' }} />
-            檔案上傳
+            file upload
           </Tabs.Trigger>
           <Tabs.Trigger value="text" style={{ 
             borderRadius: '8px', 
@@ -516,7 +516,7 @@ function WalrusUploader({ willlistId, capId }: { willlistId: string; capId: stri
             fontWeight: '600'
           }}>
             <FileText size={16} style={{ marginRight: '8px' }} />
-            文字上傳
+            upload
           </Tabs.Trigger>
         </Tabs.List>
         
@@ -525,12 +525,12 @@ function WalrusUploader({ willlistId, capId }: { willlistId: string; capId: stri
             <Flex direction="column" gap="3">
               <Flex gap="3" align="center">
                 <Text size="3" style={{ color: oceanTheme.colors.text.secondary, fontWeight: '500' }}>
-                  選擇 Walrus 服務:
+                  Select Walrus service:
                 </Text>
                 <select
                   value={selectedService}
                   onChange={(e) => setSelectedService(e.target.value)}
-                  aria-label="選擇 Walrus 服務"
+                  aria-label="Select Walrus service"
                   className="ocean-input"
                   style={{ minWidth: '200px' }}
                 >
@@ -566,10 +566,10 @@ function WalrusUploader({ willlistId, capId }: { willlistId: string; capId: stri
                 />
                 <Waves size={48} style={{ marginBottom: '12px', color: oceanTheme.colors.primary }} />
                 <Text size="3" style={{ display: 'block', color: oceanTheme.colors.text.secondary }}>
-                  拖曳檔案至此處或點擊選擇檔案
+                  Drag file here or click to select
                 </Text>
                 <Text size="2" style={{ display: 'block', marginTop: '8px', color: oceanTheme.colors.text.light }}>
-                  檔案大小必須小於 10 MiB
+                  File should less than 10 MiB
                 </Text>
               </Box>
               
@@ -580,7 +580,7 @@ function WalrusUploader({ willlistId, capId }: { willlistId: string; capId: stri
                   borderRadius: '8px'
                 }}>
                   <Text size="2" style={{ color: oceanTheme.colors.text.primary }}>
-                    已選擇: {file.name}
+                    Selected: {file.name}
                   </Text>
                 </Card>
               )}
@@ -594,12 +594,12 @@ function WalrusUploader({ willlistId, capId }: { willlistId: string; capId: stri
                 {isUploading ? (
                   <Flex align="center" gap="2">
                     <Spinner size="1" />
-                    正在加密上傳...
+                    Encrypting and Uploading...
                   </Flex>
                 ) : (
                   <>
                     <Upload size={16} style={{ marginRight: '8px' }} />
-                    步驟 1: 加密並上傳至 Walrus
+                    step1 : upload file
                   </>
                 )}
               </Button>
@@ -609,24 +609,24 @@ function WalrusUploader({ willlistId, capId }: { willlistId: string; capId: stri
           <Tabs.Content value="text">
             <Flex direction="column" gap="3">
               <Text size="3" style={{ color: oceanTheme.colors.text.secondary, fontWeight: '500' }}>
-                輸入要上傳的文字:
+                Select file:
               </Text>
               <TextArea 
                 value={textInput}
                 onChange={(e) => setTextInput(e.target.value)}
-                placeholder="在此輸入文字..."
+                placeholder="Input text here..."
                 className="ocean-input"
                 style={{ minHeight: '150px', resize: 'vertical' }}
               />
               
               <Flex gap="3" align="center">
                 <Text size="3" style={{ color: oceanTheme.colors.text.secondary, fontWeight: '500' }}>
-                  選擇 Walrus 服務:
+                  choose Walrus service:
                 </Text>
                 <select
                   value={selectedService}
                   onChange={(e) => setSelectedService(e.target.value)}
-                  aria-label="選擇 Walrus 服務"
+                  aria-label="choose walrus service"
                   className="ocean-input"
                   style={{ minWidth: '200px' }}
                 >
@@ -647,12 +647,12 @@ function WalrusUploader({ willlistId, capId }: { willlistId: string; capId: stri
                 {isUploading ? (
                   <Flex align="center" gap="2">
                     <Spinner size="1" />
-                    正在轉換上傳...
+                    Uploading...
                   </Flex>
                 ) : (
                   <>
                     <FileText size={16} style={{ marginRight: '8px' }} />
-                    轉換為文字檔並上傳
+                    upload
                   </>
                 )}
               </Button>
@@ -671,7 +671,7 @@ function WalrusUploader({ willlistId, capId }: { willlistId: string; capId: stri
           <Flex align="center" gap="3">
             <Spinner size="2" />
             <Text size="3" style={{ color: oceanTheme.colors.text.primary }}>
-              正在上傳至 Walrus {currentRetry > 0 ? `(重試 ${currentRetry}/${maxRetries})` : ''}
+              Uploading to Walrus {currentRetry > 0 ? `(重試 ${currentRetry}/${maxRetries})` : ''}
             </Text>
           </Flex>
         </Card>
@@ -686,11 +686,11 @@ function WalrusUploader({ willlistId, capId }: { willlistId: string; capId: stri
           border: `1px solid ${oceanTheme.colors.wave.medium}`
         }}>
           <Heading size="4" style={{ marginBottom: '16px', color: oceanTheme.colors.primary }}>
-            上傳資訊
+            Upload Info
           </Heading>
           <Flex direction="column" gap="3">
             <Text size="3" style={{ color: oceanTheme.colors.text.primary }}>
-              <strong>狀態:</strong> {info.status}
+              <strong>Status:</strong> {info.status}
             </Text>
             <Text size="3" style={{ color: oceanTheme.colors.text.primary, wordBreak: 'break-all' }}>
               <strong>Blob ID:</strong> {info.blobId}
@@ -711,7 +711,7 @@ function WalrusUploader({ willlistId, capId }: { willlistId: string; capId: stri
                   target="_blank"
                   rel="noopener noreferrer"
                 >
-                  查看加密 Blob
+                  check the encrypted Blob
                 </a>
               </Button>
               <Button 
@@ -729,7 +729,7 @@ function WalrusUploader({ willlistId, capId }: { willlistId: string; capId: stri
                   target="_blank"
                   rel="noopener noreferrer"
                 >
-                  查看 Sui 物件
+                  check sui object
                 </a>
               </Button>
             </Flex>
@@ -743,7 +743,7 @@ function WalrusUploader({ willlistId, capId }: { willlistId: string; capId: stri
         disabled={!info || isUploading || !willlistId || !capId}
         style={{ marginTop: '24px', width: '100%' }}
       >
-        步驟 2: 將檔案關聯至 Sui 物件
+        step 2: attach to sui object
       </Button>
     </Card>
   );
@@ -775,7 +775,7 @@ function WilllistManager({ willlistId, capId, onBack, style }: { willlistId: str
 
         setWilllist({ id: willlistId, name: fields.name, list: fields.list });
       } catch (error) {
-        console.error('[getWilllist] 發生錯誤:', error);
+        console.error('[getWilllist] error occur:', error);
       }
     }
 
@@ -807,7 +807,7 @@ function WilllistManager({ willlistId, capId, onBack, style }: { willlistId: str
   const grantAccess = (addressToGrant: string) => {
     if (addressToGrant.trim() !== '') {
       if (!isValidSuiAddress(addressToGrant.trim())) {
-        alert('無效的地址');
+        alert('invalid address');
         return;
       }
       const tx = new Transaction();
@@ -826,16 +826,16 @@ function WilllistManager({ willlistId, capId, onBack, style }: { willlistId: str
         },
         {
           onSuccess: async (result) => {
-            console.log('[grantAccess] 交易成功:', result);
+            console.log('[grantAccess] success:', result);
             setNewAddress(''); // 清空輸入框
           },
           onError: (error) => {
-            console.error('[grantAccess] 交易失敗:', error);
+            console.error('[grantAccess] fail:', error);
           }
         },
       );
     } else {
-      console.warn('[grantAccess] 地址為空，不執行操作');
+      console.warn('[grantAccess] null');
     }
   };
 
@@ -858,10 +858,10 @@ function WilllistManager({ willlistId, capId, onBack, style }: { willlistId: str
       },
       {
         onSuccess: async (result) => {
-          console.log('[removeAccess] 交易成功:', result);
+          console.log('[removeAccess] Success:', result);
         },
         onError: (error) => {
-          console.error('[removeAccess] 交易失敗:', error);
+          console.error('[removeAccess] Failed:', error);
         }
       },
     );
@@ -902,7 +902,7 @@ function WilllistManager({ willlistId, capId, onBack, style }: { willlistId: str
               color: oceanTheme.colors.text.primary,
               fontWeight: '600'
             }}>
-              地址管理
+              Manage addresses
             </Tabs.Trigger>
             <Tabs.Trigger value="upload" style={{ 
               borderRadius: '8px', 
@@ -910,7 +910,7 @@ function WilllistManager({ willlistId, capId, onBack, style }: { willlistId: str
               color: oceanTheme.colors.text.primary,
               fontWeight: '600'
             }}>
-              檔案上傳
+              File upload
             </Tabs.Trigger>
           </Tabs.List>
           
@@ -922,7 +922,7 @@ function WilllistManager({ willlistId, capId, onBack, style }: { willlistId: str
                     type="text"
                     value={newAddress}
                     onChange={(e) => setNewAddress(e.target.value)}
-                    placeholder="輸入要添加的地址"
+                    placeholder="Please enter address"
                     className="ocean-input"
                     style={{ flex: 1 }}
                   />
@@ -931,12 +931,12 @@ function WilllistManager({ willlistId, capId, onBack, style }: { willlistId: str
                     onClick={() => grantAccess(newAddress)}
                   >
                     <Plus size={16} style={{ marginRight: '8px' }} />
-                    添加地址
+                    Add New Address
                   </Button>
                 </Flex>
                 
                 <Text size="3" style={{ marginBottom: '12px', color: oceanTheme.colors.text.secondary, fontWeight: '600' }}>
-                  地址列表
+                  Address list
                 </Text>
                 <div className="flex flex-col gap-2">
                   {willlist?.list?.length === 0 && (
@@ -947,7 +947,7 @@ function WilllistManager({ willlistId, capId, onBack, style }: { willlistId: str
                       borderRadius: '12px'
                     }}>
                       <Text size="3" style={{ color: oceanTheme.colors.text.light }}>
-                        當前列表為空，請添加地址
+                        Currently no addresses added.
                       </Text>
                     </Card>
                   )}
@@ -1059,7 +1059,7 @@ export function AllWilllist({ width, height, maxWidth = '1200px', style = {} }: 
   // 創建新的 willlist 函式
   const createWillList = () => {
     if (newWillName.trim() === '') {
-      alert('請輸入 Will List 的名稱');
+      alert('Please enter a name for the new Will');
       return;
     }
     
@@ -1077,17 +1077,17 @@ export function AllWilllist({ width, height, maxWidth = '1200px', style = {} }: 
       },
       {
         onSuccess: async (result) => {
-          console.log('創建成功', result);
+          console.log('Successfully Create', result);
           // 重新獲取列表
           await getCapObj();
           setNewWillName('');
           setShowCreateModal(false);
           setIsCreating(false);
-          alert('Will List 創建成功！');
+          alert('Will List Create Successfully');
         },
         onError: (error) => {
-          console.error('創建失敗:', error);
-          alert('創建失敗，請稍後再試');
+          console.error('Create Failed:', error);
+          alert('Create Will Failed');
           setIsCreating(false);
         }
       },
@@ -1169,7 +1169,7 @@ export function AllWilllist({ width, height, maxWidth = '1200px', style = {} }: 
                 Admin View: Owned Willlists
               </Heading>
               <Text size="3" style={{ color: 'rgba(255,255,255,0.9)' }}>
-                管理您創建的所有 Willlist，點擊管理按鈕編輯 willlist 並上傳新檔案。
+                Mange your willlists and upload files
               </Text>
             </Box>
             <Button
@@ -1178,7 +1178,7 @@ export function AllWilllist({ width, height, maxWidth = '1200px', style = {} }: 
               size="3"
             >
               <Plus size={20} style={{ marginRight: '8px' }} />
-              創建新的 Will
+              Create New Will
             </Button>
           </Flex>
         </Box>
@@ -1218,18 +1218,18 @@ export function AllWilllist({ width, height, maxWidth = '1200px', style = {} }: 
               </Button>
               
               <Heading size="5" style={{ marginBottom: '24px', color: oceanTheme.colors.text.primary }}>
-                創建新的 Will List
+                Create New Will
               </Heading>
               
               <Flex direction="column" gap="4">
                 <Text size="3" style={{ color: oceanTheme.colors.text.secondary }}>
-                  請輸入 Will List 名稱：
+                  Please enter a name for your new Will:
                 </Text>
                 <input
                   type="text"
                   value={newWillName}
                   onChange={(e) => setNewWillName(e.target.value)}
-                  placeholder="輸入名稱..."
+                  placeholder="input will name..."
                   className="ocean-input"
                   style={{ marginBottom: '16px' }}
                   autoFocus
@@ -1247,7 +1247,7 @@ export function AllWilllist({ width, height, maxWidth = '1200px', style = {} }: 
                       color: oceanTheme.colors.text.secondary,
                     }}
                   >
-                    取消
+                    Cancel
                   </Button>
                   <Button
                     className="ocean-button"
@@ -1257,10 +1257,10 @@ export function AllWilllist({ width, height, maxWidth = '1200px', style = {} }: 
                     {isCreating ? (
                       <Flex align="center" gap="2">
                         <Spinner size="1" />
-                        創建中...
+                        Creating...
                       </Flex>
                     ) : (
-                      '創建'
+                      'Create'
                     )}
                   </Button>
                 </Flex>
@@ -1279,7 +1279,7 @@ export function AllWilllist({ width, height, maxWidth = '1200px', style = {} }: 
             }}>
               <Waves size={64} style={{ marginBottom: '16px', color: oceanTheme.colors.primary }} />
               <Text size="4" style={{ color: oceanTheme.colors.text.secondary }}>
-                沒有找到 Willlist
+                Will not found, please create one.
               </Text>
               <Button
                 className="ocean-button"
@@ -1287,7 +1287,7 @@ export function AllWilllist({ width, height, maxWidth = '1200px', style = {} }: 
                 style={{ marginTop: '16px' }}
               >
                 <Plus size={16} style={{ marginRight: '8px' }} />
-                創建第一個 Will
+                Create your first Will
               </Button>
             </Card>
           )}
@@ -1308,7 +1308,7 @@ export function AllWilllist({ width, height, maxWidth = '1200px', style = {} }: 
                     className="ocean-button"
                     onClick={() => handleManage(item.willlist_id, item.cap_id)}
                   >
-                    管理
+                    Manage
                   </Button>
                 </Flex>
               </Card>
