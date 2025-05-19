@@ -10,14 +10,14 @@ interface SubscribeState {
 
 export const useSubscribeStore = create<SubscribeState>((set, get) => ({
     email: '',
-    packageName: '0x025fcbe4c2d5566fd28677e4d31f4e8bc51ff16d4cf4a740cad5f6014df02de6',
+    packageName: '0x2ce19738ec9d4e832abb2a09c1c0816bf487a7eaa226258280cd6b7234d82b65',
     setEmail: (email: string) => set({ email }),
     async createService(coinType, price, name, serviceAddr, yDiscount) {
         console.log("Create", coinType, price, name, serviceAddr, yDiscount);
         // Extract the base coin type without module::struct part
         const tx = new Transaction();
         tx.moveCall({
-            target: `${get().packageName}::seaVault::createService`,
+            target: `${get().packageName}::subscription::createService`,
             arguments: [
                 tx.pure.u64(price),
                 tx.pure.string(name),

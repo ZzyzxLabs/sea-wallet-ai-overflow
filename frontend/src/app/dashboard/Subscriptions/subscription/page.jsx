@@ -244,23 +244,23 @@ export default function Subscriptions() {
           return (
             <div
               key={index}
-              className={`rounded-lg overflow-hidden shadow-md ${isActive ? "bg-linear-to-br from-blue-400 to-blue-600" : "bg-linear-to-br from-red-400 to-red-600"}`}
+              className={`rounded-lg overflow-hidden shadow-md ${isActive ? "bg-linear-to-br from-blue-300 to-blue-400" : "bg-linear-to-br from-red-300 to-red-400"}`}
             >
               {" "}
-              <div className="px-4 pt-4 pb-2 text-white">
+              <div className="px-4 pt-4 pb-2 text-black">
                 <h3 className="text-lg font-semibold">{service.name}</h3>
-                <p className="text-sm my-2 text-white/90">{service.description}</p>
+                <p className="text-sm my-2 text-black/90">{service.description}</p>
               </div>
               <div className="flex justify-between items-center px-4 py-3">
                 {isActive
                   ? service.nextPaymentDate && (
-                      <div className=" items-start text-white">
+                      <div className=" items-start text-black">
                         <p className="text-xs opacity-80">Next Payment Date:</p>
                         <p className="text-sm">{service.nextPaymentDate}</p>
                       </div>
                     )
                   : service.nextPaymentDate && (
-                      <div className=" items-start text-white">
+                      <div className=" items-start text-black">
                         <p className="text-xs opacity-80">Last Payment Date:</p>
                         <p className="text-sm">
                           {service.nextPaymentDate || "Apr 14, 2025"}

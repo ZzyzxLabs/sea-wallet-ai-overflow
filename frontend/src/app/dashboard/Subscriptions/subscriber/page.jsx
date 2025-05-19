@@ -228,7 +228,7 @@ export default function ServiceDirectory() {
           <button 
             className="px-4 py-1.5 border-b-2 border-black font-medium"
           >
-            Available Services
+            My Subscribers
           </button>
         </div>{/* Filter and Search */}
         <div className="flex justify-between items-center">

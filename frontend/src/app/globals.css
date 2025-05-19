@@ -1,9 +1,9 @@
 @import "tailwindcss";
 
 @theme {
-  --color-primary: #9fc4e1;
-  --color-secondary: #e1bc9f;
-  --color-secondary-dark: #d0ab8e;
+  --color-primary: #7db7e8;     /* More saturated blue */
+  --color-secondary: #e9a978;   /* More saturated orange/peach */
+  --color-secondary-dark: #d9915c; /* More saturated dark orange */
 }
 
 .scrollbar-hidden::-webkit-scrollbar {
