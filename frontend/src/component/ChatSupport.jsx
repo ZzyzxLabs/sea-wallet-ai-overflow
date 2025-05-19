@@ -21,7 +21,7 @@ const ChatSupport = () => {  const [isOpen, setIsOpen] = useState(false);
   const suiClient = useSuiClient();
   const [selectedCoin, setSelectedCoin] = useState(null);
   const [formattedCoins, setFormattedCoins] = useState("");
-
+  const getCoinsAsRawText = useCoinStore(state => state.getCoinsAsRawText);
     // Generate unique ID
   const generateUniqueId = () => {
     return Math.random().toString(36).substring(2, 15) + 
@@ -265,7 +265,8 @@ const ChatSupport = () => {  const [isOpen, setIsOpen] = useState(false);
       
       try {
         const walletData = await fetchWalletStatus(userId);
-        setWalletStatus(walletData);
+        console.log(walletData + 'coinInVault:', getCoinsAsRawText())
+        setWalletStatus(walletData + 'coinInVault:'+ getCoinsAsRawText());
         handleSystemMessage(`Wallet information retrieved successfully.`);
       } catch (error) {
         console.error("Error fetching wallet status:", error);

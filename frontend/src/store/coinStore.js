@@ -1,50 +1,8 @@
-// coinStore.ts
+// coinStore.js
 import { create } from 'zustand';
 
-// 定義代幣資料的介面
-interface Coin {
-  symbol?: string;
-  name?: string;
-  formattedAmount?: number;
-  [key: string]: any; // 允許其他屬性
-}
-
-// 定義簡化格式的介面
-interface SimpleCoin {
-  coin: string;
-  amount: number;
-}
-
-// 定義元數據的介面
-interface CoinMetadata {
-  decimals?: number;
-  name?: string;
-  symbol?: string;
-  [key: string]: any; // 允許其他屬性
-}
-
-// 定義 Store 的狀態介面
-interface CoinState {
-  // 狀態
-  coinsInVault: any[]; // 可以是對象數組或嵌套數組
-  coinMetadata: CoinMetadata[];
-  isLoading: boolean;
-  
-  // 設置函數
-  setCoinsInVault: (coins: any[]) => void;
-  setCoinMetadata: (metadata: CoinMetadata[]) => void;
-  setLoading: (isLoading: boolean) => void;
-  
-  // 重置函數
-  resetCoinsData: () => void;
-  
-  // 選擇器
-  getSimpleCoins: () => SimpleCoin[];
-}
-
-// 創建 store
-const useCoinStore = create<CoinState>((set, get) => ({
-  // 初始狀態
+const useCoinStore = create((set, get) => ({
+  // 基本狀態
   coinsInVault: [],
   coinMetadata: [],
   isLoading: true,
@@ -57,7 +15,7 @@ const useCoinStore = create<CoinState>((set, get) => ({
   // 重置函數
   resetCoinsData: () => set({ coinsInVault: [], isLoading: true }),
   
-  // 選擇器 - 獲取簡化格式的代幣資料
+  // 獲取簡潔格式數據的選擇器
   getSimpleCoins: () => {
     const { coinsInVault, coinMetadata } = get();
     
@@ -65,16 +23,16 @@ const useCoinStore = create<CoinState>((set, get) => ({
       return [];
     }
     
-    // 判斷資料格式並轉換
+    // 判斷數據格式並進行轉換
     const isObjectFormat = typeof coinsInVault[0] === 'object' && !Array.isArray(coinsInVault[0]);
     
     if (isObjectFormat) {
-      return coinsInVault.map((coin: Coin) => ({
+      return coinsInVault.map(coin => ({
         coin: coin.symbol || coin.name || 'Unknown',
         amount: coin.formattedAmount || 0
       }));
     } else {
-      return coinsInVault.map((coin: any[], index: number) => {
+      return coinsInVault.map((coin, index) => {
         const coinName = Array.isArray(coin) ? coin[0] : 'Unknown';
         const rawAmount = Array.isArray(coin) ? coin[2] : '0';
         const decimals = (coinMetadata[index]?.decimals || 9);
@@ -86,6 +44,20 @@ const useCoinStore = create<CoinState>((set, get) => ({
         };
       });
     }
+  },
+  
+  // 新增: 獲取代幣資料為原始文本格式
+  getCoinsAsRawText: () => {
+    const simpleCoins = get().getSimpleCoins();
+    
+    if (simpleCoins.length === 0) {
+      return "No coins in vault";
+    }
+    
+    // 將簡化的代幣資料轉換為文本
+    return simpleCoins.map(item => 
+      `coin: ${item.coin}, amount: ${item.amount}`
+    ).join('\n');
   }
 }));
 
