@@ -18,7 +18,7 @@ function stringToUint8Array(str) {
 // Define a TypeScript interface for your store state
 interface MoveStore {
   packageName: string;
-  walletOnwer: string;
+  walletOwner: string;
   setAddress: (address: string) => void;
   createVaultTx: () => Transaction;
   fuseTxFunctions: (
@@ -35,7 +35,8 @@ interface MoveStore {
     cap: string,
     vault: string,
     sui: { keys: string[]; values: number[] },
-    email: { keys: string[]; values: number[] }
+    email: { keys: string[]; values: number[] },
+    senderAddress: string
   ) => Promise<Transaction>;
   zkTransaction: (
     sender: string,
@@ -72,9 +73,9 @@ const useMoveStore = create<MoveStore>((set, get) => ({
   // main
   packageName:
     "0xbcd418e03c096fb1d52b8446c6148caf5e26c885714d0a79b76e4a15cd22f0bf",
-  walletOnwer: "",
+  walletOwner: "",
   setAddress: (address: string) => {
-    set({ walletOnwer: address });
+    set({ walletOwner: address });
   },
   createVaultTx: () => {
     const vaultTx = new Transaction();
@@ -242,20 +243,7 @@ const useMoveStore = create<MoveStore>((set, get) => ({
     return tx;
   },
 
-  async mintCapTest(cap, vault, sui, email) {},
-  async mintCap(cap, vault, sui, email) {
-    // testing config
-    // email = {
-    //   keys: ["x.com", "y.com"],
-    //   values: [25, 25],
-    // };
-    // sui = {
-    //   keys: [
-    //     "0x08b782844f1900e033607d33d353ef3c8e181abfe044e8b921a102ee67f18c37",
-    //     "0x08b782844f1900e033607d33d353ef3c8e181abfe044e8b921a102ee67f18c37",
-    //   ],
-    //   values: [25, 25],
-    // };
+  async mintCap(cap, vault, sui, email, senderAddress) {
     const addressList = bcs.vector(bcs.Address).serialize(sui.keys).toBytes();
     const addressPer = bcs.vector(bcs.u8()).serialize(sui.values).toBytes();
     const emailList = bcs.vector(bcs.String).serialize(email.keys).toBytes();
@@ -265,6 +253,7 @@ const useMoveStore = create<MoveStore>((set, get) => ({
     // console.log("emailList", emailList);
     // console.log("emailPer", emailPer);
     const tx = new Transaction();
+    tx.setSender(senderAddress);
 
     // handle addresses
     tx.moveCall({
@@ -281,12 +270,12 @@ const useMoveStore = create<MoveStore>((set, get) => ({
     const links = [];
     for (let i = 0; i < email.keys.length; i++) {
       const link = new ZkSendLinkBuilder({
-        sender: get().walletOnwer,
+        sender: get().walletOwner,
         network: "testnet",
       });
 
       let emailCap = tx.moveCall({
-        target: `${get().packageName}::seaVault::addMemberByEmail`,
+        target: `${get().packageName}::seaVault::add_member_by_email`,
         arguments: [
           tx.object(cap),
           tx.object(vault),
@@ -296,7 +285,7 @@ const useMoveStore = create<MoveStore>((set, get) => ({
       });
 
       link.addClaimableObjectRef(
-        emailCapRef,
+        emailCap,
         `${get().packageName}::seaVault::MemberCap`
       );
       await link.createSendTransaction({
@@ -364,20 +353,22 @@ const useMoveStore = create<MoveStore>((set, get) => ({
   ) => {
     // Verify arrays have same length
     if (assetNames.length !== coinTypes.length) {
-      throw new Error("Asset names and coin types arrays must have the same length");
+      throw new Error(
+        "Asset names and coin types arrays must have the same length"
+      );
     }
-    
+
     const tx = new Transaction();
-    
+
     // Get system clock object ID
     const clockObjectId = "0x6";
-    
+
     // Process each asset withdrawal
     for (let i = 0; i < assetNames.length; i++) {
       // BCS-serialize the asset name string
-      
+
       const nameBC = bcs.string().serialize(assetNames[i]).toBytes();
-      
+
       // Call the Move function to withdraw coins as an heir
       tx.moveCall({
         target: `${get().packageName}::seaVault::member_withdraw`,
@@ -390,7 +381,7 @@ const useMoveStore = create<MoveStore>((set, get) => ({
         typeArguments: [coinTypes[i]],
       });
     }
-    
+
     return tx;
   },
 }));
