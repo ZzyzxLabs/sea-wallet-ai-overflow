@@ -335,7 +335,7 @@ export default function InitializeContract() {
                 
                 // 延遲後重定向到儀表板頁面
                 setTimeout(() => {
-                  router.push(`/dashboard?vault=${vaultIDFromTx}&owner=${ownerCapFromTx}`);
+                  router.push(`/dashboard/settings`);
                 }, 2000);
               } else {
                 console.error("Failed to retrieve Vault ID or Owner Cap from the result.");
