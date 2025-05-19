@@ -1,6 +1,11 @@
 "use client";
 import React, { useEffect, useState, useCallback, useMemo } from "react";
-import { useCurrentAccount, useSuiClientQueries, useSuiClientQuery, useSignAndExecuteTransaction } from "@mysten/dapp-kit";
+import {
+  useCurrentAccount,
+  useSuiClientQueries,
+  useSuiClientQuery,
+  useSignAndExecuteTransaction,
+} from "@mysten/dapp-kit";
 import ButtonInContractAlter from "./ButtonInContractAlter";
 import useMoveStore from "../store/moveStore";
 import useHeirStore from "../store/heirStore";
@@ -16,7 +21,7 @@ const ContractAlter = () => {
   const [withdrawAmount, setWithdrawAmount] = useState({});
   const [isWithdrawing, setIsWithdrawing] = useState(false);
   const [toggle, setToggle] = useState(false);
-  
+
   // Query vault and owner cap
   const vaultAndCap = useSuiClientQuery(
     "getOwnedObjects",
@@ -29,12 +34,10 @@ const ContractAlter = () => {
       staleTime: 30000,
     }
   );
-  
+
   // Use the sign and execute transaction hook directly
   const { mutate: signAndExecuteTransaction } = useSignAndExecuteTransaction();
-  
- 
-  
+
   // Extract vault ID
   const getVaultAndCap = useCallback(() => {
     let ownerCapObjects = null;
@@ -47,9 +50,9 @@ const ContractAlter = () => {
     }
     return { ownerCapObjects, vaultID };
   }, [vaultAndCap.data, packageName]);
-  
+
   const { ownerCapObjects, vaultID } = getVaultAndCap();
-  
+
   // Query dynamic fields
   const vaultList = useSuiClientQuery(
     "getDynamicFields",
@@ -57,32 +60,29 @@ const ContractAlter = () => {
     {
       enabled: !!vaultID,
       staleTime: 30000,
-      
     }
   );
-  
 
-  
   // Log vault list data properly
   useEffect(() => {
     if (vaultList.data) {
       console.log("vaultList", vaultList.data);
-      
+
       // Update vault name at the correct place
       if (vaultList.data?.data) {
-        setVaultName(vaultList.data.data.map(item => item.name));
+        setVaultName(vaultList.data.data.map((item) => item.name));
       }
     }
   }, [vaultList.data, setVaultName]);
-  
+
   // Get objectIds
   const getObjectIds = useCallback(() => {
     if (!vaultList?.data?.data) return [];
     return vaultList.data.data.map((item) => item.objectId);
   }, [vaultList?.data]);
-  
+
   const objectIds = getObjectIds();
-  
+
   // Query coin data
   const coinData = useSuiClientQuery(
     "multiGetObjects",
@@ -99,7 +99,7 @@ const ContractAlter = () => {
       refetchOnWindowFocus: false,
     }
   );
-  
+
   // Log coin data properly
   useEffect(() => {
     if (coinData.data) {
@@ -109,7 +109,7 @@ const ContractAlter = () => {
 
   // Add a function to refresh the data
   const refreshData = useCallback(() => {
-    setToggle(prev => !prev);
+    setToggle((prev) => !prev);
   }, []);
 
   // Add effect to refetch when toggle changes
@@ -118,23 +118,27 @@ const ContractAlter = () => {
       coinData.refetch();
     }
   }, [toggle]);
-  
+
   // Extract coin types (moved outside of effects)
   const coinTypes = useMemo(() => {
-    return coinData.data?.map(coinObj => {
-      const type = coinObj?.data?.type || "";
-      const typeMatch = type.match(/<(.+)>/);
-      return typeMatch ? typeMatch[1] : null;
-    }).filter(Boolean) || [];
+    return (
+      coinData.data
+        ?.map((coinObj) => {
+          const type = coinObj?.data?.type || "";
+          const typeMatch = type.match(/<(.+)>/);
+          return typeMatch ? typeMatch[1] : null;
+        })
+        .filter(Boolean) || []
+    );
   }, [coinData.data]);
-  
+
   // Query metadata for each coin type - PROPERLY PLACED AT COMPONENT LEVEL
   const coinMetadataQueries = useSuiClientQueries({
-    queries: coinTypes.map(coinType => ({
+    queries: coinTypes.map((coinType) => ({
       method: "getCoinMetadata",
       params: {
-        coinType: coinType
-      }
+        coinType: coinType,
+      },
     })),
     combine: (result) => {
       return {
@@ -147,7 +151,7 @@ const ContractAlter = () => {
     enabled: coinTypes.length > 0,
     staleTime: 30000,
   });
-  
+
   // Log coin metadata properly
   useEffect(() => {
     if (coinMetadataQueries?.data) {
@@ -218,27 +222,27 @@ const ContractAlter = () => {
       alert("Please enter a valid amount to withdraw");
       return;
     }
-    
+
     setIsWithdrawing(true);
-    
+
     try {
       // Get coin metadata to calculate decimals
       const decimals = coinMetadataQueries.data[index]?.decimals || 9;
-      
+
       // Convert to smallest units
       const amountInSmallestUnit = BigInt(
         Math.floor(parseFloat(withdrawAmount[index]) * Math.pow(10, decimals))
       );
-      
+
       // Get the name of asset in the vault - this should match the stored name in the vault
       const assetName = coin[0];
-      console.log("coin",coin)
-      
+      console.log("coin", coin);
+
       // Get the original full coin type, not the formatted one with ellipses
       const coinType = normalizeType(coin[3] || coinTypes[index] || "");
-      
+
       console.log("Using coin type for withdrawal:", coinType);
-      
+
       // Create transaction
       const tx = takeCoinTx(
         ownerCapObjects[0].data.objectId,
@@ -247,25 +251,25 @@ const ContractAlter = () => {
         Number(amountInSmallestUnit),
         coinType
       );
-      
+
       // Execute transaction
-      signAndExecuteTransaction({
-        transaction: tx,
-        chain: "sui:testnet"
-      },
-      {
-        onSuccess: (result) => {
-          setWithdrawAmount({...withdrawAmount, [index]: ""});
-      
-          // Refresh the data after successful withdrawal
-          setTimeout(() => {
-            refreshData();
-          }, 1000);
+      signAndExecuteTransaction(
+        {
+          transaction: tx,
+          chain: "sui:testnet",
+        },
+        {
+          onSuccess: (result) => {
+            setWithdrawAmount({ ...withdrawAmount, [index]: "" });
+
+            // Refresh the data after successful withdrawal
+            setTimeout(() => {
+              refreshData();
+            }, 1000);
+          },
         }
-      });
+      );
       // Reset the withdrawal amount
-      
-      
     } catch (error) {
       console.error("Withdrawal failed:", error);
       alert("Failed to withdraw: " + (error.message || "Unknown error"));
@@ -275,48 +279,60 @@ const ContractAlter = () => {
   };
 
   return (
-    <div className="flex justify-center items-center w-full h-fit bg-white/30">
-      <div className="rounded-lg p-4 mb-4 w-1/2">
-        <div className="flex justify-between items-center mb-3">
-          <h3 className="text-lg text-gray-800 font-medium">
-            YOUR WILL CONTENT
+    <div className='flex justify-center items-center w-full h-fit bg-white/30'>
+      <div className='rounded-lg p-4 mb-4 w-1/2'>
+        <div className='flex justify-between items-center mb-3'>
+          <h3 className='text-lg text-gray-800 font-medium'>
+            Your SeaVault Assets
           </h3>
-          <ButtonInContractAlter coinsInVault={coinsInVault} onTransactionSuccess={refreshData} />
+          <ButtonInContractAlter
+            coinsInVault={coinsInVault}
+            onTransactionSuccess={refreshData}
+          />
         </div>
-        <div className="grid grid-cols-3 -gap-2">
-          <div className="text-black font-medium">Coin Type</div>
-          <div className="text-black font-medium">Amount</div>
-          <div className="text-black font-medium">Action</div>
+        <div className='grid grid-cols-3 -gap-2'>
+          <div className='text-black font-medium'>Coin Type</div>
+          <div className='text-black font-medium'>Amount</div>
+          <div className='text-black font-medium'>Action</div>
 
           {isLoading ? (
-            <div className="col-span-3 py-4 text-center text-gray-500">
+            <div className='col-span-3 py-4 text-center text-gray-500'>
               Loading assets...
             </div>
           ) : coinsInVault.length > 0 ? (
             coinsInVault.map((coin, index) => {
               // Only render if coin exists and has valid data
               if (!coin || !coin[2]) return null;
-              
+
               return (
                 <React.Fragment key={index}>
-                  <div className="py-2 border-t text-black dark:border-gray-700">
+                  <div className='py-2 border-t text-black dark:border-gray-700'>
                     {coin[0]}{" "}
-                    <span className="text-xs text-gray-500">{coin[1]}</span>
+                    <span className='text-xs text-gray-500'>{coin[1]}</span>
                   </div>
-                  <div className="py-2 border-t text-black dark:border-gray-700">
-                    {coin[2]/Math.pow(10,coinMetadataQueries.data[index]?.decimals)}{" "}
+                  <div className='py-2 border-t text-black dark:border-gray-700'>
+                    {coin[2] /
+                      Math.pow(
+                        10,
+                        coinMetadataQueries.data[index]?.decimals
+                      )}{" "}
                   </div>
-                  <div className="py-2 border-t text-black dark:border-gray-700 flex items-center">
+                  <div className='py-2 border-t text-black dark:border-gray-700 flex items-center'>
                     <input
-                      type="number"
-                      placeholder="Amount"
-                      className="w-20 px-2 py-1 mr-2 text-sm border rounded"
+                      type='number'
+                      placeholder='Amount'
+                      className='w-20 px-2 py-1 mr-2 text-sm border rounded'
                       value={withdrawAmount[index] || ""}
-                      onChange={(e) => setWithdrawAmount({...withdrawAmount, [index]: e.target.value})}
+                      onChange={(e) =>
+                        setWithdrawAmount({
+                          ...withdrawAmount,
+                          [index]: e.target.value,
+                        })
+                      }
                       disabled={isWithdrawing}
                     />
                     <button
-                      className="px-2 py-1 bg-red-500 text-white text-sm rounded hover:bg-red-600 transition"
+                      className='px-2 py-1 bg-red-500 text-white text-sm rounded hover:bg-red-600 transition'
                       onClick={() => handleWithdraw(coin, index)}
                       disabled={isWithdrawing}
                     >
@@ -327,13 +343,12 @@ const ContractAlter = () => {
               );
             })
           ) : (
-            <div className="col-span-3 py-4 text-center text-gray-500">
+            <div className='col-span-3 py-4 text-center text-gray-500'>
               No assets in your Vault
             </div>
           )}
         </div>
       </div>
-      
     </div>
   );
 };
