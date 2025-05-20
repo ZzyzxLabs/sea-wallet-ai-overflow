@@ -97,7 +97,8 @@ export default function Subscriptions() {
   const [currentTime, setCurrentTime] = useState(Date.now());
   const [selectedService, setSelectedService] = useState(null);
   const [selectedProduct, setSelectedProduct] = useState(null);
-  const [showSubscribeModal, setShowSubscribeModal] = useState(false);  const [subscriptionDetails, setSubscriptionDetails] = useState({
+  const [showSubscribeModal, setShowSubscribeModal] = useState(false);  
+  const [subscriptionDetails, setSubscriptionDetails] = useState({
     serviceAddress: "",
     billingCycle: false, // false = monthly, true = yearly
   });
@@ -105,7 +106,7 @@ export default function Subscriptions() {
   const account = useCurrentAccount();
   const packageName = useMoveStore((state) => state.packageName);
   const SubService = useSubscribeStore((state) => state.subscribeTo);
-  
+  const [assetName, setAssetName] = useState<string>("");
   // Get vault and owner cap information
   const { ownerCapId, vaultID } = useVaultAndOwnerCap(
     account?.address,
@@ -166,6 +167,14 @@ export default function Subscriptions() {
 
     return filteredServices;
   };
+  useEffect(() => {
+    const content = getSubscriptionDetails.data?.data?.content;
+    if (content && content.dataType === "moveObject" && content.fields?.asset_name) {
+      const assetName = content.fields.asset_name;
+      setAssetName(assetName);
+      console.log("Asset Name:", assetName);
+    }
+  }, [subscriptionDetails.serviceAddress]);
 
   // Calculate payment countdown
   const calculateCountdown = (days) => {
@@ -243,8 +252,10 @@ export default function Subscriptions() {
       ownerCapId, // ownerCap object format
       vaultID, // vault ID
       subscriptionDetails.serviceAddress,
-      subscriptionDetails.billingCycle
+      subscriptionDetails.billingCycle,
+      assetName
     );
+    
     
     signAndExecuteTransaction(
       {
@@ -269,6 +280,16 @@ export default function Subscriptions() {
     );
   };
 
+  const getSubscriptionDetails = useSuiClientQuery(
+    "getObject",
+    {
+      id: subscriptionDetails.serviceAddress,
+      options: { showType: true, showContent: true },
+    },
+    {
+      enabled: !!subscriptionDetails.serviceAddress,
+    },
+  );
   const recepList = useSuiClientQuery(
     "getOwnedObjects",
     {

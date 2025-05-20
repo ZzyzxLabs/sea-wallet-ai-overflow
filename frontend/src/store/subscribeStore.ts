@@ -10,7 +10,7 @@ interface SubscribeState {
 
 export const useSubscribeStore = create<SubscribeState>((set, get) => ({
     email: '',
-    packageName: '0x2ce19738ec9d4e832abb2a09c1c0816bf487a7eaa226258280cd6b7234d82b65',
+    packageName: '0x44a617da633e13f2d366ae8480b88706c988707ffdf76eb3f8029016472afb8b',
     setEmail: (email: string) => set({ email }),
     async createService(coinType, price, name, serviceAddr, yDiscount) {
         console.log("Create", coinType, price, name, serviceAddr, yDiscount);
@@ -29,8 +29,8 @@ export const useSubscribeStore = create<SubscribeState>((set, get) => ({
         });
         return tx;
     },
-async subscribeTo(OwCap, Vault, service, is_year) {
-    console.log("Subscribe", OwCap, Vault, service, is_year);
+async subscribeTo(OwCap, Vault, service, is_year, coinType) {
+    console.log("Subscribe", OwCap, Vault, service, is_year, coinType);
     const tx = new Transaction();
     tx.moveCall({
         target: `${get().packageName}::seaVault::subscribe`, // or ::sea_vault::subscribe if that's the actual module name
@@ -40,7 +40,7 @@ async subscribeTo(OwCap, Vault, service, is_year) {
             tx.object(service),
             tx.pure.bool(is_year), // Pass boolean directly
         ],
-        typeArguments: ['0x79486ac31a96c25de76faac66e01418146c2a0566a8aacac4538e956b7157aec::hair::HAIR'],
+        typeArguments: [coinType],
     });
     return tx;
 }
