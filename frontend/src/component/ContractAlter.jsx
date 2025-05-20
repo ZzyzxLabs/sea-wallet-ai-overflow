@@ -227,7 +227,7 @@ const ContractAlter = () => {
 
     try {
       // Get coin metadata to calculate decimals
-      const decimals = coinMetadataQueries.data[index]?.decimals || 9;
+      const decimals = coinMetadataQueries.data[index]?.decimals;
 
       // Convert to smallest units
       const amountInSmallestUnit = BigInt(

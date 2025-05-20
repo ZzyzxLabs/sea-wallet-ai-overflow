@@ -1,11 +1,12 @@
 "use client";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import {
   useCurrentAccount,
   useSignAndExecuteTransaction,
   useSuiClientQuery,
   useAutoConnectWallet,
   useSuiClient,
+  useSuiClientQueries,
 } from "@mysten/dapp-kit";
 import useMoveStore from "../store/moveStore"; // Ensure correct path to your store
 import useHeirStore from '../store/heirStore'
@@ -46,6 +47,7 @@ const ButtonInContractAlter = ({coinsInVault, onTransactionSuccess}) => {
   const [errorr, setErrorr] = useState("");
   const [modalAnimation, setModalAnimation] = useState("");
   const [availableCoins, setAvailableCoins] = useState([]);
+  const [coinMetadata, setCoinMetadata] = useState([]);
   const [transactionDigest, setTransactionDigest] = useState("");
   const [transactionStatus, setTransactionStatus] = useState("");
   const [isProcessing, setIsProcessing] = useState(false);
@@ -75,9 +77,8 @@ const ButtonInContractAlter = ({coinsInVault, onTransactionSuccess}) => {
         const coinName = coinPath.length > 2 ? coinPath[2] : coinPath[1];
 
         // Format balance for display (convert from smallest units)
-        const balance = parseInt(coin.totalBalance) / 1000000000;
 
-        return [coinName, coin.coinType, balance];
+        return [coinName, coin.coinType, parseInt(coin.totalBalance)];
       });
 
       // Set available coins to user's coins only
@@ -86,15 +87,29 @@ const ButtonInContractAlter = ({coinsInVault, onTransactionSuccess}) => {
   }, [AllBLN.data]);
 
   // Get the metadata for the selected coin
-  const selectedCoinMetadata = useSuiClientQuery(
-    "getCoinMetadata",
-    {
-      coinType: selectedCoin ? normalizeType(selectedCoin[1]) : "",
+  // Query metadata for all available coins at once
+  const coinMetadataQueries = useSuiClientQueries({
+    queries: availableCoins.map(coin => ({
+      method: "getCoinMetadata",
+      params: {
+        coinType: normalizeType(coin[1])
+      }
+    })),
+    combine: (result) => {
+      return {
+        data: result.map((res) => res.data),
+        isSuccess: result.every((res) => res.isSuccess),
+        isPending: result.some((res) => res.isPending),
+        isError: result.some((res) => res.isError),
+      };
     },
-    {
-      enabled: !!selectedCoin && !!account,
+    enabled: availableCoins.length > 0 && !!account,
+  });
+  useEffect(() => {
+    if (coinMetadataQueries.data) {
+      setCoinMetadata(coinMetadataQueries.data);
     }
-  );
+  }, [coinMetadataQueries.data]);
 
   // Get vault and owner cap objects
   const vaultAndCap = useSuiClientQuery(
@@ -261,7 +276,11 @@ const ButtonInContractAlter = ({coinsInVault, onTransactionSuccess}) => {
         return;
       }
       
-      const dec = selectedCoinMetadata.data?.decimals || 9;
+      // Find the metadata for the selected coin type from our stored metadata
+      const selectedCoinIndex = availableCoins.findIndex(coin => 
+        coin[0] === selectedCoin[0] && coin[1] === selectedCoin[1]
+      );
+      const dec = coinMetadata?.[selectedCoinIndex]?.decimals || 9;
       const amountInSmallestUnit = BigInt(
         Math.floor(amount * Math.pow(10, dec))
       );
@@ -345,6 +364,8 @@ const ButtonInContractAlter = ({coinsInVault, onTransactionSuccess}) => {
       setIsProcessing(false);
     }
   };
+  console.log("availableCoins", availableCoins)
+  console.log("coinMetadataQueries", coinMetadataQueries.data)
 
   return (
     <>
@@ -401,7 +422,12 @@ const ButtonInContractAlter = ({coinsInVault, onTransactionSuccess}) => {
                         </div>
                       </div>
                       <div className="text-sm text-gray-600">
-                        {coin[2] || 0}
+                        {coinMetadata && coinMetadata[index] 
+                          ? (Number(coin[2]) / Math.pow(10, coinMetadata[index]?.decimals || 0)).toLocaleString(undefined, {
+                              minimumFractionDigits: 0,
+                              maximumFractionDigits: coinMetadata[index]?.decimals || 2
+                            })
+                          : coin[2] || 0}
                       </div>
                     </div>
                   </div>
