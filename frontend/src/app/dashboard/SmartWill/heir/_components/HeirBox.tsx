@@ -2,7 +2,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react'
 import { useSuiClientQuery, useSuiClientQueries, useCurrentAccount, useSignAndExecuteTransaction } from '@mysten/dapp-kit';
 import useMoveStore from '@/store/moveStore';
-
+import { useRouter } from 'next/navigation';
 type CoinMetadata = {
   decimals: number;
   name: string;
@@ -24,6 +24,7 @@ type HeirData = {
       fields: {
         capID: string;
         vaultID: string;
+        withdrawn_count: number;
       }
     }
   }
@@ -67,16 +68,17 @@ type CoinContent = {
 }
 
 function HeirBox({heir, index}: {heir: HeirData, index: number}) {
+  const router = useRouter();
   const account = useCurrentAccount();
   const [coinsInVault, setCoinsInVault] = useState([]);
   const [capID, setCapID] = useState(heir.data?.content?.fields?.capID)
   const [vaultID, setVaultID] = useState(heir.data?.content?.fields?.vaultID)
+  const [withdrawnCount, setWithdrawnCount] = useState(heir.data?.content?.fields?.withdrawn_count)
   const [capActivated, setCapActivated] = useState(null)
   const [capPercentage, setCapPercentage] = useState(null)
   const [isVaultWarned, setIsVaultWarned] = useState(null)
   const [isLoading, setIsLoading] = useState(true);
   const [isWithdrawing, setIsWithdrawing] = useState(false);
-  const [assetWithdrawnID, setAssetWithdrawnID] = useState(null)
   const memberWithdrawTx = useMoveStore((state) => state.memberWithdrawTx);
   const { mutate: signAndExecuteTransaction } = useSignAndExecuteTransaction();
 
@@ -85,7 +87,7 @@ function HeirBox({heir, index}: {heir: HeirData, index: number}) {
     { parentId: vaultID },
     {
       enabled: !!vaultID,
-      staleTime: 30000,
+      staleTime: 5000,
     }
   );
   
@@ -97,7 +99,7 @@ function HeirBox({heir, index}: {heir: HeirData, index: number}) {
     },
     {
       enabled: !!vaultID,
-      staleTime: 30000,
+      staleTime: 5000,
     }
   )
 
@@ -142,10 +144,7 @@ function HeirBox({heir, index}: {heir: HeirData, index: number}) {
               }
             }
           }
-          if (fields?.asset_withdrawn && 'fields' in fields.asset_withdrawn) {
-            const assetWithdrawnField = fields.asset_withdrawn;
-            setAssetWithdrawnID(assetWithdrawnField.fields.id.id)
-          }
+
           
           setIsVaultWarned(fields?.is_warned);
         }
@@ -172,11 +171,11 @@ function HeirBox({heir, index}: {heir: HeirData, index: number}) {
     },
     {
       enabled: objectIds.length > 0,
-      staleTime: 30000,
+      staleTime: 5000,
 
       // Add refetch trigger based on toggle state
-      refetchInterval: false,
-      refetchOnWindowFocus: false,
+      refetchInterval: 10000,
+      refetchOnWindowFocus: true,
     }
   );
   
@@ -193,7 +192,7 @@ function HeirBox({heir, index}: {heir: HeirData, index: number}) {
   const coinTypes = useMemo(() => {
     return coinData.data?.map(coinObj => {
       const type = coinObj?.data?.type || "";
-      const typeMatch = type.match(/<(.+)>/);
+      const typeMatch = type.match(/\<(.+)\>/);
       return typeMatch ? typeMatch[1] : null;
     }).filter(Boolean) || [];
   }, [coinData.data]);
@@ -233,7 +232,7 @@ function HeirBox({heir, index}: {heir: HeirData, index: number}) {
           if (!coinObj?.data?.content) return null;
 
           const type = coinObj.data.type || "";
-          const typeMatch = type.match(/<(.+)>/);
+          const typeMatch = type.match(/\<(.+)\>/);
           const fullCoinType = typeMatch ? typeMatch[1] : "Unknown";
 
           let formattedCoinType = "Unknown";
@@ -281,8 +280,15 @@ function HeirBox({heir, index}: {heir: HeirData, index: number}) {
       setIsWithdrawing(true);
       console.log("Withdraw from vault", vaultID);
       // Collect asset names and coin types from coinsInVault
-      const assetNames = coinsInVault.map(coin => coin[0]);
-      const coinTypes = coinsInVault.map(coin => coin[3]); // Full coin type is at index 3
+      let assetNames = coinsInVault.map(coin => coin[0]);
+      let coinTypes = coinsInVault.map(coin => coin[3]); // Full coin type is at index 3
+
+      // for the first time to trigger the grace period
+      // just need to send one tx to the contract
+      if(!isVaultWarned) {
+        assetNames = assetNames.slice(0, 1);
+        coinTypes = coinTypes.slice(0, 1);
+      }
       console.log("params",heir.data.objectId, vaultID, assetNames, coinTypes)
       // Create transaction using memberWithdrawTx
       const tx = memberWithdrawTx(
@@ -291,7 +297,7 @@ function HeirBox({heir, index}: {heir: HeirData, index: number}) {
         assetNames,
         coinTypes
       );
-      console.log("tx",tx)
+      console.log("tx", tx);
 
       // Execute transaction
       signAndExecuteTransaction({
@@ -302,6 +308,22 @@ function HeirBox({heir, index}: {heir: HeirData, index: number}) {
         onSuccess: (result) => {
           console.log("Withdraw transaction succeeded:", result);
           setIsWithdrawing(false);
+          
+          // Force refetch all data
+          vaultObject.refetch();
+          vaultList.refetch();
+          coinData.refetch();
+          
+          // Update component state directly (if possible from transaction results)
+          if (!isVaultWarned) {
+            setIsVaultWarned(true);
+          } else {
+            setWithdrawnCount(prev => prev + 1);
+          }
+          
+          setTimeout(() => {
+            router.refresh();
+          }, 2000);
         },
         onError: (error) => {
           console.error("Error withdrawing assets:", error);
@@ -315,12 +337,8 @@ function HeirBox({heir, index}: {heir: HeirData, index: number}) {
       setIsWithdrawing(false);
     }
   };
-
-  if (capActivated === false) {
-    return (
-      <></>
-    )
-  }
+  // Check if component should show a disabled "Already withdrawn" button
+  const isAlreadyWithdrawn = capActivated === false || coinsInVault.length === withdrawnCount;
 
   return (
     <div  className="border-2 rounded-xl p-5 shadow-md hover:shadow-lg transition-shadow bg-white border-blue-200 w-full">
@@ -329,7 +347,17 @@ function HeirBox({heir, index}: {heir: HeirData, index: number}) {
           <div>
             <div className="flex justify-between items-center mb-2">
               <h2 className="text-l font-bold text-blue-600">Vault ID: {vaultID}</h2>
-              {isVaultWarned ? (
+              {isAlreadyWithdrawn ? (
+                <button 
+                  className="bg-gray-400 text-white px-4 py-2 rounded-lg font-semibold transition-colors duration-300 flex items-center cursor-not-allowed"
+                  disabled={true}
+                >
+                  <span>Withdrawn</span>
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 ml-1" viewBox="0 0 20 20" fill="currentColor">
+                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                  </svg>
+                </button>
+              ) : isVaultWarned ? (
                 <button 
                   className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg font-semibold transition-colors duration-300 flex items-center"
                   onClick={handleWithdraw}
@@ -363,41 +391,43 @@ function HeirBox({heir, index}: {heir: HeirData, index: number}) {
             </div>
           </div>
           
-          {/* Coins in Vault Section */}
-          <div className="mt-4">
-            <h3 className="font-medium text-gray-800 mb-2">Assets in Vault</h3>
-            <div className="bg-gray-50 rounded-lg overflow-hidden">
-              {isLoading ? (
-                <div className="p-4 text-center text-gray-500">
-                  Loading assets...
-                </div>
-              ) : coinsInVault.length > 0 ? (
-                <div className="grid grid-cols-4 gap-4">
-                  <div className="p-2 font-medium text-gray-700 bg-gray-100">Coin</div>
-                  <div className="p-2 font-medium text-gray-700 bg-gray-100">Type</div>
-                  <div className="p-2 font-medium text-gray-700 bg-gray-100">Amount</div>
-                  <div className="p-2 font-medium text-gray-700 bg-gray-100">Your Share</div>
-                  
-                  {coinsInVault.map((coin, index) => (
-                    <React.Fragment key={index}>
-                      <div className="p-2 border-t border-gray-200 text-gray-500">{coin[0]}</div>
-                      <div className="p-2 border-t border-gray-200 text-xs text-gray-500">{coin[1]}</div>
-                      <div className="p-2 border-t border-gray-200 text-gray-500">
-                        {Number(coin[2])/(Math.pow(10, coinMetadataQueries?.data?.[index]?.decimals || 0))}
-                      </div>
-                      <div className="p-2 border-t border-gray-200 text-gray-500">
-                        {(Number(coin[2])/(Math.pow(10, coinMetadataQueries?.data?.[index]?.decimals || 0))) * (capPercentage || 0)}
-                      </div>
-                    </React.Fragment>
-                  ))}
-                </div>
-              ) : (
-                <div className="p-4 text-center text-gray-500">
-                  No assets in this Vault
-                </div>
-              )}
+          {/* Coins in Vault Section - Only show if not already withdrawn */}
+          {!isAlreadyWithdrawn && (
+            <div className="mt-4">
+              <h3 className="font-medium text-gray-800 mb-2">Assets in Vault</h3>
+              <div className="bg-gray-50 rounded-lg overflow-hidden">
+                {isLoading ? (
+                  <div className="p-4 text-center text-gray-500">
+                    Loading assets...
+                  </div>
+                ) : coinsInVault.length > 0 ? (
+                  <div className="grid grid-cols-4 gap-4">
+                    <div className="p-2 font-medium text-gray-700 bg-gray-100">Coin</div>
+                    <div className="p-2 font-medium text-gray-700 bg-gray-100">Type</div>
+                    <div className="p-2 font-medium text-gray-700 bg-gray-100">Amount</div>
+                    <div className="p-2 font-medium text-gray-700 bg-gray-100">Your Share</div>
+                    
+                    {coinsInVault.map((coin, index) => (
+                      <React.Fragment key={index}>
+                        <div className="p-2 border-t border-gray-200 text-gray-500">{coin[0]}</div>
+                        <div className="p-2 border-t border-gray-200 text-xs text-gray-500">{coin[1]}</div>
+                        <div className="p-2 border-t border-gray-200 text-gray-500">
+                          {Number(coin[2])/(Math.pow(10, coinMetadataQueries?.data?.[index]?.decimals || 0))}
+                        </div>
+                        <div className="p-2 border-t border-gray-200 text-gray-500">
+                          {(Number(coin[2])/(Math.pow(10, coinMetadataQueries?.data?.[index]?.decimals || 0))) * (capPercentage || 0)}
+                        </div>
+                      </React.Fragment>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="p-4 text-center text-gray-500">
+                    No assets in this Vault
+                  </div>
+                )}
+              </div>
             </div>
-          </div>
+          )}
         </div>
       
       </div>
