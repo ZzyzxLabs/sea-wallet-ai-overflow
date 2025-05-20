@@ -309,7 +309,7 @@ const ButtonInContractAlter = ({coinsInVault, onTransactionSuccess}) => {
           vault.objectId, 
           [coinObjectIds[0]],
           amountInSmallestUnit,
-          selectedCoin[0], // Using the coin name (first element in selectedCoin array)
+          finalCoinType, // Using the coin name (first element in selectedCoin array)
           finalCoinType,
           account?.address
         );
@@ -319,7 +319,7 @@ const ButtonInContractAlter = ({coinsInVault, onTransactionSuccess}) => {
           vault.objectId,
           coinObjectIds,
           amountInSmallestUnit,
-          selectedCoin[0], // Using the coin name (first element in selectedCoin array)
+          finalCoinType, // Using the coin name (first element in selectedCoin array)
           finalCoinType,
           account?.address
         )

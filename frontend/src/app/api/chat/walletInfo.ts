@@ -12,30 +12,6 @@ const qdrant = new QdrantClient({
 const embeddingsModel = new OllamaEmbeddings({
   model: "nomic-embed-text",
 });
-
-/**
- * 獲取用戶錢包狀態
- * @param userId 用戶ID
- * @returns 用戶錢包狀態數據
- */
-export async function fetchWalletStatus(userId: string) {
-  // 這裡是簡化的實現，實際上應該從數據庫或API獲取用戶的錢包狀態
-  // 保持可修改性，以便未來擴展
-  const mockWalletData = `
-用戶ID: ${userId}
-錢包餘額: 1,000 USD
-最近交易:
-- 2025-05-15: 購買 BTC -100 USD
-- 2025-05-14: 充值 +500 USD
-- 2025-05-10: 提現 -200 USD
-資產分佈:
-- 比特幣 (BTC): 0.05 BTC
-- 以太幣 (ETH): 2.5 ETH
-- 穩定幣 (USDT): 400 USDT
-`;
-  return mockWalletData;
-}
-
 /**
  * 將錢包狀態數據存入向量數據庫
  * @param userId 用戶ID

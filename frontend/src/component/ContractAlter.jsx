@@ -9,59 +9,31 @@ import {
 import ButtonInContractAlter from "./ButtonInContractAlter";
 import useMoveStore from "../store/moveStore";
 import useHeirStore from "../store/heirStore";
+import useCoinStore from "../store/coinStore";
+import { useVaultAndOwnerCap, useVaultList } from "../utils/vaultUtils";
+
 
 const ContractAlter = () => {
   const account = useCurrentAccount();
-  const [coinsInVault, setCoinsInVault] = useState([]);
-  const [isLoading, setIsLoading] = useState(true);
   const packageName = useMoveStore((state) => state.packageName);
   const takeCoinTx = useMoveStore((state) => state.takeCoinTx);
   const { setVaultName } = useHeirStore(); // Get setter function at component level
   const VaultName = useHeirStore((state) => state.VaultName);
   const [withdrawAmount, setWithdrawAmount] = useState({});
   const [isWithdrawing, setIsWithdrawing] = useState(false);
-  const [toggle, setToggle] = useState(false);
-
-  // Query vault and owner cap
-  const vaultAndCap = useSuiClientQuery(
-    "getOwnedObjects",
-    {
-      owner: account?.address,
-      options: { showType: true, showContent: true },
-    },
-    {
-      enabled: !!account?.address,
-      staleTime: 30000,
-    }
-  );
-
+  const [toggle, setToggle] = useState(false);  const { coinsInVault, isLoading, setCoinsInVault, setLoading } = useCoinStore();
+  
   // Use the sign and execute transaction hook directly
   const { mutate: signAndExecuteTransaction } = useSignAndExecuteTransaction();
 
-  // Extract vault ID
-  const getVaultAndCap = useCallback(() => {
-    let ownerCapObjects = null;
-    let vaultID = null;
-    if (vaultAndCap.data) {
-      ownerCapObjects = vaultAndCap.data.data.filter((obj) =>
-        obj.data?.type?.includes(packageName + "::seaVault::OwnerCap")
-      );
-      vaultID = ownerCapObjects[0]?.data?.content?.fields?.vaultID;
-    }
-    return { ownerCapObjects, vaultID };
-  }, [vaultAndCap.data, packageName]);
-
-  const { ownerCapObjects, vaultID } = getVaultAndCap();
-
-  // Query dynamic fields
-  const vaultList = useSuiClientQuery(
-    "getDynamicFields",
-    { parentId: vaultID },
-    {
-      enabled: !!vaultID,
-      staleTime: 30000,
-    }
+  // Extract vault and owner cap using the utility function
+  const { vaultAndCapQuery, ownerCapObjects, vaultID } = useVaultAndOwnerCap(
+    account?.address,
+    packageName
   );
+
+  // Query dynamic fields using the utility function
+  const vaultList = useVaultList(vaultID);
 
   // Log vault list data properly
   useEffect(() => {
@@ -193,10 +165,10 @@ const ContractAlter = () => {
         .filter((coin) => coin !== null);
 
       setCoinsInVault(processedCoins);
-      setIsLoading(false);
+      setLoading(false); // 使用全局狀態的設置器
     } catch (error) {
       console.error("Error processing token data:", error);
-      setIsLoading(false);
+      setLoading(false); // 使用全局狀態的設置器
     }
   }, [coinData.data]);
 
@@ -209,7 +181,7 @@ const ContractAlter = () => {
   useEffect(() => {
     const isDataLoading = !coinData.data && objectIds.length > 0;
     if (isLoading !== isDataLoading) {
-      setIsLoading(isDataLoading);
+      setLoading(isDataLoading);
     }
   }, [coinData.data, objectIds, isLoading]);
 
@@ -249,7 +221,7 @@ const ContractAlter = () => {
         coinType
       );
 
-      // Execute transaction
+    // Execute transaction
       signAndExecuteTransaction(
         {
           transaction: tx,

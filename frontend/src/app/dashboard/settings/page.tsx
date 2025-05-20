@@ -408,16 +408,16 @@ export default function Dashboard() {
   return (
     <div className='flex flex-col items-center justify-center min-h-screen bg-gray-100 p-4'>
       <div className='bg-white p-8 rounded-lg shadow-lg w-full max-w-3xl'>
-        <h1 className='text-3xl font-bold mb-6 text-center'>遺囑儀表板</h1>
+        <h1 className='text-3xl font-bold mb-6 text-center text-[#4da2ff]'>SeaVault Settings</h1>
 
         {/* 顯示保險庫資訊 */}
         <div className='mb-6 p-4 bg-gray-100 rounded-lg'>
-          <h2 className='text-xl font-bold mb-3'>保險庫資訊</h2>
+          <h2 className='text-xl font-bold mb-3 text-[#4da2ff]'>Vault Information</h2>
           <p>
-            <strong>Vault ID:</strong> {formatAddress(vaultID)}
+            <strong className='text-[#4da2ff]'>Vault ID:{formatAddress(vaultID)}</strong>
           </p>
           <p>
-            <strong>Owner Cap:</strong> {formatAddress(ownerCap)}
+            <strong className='text-[#4da2ff]'>Owner Cap:{formatAddress(ownerCap)}</strong> 
           </p>
         </div>
 
@@ -426,11 +426,11 @@ export default function Dashboard() {
           {/* Mint Capabilities 卡片 */}
           <div className='w-full md:w-1/3 p-4 border border-green-200 rounded-lg bg-green-50'>
             <h3 className='font-bold text-lg mb-2 text-green-800'>
-              鑄造繼承人能力
+              Mint Heir Capabilities
             </h3>
-            <p className='text-gray-700 mb-4'>
-              為您的繼承人鑄造能力令牌，允許他們訪問保險庫。
-            </p>
+            {/*<p className='text-gray-700 mb-4'>
+              Mint capability for your heirs, allowing them to access the vault.
+            </p>*/}
             <button
               onClick={mintCaps}
               className={`w-full p-3 bg-green-500 text-white rounded hover:bg-green-600 transition ${isProcessing ? "opacity-50 cursor-not-allowed" : ""}`}
@@ -439,76 +439,75 @@ export default function Dashboard() {
               {isProcessing ? (
                 <>
                   <span className='inline-block animate-spin mr-2'>⟳</span>
-                  處理中...
+                  Processing...
                 </>
               ) : (
-                "鑄造能力"
+                "Mint Capabilities"
               )}
             </button>
           </div>
 
-          {/* 通過電子郵件發送能力卡片 */}
-          <div className='w-full md:w-1/3 p-4 border border-blue-200 rounded-lg bg-blue-50'>
-            <h3 className='font-bold text-lg mb-2 text-blue-800'>
-              通過電子郵件發送
-            </h3>
-            <p className='text-gray-700 mb-4'>
-              通過加密電子郵件安全地向繼承人發送能力。
-            </p>
-            <button
-              onClick={executeCustomTxA}
-              className={`w-full p-3 bg-blue-500 text-white rounded hover:bg-blue-600 transition ${isProcessing ? "opacity-50 cursor-not-allowed" : ""}`}
-              disabled={isProcessing}
-            >
-              {isProcessing ? (
-                <>
-                  <span className='inline-block animate-spin mr-2'>⟳</span>
-                  處理中...
-                </>
-              ) : (
-                "使用 zksend 發送"
-              )}
-            </button>
-          </div>
+          {/* 通過電子郵件發送能力卡片 
+            <div className='w-full md:w-1/3 p-4 border border-blue-200 rounded-lg bg-blue-50'>
+              <h3 className='font-bold text-lg mb-2 text-blue-800'>
+                Send via Email
+              </h3>
+              <p className='text-gray-700 mb-4'>
+                Securely send capabilities to heirs via encrypted email.
+              </p>
+              <button
+                onClick={executeCustomTxA}
+                className={`w-full p-3 bg-blue-500 text-white rounded hover:bg-blue-600 transition ${isProcessing ? "opacity-50 cursor-not-allowed" : ""}`}
+                disabled={isProcessing}
+              >
+                {isProcessing ? (
+                  <>
+                    <span className='inline-block animate-spin mr-2'>⟳</span>
+                    Processing...
+                  </>
+                ) : (
+                  "Send with zksend"
+                )}
+              </button>
+            </div> */}
 
-          {/* 啟用自動分配卡片 */}
-          <div className='w-full md:w-1/3 p-4 border border-purple-200 rounded-lg bg-purple-50'>
-            <h3 className='font-bold text-lg mb-2 text-purple-800'>
-              啟用自動分配
-            </h3>
-            <p className='text-gray-700 mb-4'>
-              為您的智能遺囑啟用自動資產分配。
-            </p>
-            <button
-              onClick={executeCustomTxB}
-              className={`w-full p-3 bg-purple-500 text-white rounded hover:bg-purple-600 transition ${isProcessing ? "opacity-50 cursor-not-allowed" : ""}`}
-              disabled={isProcessing}
-            >
-              {isProcessing ? (
-                <>
-                  <span className='inline-block animate-spin mr-2'>⟳</span>
-                  處理中...
-                </>
-              ) : (
-                "啟用自動分配"
-              )}
-            </button>
-          </div>
+          {/* 啟用自動分配卡片 - Commented out
+            <div className='w-full md:w-1/3 p-4 border border-purple-200 rounded-lg bg-purple-50'>
+              <h3 className='font-bold text-lg mb-2 text-purple-800'>
+                Enable Auto-Distribution
+              </h3>
+              <p className='text-gray-700 mb-4'>
+                Enable automatic asset distribution for your smart will.
+              </p>
+              <button
+                onClick={executeCustomTxB}
+                className={`w-full p-3 bg-purple-500 text-white rounded hover:bg-purple-600 transition ${isProcessing ? "opacity-50 cursor-not-allowed" : ""}`}
+                disabled={isProcessing}
+              >
+                {isProcessing ? (
+                  <>
+                    <span className='inline-block animate-spin mr-2'>⟳</span>
+                    Processing...
+                  </>
+                ) : (
+                  "Enable Auto-Distribution"
+                )}
+              </button>
+            </div> */}
         </div>
       </div>
-
       {/* 警告/消息對話框 */}
       {showWarning && (
         <div className='fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50'>
           <div className='bg-white p-6 rounded-lg shadow-xl max-w-md w-full'>
-            <h3 className='text-xl font-bold text-gray-800 mb-4'>消息</h3>
+            <h3 className='text-xl font-bold text-gray-800 mb-4'>Message</h3>
             <p className='text-gray-700 mb-6'>{warningMessage}</p>
             <div className='flex justify-end'>
               <button
                 className='px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition'
                 onClick={closeWarning}
               >
-                確定
+                OK
               </button>
             </div>
           </div>

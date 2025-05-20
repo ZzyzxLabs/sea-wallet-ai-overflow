@@ -1,8 +1,10 @@
 "use client";
 
-import { ConnectButton } from "@mysten/dapp-kit";
-import { useState, useEffect } from "react";
-
+import { ConnectButton, useCurrentAccount, useSignAndExecuteTransaction, useSuiClientQuery, useSuiClient } from "@mysten/dapp-kit";
+import { useState, useEffect, useMemo } from "react";
+import { useSubscribeStore } from "@/store/subscribeStore";
+import { useVaultAndOwnerCap } from "@/utils/vaultUtils";
+import useMoveStore from "@/store/moveStore";
 const exampleService = [
   {
     name: "Cold Storage Protection",
@@ -67,7 +69,7 @@ const exampleService = [
     name: "Smart Contract Monitoring",
     description: "the smart safeguard your business can't afford to ignore",
     icon: "/sui.svg",
-    address:
+    address: 
       "0x93b236ec83f8b308e077a09c77394d642e15f42d5f3c92b121723eac2045adac",
     status: "active",
     products: {
@@ -95,8 +97,35 @@ export default function Subscriptions() {
   const [currentTime, setCurrentTime] = useState(Date.now());
   const [selectedService, setSelectedService] = useState(null);
   const [selectedProduct, setSelectedProduct] = useState(null);
-
-  // Update current time every minute
+  const [showSubscribeModal, setShowSubscribeModal] = useState(false);  const [subscriptionDetails, setSubscriptionDetails] = useState({
+    serviceAddress: "",
+    billingCycle: false, // false = monthly, true = yearly
+  });
+  const [isProcessing, setIsProcessing] = useState(false);
+  const account = useCurrentAccount();
+  const packageName = useMoveStore((state) => state.packageName);
+  const SubService = useSubscribeStore((state) => state.subscribeTo);
+  
+  // Get vault and owner cap information
+  const { ownerCapId, vaultID } = useVaultAndOwnerCap(
+    account?.address,
+    packageName
+  );
+  const client = useSuiClient();
+  const { mutate: signAndExecuteTransaction } = useSignAndExecuteTransaction({
+    execute: async ({ bytes, signature }) =>
+      await client.executeTransactionBlock({
+        transactionBlock: bytes,
+        signature,
+        options: {
+          showEffects: true,
+          showEvents: true,
+          showObjectChanges: true,
+          showBalanceChanges: true,
+          showRawEffects: true,
+        },
+      }),
+  });  // Update current time every minute
   useEffect(() => {
     const interval = setInterval(() => {
       setCurrentTime(Date.now());
@@ -105,9 +134,17 @@ export default function Subscriptions() {
     return () => clearInterval(interval);
   }, []);
 
+  // Log vault and owner cap information when available
+  useEffect(() => {
+    if (ownerCapId && vaultID) {
+      console.log("Vault and Owner Cap information available:");
+      console.log("Owner Cap ID:", ownerCapId);
+      console.log("Vault ID:", vaultID);
+    }
+  }, [ownerCapId, vaultID]);
   // Filter services based on selected filter
   const getFilteredServices = () => {
-    let filteredServices = exampleService;
+    let filteredServices = servicesToDisplay;
 
     // Apply status filter
     if (filterValue === "active") {
@@ -156,7 +193,6 @@ export default function Subscriptions() {
 
     return { days: daysUntil, hours: hoursUntil, minutes: minutesUntil };
   };
-
   // 獲取產品的月費用
   const getMonthlyCostForService = (service) => {
     let monthlyCost = 0;
@@ -167,9 +203,154 @@ export default function Subscriptions() {
     );
     return monthlyCost.toFixed(2);
   };
+  // Handle subscription modal input changes
+  const handleSubscriptionInputChange = (e) => {
+    const { name, value } = e.target;
+    if (name === "billingCycle") {
+      // Convert the value to boolean: 'true' -> true, 'false' -> false
+      setSubscriptionDetails(prev => ({
+        ...prev,
+        [name]: value === 'true'
+      }));
+    } else {
+      setSubscriptionDetails(prev => ({
+        ...prev,
+        [name]: value
+      }));
+    }
+  };
+  // Close subscribe modal
+  const closeSubscribeModal = () => {
+    setShowSubscribeModal(false);
+    setSubscriptionDetails({
+      serviceAddress: "",
+      billingCycle: false, // false = monthly, true = yearly
+    });
+    setIsProcessing(false);
+  };  // Handle subscribe form submission
+  const handleSubscribeSubmit = async (e) =>{
+    e.preventDefault();
+    setIsProcessing(true);
+    console.log("Subscribing to service:", subscriptionDetails);
+    
+    // Check if we have the required vault and owner cap values
+    if (!ownerCapId || !vaultID) {
+      console.error("Missing vault or owner cap information");
+      setIsProcessing(false);
+      return;
+    }    // Create the transaction for subscription
+    const tx = await SubService(
+      ownerCapId, // ownerCap object format
+      vaultID, // vault ID
+      subscriptionDetails.serviceAddress,
+      subscriptionDetails.billingCycle
+    );
+    
+    signAndExecuteTransaction(
+      {
+        transaction: tx,
+        chain: "sui:testnet",
+      },
+      {
+        onSuccess: (response) => {
+          console.log("Transaction successful:", response);
+          setTimeout(() => {
+            setIsProcessing(false);
+            closeSubscribeModal();
+            // You could add a success notification here
+          }, 1500);
+        },
+        onError: (error) => {
+          console.error("Transaction failed:", error);
+          setIsProcessing(false);
+          // You could add an error notification here
+        }
+      }
+    );
+  };
+
+  const recepList = useSuiClientQuery(
+    "getOwnedObjects",
+    {
+      owner: account?.address,
+      options: { showType: true, showContent: true },
+    },
+    {
+      enabled: !!account,
+    }
+  );
+
+  // Filter subscription receipts and extract serviceIDs
+  const subscriptionReceipts = recepList.data?.data
+    ?.filter(item => 
+      item.data.type && 
+      item.data.type.includes("::subscription::Receipt")
+    )
+    .map(receipt => ({
+      serviceId: receipt.data.content.fields.serviceID,
+      expireDate: receipt.data.content.fields.expire_date,
+      isActive: receipt.data.content.fields.is_active,
+      receiptOwner: receipt.data.content.fields.receipt_owner,
+      paidAmount: receipt.data.content.fields.paid_amount
+    })) || [];  const serviceContent = useSuiClientQuery("multiGetObjects",{
+    ids: subscriptionReceipts.map(item => item.serviceId),
+    options: { showType: true, showContent: true },
+  }, {
+    enabled: !!subscriptionReceipts.length,
+  });
+  
+  // Process real service data
+  const realServices = useMemo(() => {
+    if (!serviceContent.data || !subscriptionReceipts.length) return [];
+    
+    return serviceContent.data.map(service => {
+      // Find the matching receipt for this service
+      const receipt = subscriptionReceipts.find(r => r.serviceId === service.data?.objectId);
+      
+      if (!service.data || !service.data.content || !service.data.content.fields || !receipt) {
+        return null;
+      }
+      
+      const serviceFields = service.data.content.fields;
+      
+      // Format expire date
+      const expireDate = new Date(Number(receipt.expireDate));
+      const formattedDate = expireDate.toLocaleDateString('en-US', { 
+        year: 'numeric', 
+        month: 'short', 
+        day: 'numeric' 
+      });
+      
+      // Extract asset name (coin type)
+      const assetName = serviceFields.asset_name.split('::').pop();
+      
+      // Convert price from smallest units (assuming 6 decimal places)
+      const price = Number(serviceFields.price) / 1000000;
+      
+      return {
+        receiptId: receipt.serviceId,
+        name: serviceFields.service_name,
+        description: `Subscription service for ${assetName}`,
+        icon: "/sui.svg",
+        address: serviceFields.service_owner,
+        status: receipt.isActive ? "active" : "deactivated",
+        yearlyDiscount: serviceFields.yearly_discount,
+        assetName: assetName,
+        price: price,
+        nextPaymentDate: formattedDate,
+        paidAmount: receipt.paidAmount,
+      };
+    }).filter(Boolean); // Remove any null entries
+  }, [serviceContent.data, subscriptionReceipts]);
+  
+  // Use real services if available, otherwise use example data
+  const servicesToDisplay = realServices.length > 0 ? realServices : exampleService;
+  
+
+
+
   return (
-    <div className="p-6 ml-8 mx-auto bg-white text-black">
-      {/* Header */}
+    <div className="p-6 ml-8 mx-auto bg-white text-black">      {/* Header */}
       <div className="mb-8 flex justify-between items-center">
         <div>
           <h1 className="text-3xl font-bold mb-2">Subscription</h1>
@@ -178,7 +359,15 @@ export default function Subscriptions() {
             from your subscribers
           </p>
         </div>
-        <ConnectButton />
+        <div className="flex items-center gap-4">
+          <button 
+            onClick={() => setShowSubscribeModal(true)}
+            className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+          >
+            Subscribe to New Service
+          </button>
+          <ConnectButton />
+        </div>
       </div>{" "}
       {/* Tabs */}
       <div className="mb-6">
@@ -236,50 +425,189 @@ export default function Subscriptions() {
           />
         </div>
       </div>
-      {/* Subscription Cards Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 pb-20">
+      {/* Subscription Cards Grid */}      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 pb-20">
         {getFilteredServices().map((service, index) => {
           const isActive = service.status === "active";
-          const monthlyCost = getMonthlyCostForService(service);
+          // For example services, use the getMonthlyCost function, for real services use the price directly
+          const monthlyCost = service.price !== undefined ? service.price : getMonthlyCostForService(service);
           return (
             <div
               key={index}
-              className={`rounded-lg overflow-hidden shadow-md ${isActive ? "bg-linear-to-br from-blue-400 to-blue-600" : "bg-linear-to-br from-red-400 to-red-600"}`}
+              className={`rounded-lg overflow-hidden shadow-md ${isActive ? "bg-gradient-to-br from-blue-300 to-blue-400" : "bg-gradient-to-br from-red-300 to-red-400"}`}
             >
-              {" "}
-              <div className="px-4 pt-4 pb-2 text-white">
+              <div className="px-4 pt-4 pb-2 text-black">
                 <h3 className="text-lg font-semibold">{service.name}</h3>
-                <p className="text-sm my-2 text-white/90">{service.description}</p>
+                <p className="text-sm my-2 text-black/90">{service.description}</p>
+                
+                {/* Show service owner */}
+                <div className="text-xs text-gray-600 mb-1">
+                  <span className="opacity-80">Provider: </span>
+                  {formatAddress(service.address)}
+                </div>
+                
+                {/* Show receipt ID if available */}
+                {service.receiptId && (
+                  <div className="text-xs text-gray-600 mb-1">
+                    <span className="opacity-80">Receipt ID: </span>
+                    {formatAddress(service.receiptId)}
+                  </div>
+                )}
+                
+                {/* Show yearly discount badge if available */}
+                {service.yearlyDiscount > 0 && (
+                  <div className="inline-block bg-green-100 text-green-800 text-xs px-2 py-1 rounded mt-1">
+                    {service.yearlyDiscount}% yearly discount available
+                  </div>
+                )}
               </div>
+              
               <div className="flex justify-between items-center px-4 py-3">
                 {isActive
                   ? service.nextPaymentDate && (
-                      <div className=" items-start text-white">
+                      <div className="items-start text-black">
                         <p className="text-xs opacity-80">Next Payment Date:</p>
                         <p className="text-sm">{service.nextPaymentDate}</p>
                       </div>
                     )
                   : service.nextPaymentDate && (
-                      <div className=" items-start text-white">
+                      <div className="items-start text-black">
                         <p className="text-xs opacity-80">Last Payment Date:</p>
-                        <p className="text-sm">
-                          {service.nextPaymentDate || "Apr 14, 2025"}
-                        </p>
+                        <p className="text-sm">{service.nextPaymentDate}</p>
                       </div>
                     )}
                 <div className="text-sm flex flex-col font-medium items-end">
                   <span
-                    className={`inline-block py-1 rounded text-xs font-light ${isActive ? "text-white" : " text-white"}`}
+                    className={`inline-block py-1 rounded text-xs font-light ${isActive ? "text-white" : "text-white"}`}
                   >
                     {isActive ? "Active" : "Deactivated"}
                   </span>
-                  <div className="text-white-900 font-light">${monthlyCost}/mo</div>
+                  <div className="text-white-900 font-light">
+                    {service.assetName ? `${monthlyCost} ${service.assetName}/mo` : `$${monthlyCost}/mo`}
+                  </div>
                 </div>
               </div>
             </div>
           );
         })}
       </div>
+      
+      {/* Modal for subscribing to a new service */}
+      {showSubscribeModal && (
+        <div className="fixed inset-0 bg-black/60 bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-md mx-4">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-bold">Subscribe to New Service</h2>
+              <button
+                onClick={closeSubscribeModal}
+                disabled={isProcessing}
+                className={`text-gray-500 hover:text-gray-700 ${isProcessing ? "cursor-not-allowed opacity-50" : ""}`}
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  className="h-6 w-6"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M6 18L18 6M6 6l12 12"
+                  />
+                </svg>
+              </button>
+            </div>
+            
+            <form onSubmit={handleSubscribeSubmit}>
+              <div className="mb-4">
+                <label
+                  htmlFor="serviceAddress"
+                  className="block text-sm font-medium text-gray-700 mb-1"
+                >
+                  Service Address
+                </label>
+                <input
+                  type="text"
+                  id="serviceAddress"
+                  name="serviceAddress"
+                  value={subscriptionDetails.serviceAddress}
+                  onChange={handleSubscriptionInputChange}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                  placeholder="0x..."
+                  required
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  Enter the address of the service you want to subscribe to
+                </p>
+              </div>
+              
+              <div className="mb-6">
+                <label
+                  htmlFor="billingCycle"
+                  className="block text-sm font-medium text-gray-700 mb-1"
+                >
+                  Billing Cycle
+                </label>                <div className="flex gap-4">
+                  <label className="flex items-center">
+                    <input
+                      type="radio"
+                      name="billingCycle"
+                      value="false"
+                      checked={subscriptionDetails.billingCycle === false}
+                      onChange={handleSubscriptionInputChange}
+                      className="mr-2"
+                    />
+                    <span>Monthly</span>
+                  </label>
+                  <label className="flex items-center">
+                    <input
+                      type="radio"
+                      name="billingCycle"
+                      value="true"
+                      checked={subscriptionDetails.billingCycle === true}
+                      onChange={handleSubscriptionInputChange}
+                      className="mr-2"
+                    />
+                    <span>Yearly (Discount may apply)</span>
+                  </label>
+                </div>
+              </div>
+              
+              <div className="flex justify-end space-x-3">
+                <button
+                  type="button"
+                  onClick={closeSubscribeModal}
+                  disabled={isProcessing}
+                  className={`px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-100 ${
+                    isProcessing ? "opacity-50 cursor-not-allowed" : ""
+                  }`}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isProcessing}
+                  className={`px-4 py-2 bg-blue-600 text-white rounded-md ${
+                    isProcessing
+                      ? "opacity-70 cursor-wait"
+                      : "hover:bg-blue-700"
+                  }`}
+                >
+                  {isProcessing ? (
+                    <>
+                      <span className="inline-block animate-spin mr-2">↻</span>
+                      Processing...
+                    </>
+                  ) : (
+                    "Subscribe Now"
+                  )}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
