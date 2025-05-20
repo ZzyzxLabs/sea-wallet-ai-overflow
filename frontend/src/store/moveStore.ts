@@ -72,7 +72,7 @@ interface MoveStore {
 const useMoveStore = create<MoveStore>((set, get) => ({
   // main
   packageName:
-    "0x2ce19738ec9d4e832abb2a09c1c0816bf487a7eaa226258280cd6b7234d82b65",
+    "0x44a617da633e13f2d366ae8480b88706c988707ffdf76eb3f8029016472afb8b",
   walletOwner: "",
   setAddress: (address: string) => {
     set({ walletOwner: address });
