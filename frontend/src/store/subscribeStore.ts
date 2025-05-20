@@ -40,7 +40,7 @@ async subscribeTo(OwCap, Vault, service, is_year) {
             tx.object(service),
             tx.pure.bool(is_year), // Pass boolean directly
         ],
-        typeArguments: ['0x2::sui::SUI'],
+        typeArguments: ['0x79486ac31a96c25de76faac66e01418146c2a0566a8aacac4538e956b7157aec::hair::HAIR'],
     });
     return tx;
 }

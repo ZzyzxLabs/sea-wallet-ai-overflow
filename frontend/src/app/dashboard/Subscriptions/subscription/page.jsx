@@ -1,7 +1,7 @@
 "use client";
 
-import { ConnectButton, useCurrentAccount, useSignAndExecuteTransaction, useSuiClientQuery } from "@mysten/dapp-kit";
-import { useState, useEffect } from "react";
+import { ConnectButton, useCurrentAccount, useSignAndExecuteTransaction, useSuiClientQuery, useSuiClient } from "@mysten/dapp-kit";
+import { useState, useEffect, useMemo } from "react";
 import { useSubscribeStore } from "@/store/subscribeStore";
 import { useVaultAndOwnerCap } from "@/utils/vaultUtils";
 import useMoveStore from "@/store/moveStore";
@@ -69,7 +69,7 @@ const exampleService = [
     name: "Smart Contract Monitoring",
     description: "the smart safeguard your business can't afford to ignore",
     icon: "/sui.svg",
-    address:
+    address: 
       "0x93b236ec83f8b308e077a09c77394d642e15f42d5f3c92b121723eac2045adac",
     status: "active",
     products: {
@@ -111,7 +111,7 @@ export default function Subscriptions() {
     account?.address,
     packageName
   );
-  
+  const client = useSuiClient();
   const { mutate: signAndExecuteTransaction } = useSignAndExecuteTransaction({
     execute: async ({ bytes, signature }) =>
       await client.executeTransactionBlock({
@@ -142,10 +142,9 @@ export default function Subscriptions() {
       console.log("Vault ID:", vaultID);
     }
   }, [ownerCapId, vaultID]);
-
   // Filter services based on selected filter
   const getFilteredServices = () => {
-    let filteredServices = exampleService;
+    let filteredServices = servicesToDisplay;
 
     // Apply status filter
     if (filterValue === "active") {
@@ -269,6 +268,87 @@ export default function Subscriptions() {
       }
     );
   };
+
+  const recepList = useSuiClientQuery(
+    "getOwnedObjects",
+    {
+      owner: account?.address,
+      options: { showType: true, showContent: true },
+    },
+    {
+      enabled: !!account,
+    }
+  );
+
+  // Filter subscription receipts and extract serviceIDs
+  const subscriptionReceipts = recepList.data?.data
+    ?.filter(item => 
+      item.data.type && 
+      item.data.type.includes("::subscription::Receipt")
+    )
+    .map(receipt => ({
+      serviceId: receipt.data.content.fields.serviceID,
+      expireDate: receipt.data.content.fields.expire_date,
+      isActive: receipt.data.content.fields.is_active,
+      receiptOwner: receipt.data.content.fields.receipt_owner,
+      paidAmount: receipt.data.content.fields.paid_amount
+    })) || [];  const serviceContent = useSuiClientQuery("multiGetObjects",{
+    ids: subscriptionReceipts.map(item => item.serviceId),
+    options: { showType: true, showContent: true },
+  }, {
+    enabled: !!subscriptionReceipts.length,
+  });
+  
+  // Process real service data
+  const realServices = useMemo(() => {
+    if (!serviceContent.data || !subscriptionReceipts.length) return [];
+    
+    return serviceContent.data.map(service => {
+      // Find the matching receipt for this service
+      const receipt = subscriptionReceipts.find(r => r.serviceId === service.data?.objectId);
+      
+      if (!service.data || !service.data.content || !service.data.content.fields || !receipt) {
+        return null;
+      }
+      
+      const serviceFields = service.data.content.fields;
+      
+      // Format expire date
+      const expireDate = new Date(Number(receipt.expireDate));
+      const formattedDate = expireDate.toLocaleDateString('en-US', { 
+        year: 'numeric', 
+        month: 'short', 
+        day: 'numeric' 
+      });
+      
+      // Extract asset name (coin type)
+      const assetName = serviceFields.asset_name.split('::').pop();
+      
+      // Convert price from smallest units (assuming 6 decimal places)
+      const price = Number(serviceFields.price) / 1000000;
+      
+      return {
+        receiptId: receipt.serviceId,
+        name: serviceFields.service_name,
+        description: `Subscription service for ${assetName}`,
+        icon: "/sui.svg",
+        address: serviceFields.service_owner,
+        status: receipt.isActive ? "active" : "deactivated",
+        yearlyDiscount: serviceFields.yearly_discount,
+        assetName: assetName,
+        price: price,
+        nextPaymentDate: formattedDate,
+        paidAmount: receipt.paidAmount,
+      };
+    }).filter(Boolean); // Remove any null entries
+  }, [serviceContent.data, subscriptionReceipts]);
+  
+  // Use real services if available, otherwise use example data
+  const servicesToDisplay = realServices.length > 0 ? realServices : exampleService;
+  
+
+
+
   return (
     <div className="p-6 ml-8 mx-auto bg-white text-black">      {/* Header */}
       <div className="mb-8 flex justify-between items-center">
@@ -345,48 +425,70 @@ export default function Subscriptions() {
           />
         </div>
       </div>
-      {/* Subscription Cards Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 pb-20">
+      {/* Subscription Cards Grid */}      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 pb-20">
         {getFilteredServices().map((service, index) => {
           const isActive = service.status === "active";
-          const monthlyCost = getMonthlyCostForService(service);
+          // For example services, use the getMonthlyCost function, for real services use the price directly
+          const monthlyCost = service.price !== undefined ? service.price : getMonthlyCostForService(service);
           return (
             <div
               key={index}
-              className={`rounded-lg overflow-hidden shadow-md ${isActive ? "bg-linear-to-br from-blue-300 to-blue-400" : "bg-linear-to-br from-red-300 to-red-400"}`}
+              className={`rounded-lg overflow-hidden shadow-md ${isActive ? "bg-gradient-to-br from-blue-300 to-blue-400" : "bg-gradient-to-br from-red-300 to-red-400"}`}
             >
-              {" "}
               <div className="px-4 pt-4 pb-2 text-black">
                 <h3 className="text-lg font-semibold">{service.name}</h3>
                 <p className="text-sm my-2 text-black/90">{service.description}</p>
+                
+                {/* Show service owner */}
+                <div className="text-xs text-gray-600 mb-1">
+                  <span className="opacity-80">Provider: </span>
+                  {formatAddress(service.address)}
+                </div>
+                
+                {/* Show receipt ID if available */}
+                {service.receiptId && (
+                  <div className="text-xs text-gray-600 mb-1">
+                    <span className="opacity-80">Receipt ID: </span>
+                    {formatAddress(service.receiptId)}
+                  </div>
+                )}
+                
+                {/* Show yearly discount badge if available */}
+                {service.yearlyDiscount > 0 && (
+                  <div className="inline-block bg-green-100 text-green-800 text-xs px-2 py-1 rounded mt-1">
+                    {service.yearlyDiscount}% yearly discount available
+                  </div>
+                )}
               </div>
+              
               <div className="flex justify-between items-center px-4 py-3">
                 {isActive
                   ? service.nextPaymentDate && (
-                      <div className=" items-start text-black">
+                      <div className="items-start text-black">
                         <p className="text-xs opacity-80">Next Payment Date:</p>
                         <p className="text-sm">{service.nextPaymentDate}</p>
                       </div>
                     )
                   : service.nextPaymentDate && (
-                      <div className=" items-start text-black">
+                      <div className="items-start text-black">
                         <p className="text-xs opacity-80">Last Payment Date:</p>
-                        <p className="text-sm">
-                          {service.nextPaymentDate || "Apr 14, 2025"}
-                        </p>
+                        <p className="text-sm">{service.nextPaymentDate}</p>
                       </div>
                     )}
                 <div className="text-sm flex flex-col font-medium items-end">
                   <span
-                    className={`inline-block py-1 rounded text-xs font-light ${isActive ? "text-white" : " text-white"}`}
+                    className={`inline-block py-1 rounded text-xs font-light ${isActive ? "text-white" : "text-white"}`}
                   >
                     {isActive ? "Active" : "Deactivated"}
                   </span>
-                  <div className="text-white-900 font-light">${monthlyCost}/mo</div>
+                  <div className="text-white-900 font-light">
+                    {service.assetName ? `${monthlyCost} ${service.assetName}/mo` : `$${monthlyCost}/mo`}
+                  </div>
                 </div>
               </div>
             </div>
-          );        })}
+          );
+        })}
       </div>
       
       {/* Modal for subscribing to a new service */}
