@@ -12,7 +12,6 @@ import useHeirStore from "../store/heirStore";
 import useCoinStore from "../store/coinStore";
 import { useVaultAndOwnerCap, useVaultList } from "../utils/vaultUtils";
 
-
 const ContractAlter = () => {
   const account = useCurrentAccount();
   const packageName = useMoveStore((state) => state.packageName);
@@ -21,8 +20,10 @@ const ContractAlter = () => {
   const VaultName = useHeirStore((state) => state.VaultName);
   const [withdrawAmount, setWithdrawAmount] = useState({});
   const [isWithdrawing, setIsWithdrawing] = useState(false);
-  const [toggle, setToggle] = useState(false);  const { coinsInVault, isLoading, setCoinsInVault, setLoading } = useCoinStore();
-  
+  const [toggle, setToggle] = useState(false);
+  const { coinsInVault, isLoading, setCoinsInVault, setLoading } =
+    useCoinStore();
+
   // Use the sign and execute transaction hook directly
   const { mutate: signAndExecuteTransaction } = useSignAndExecuteTransaction();
 
@@ -78,8 +79,6 @@ const ContractAlter = () => {
       console.log("coinData", coinData.data);
     }
   }, [coinData.data]);
-
-   
 
   // Add effect to refetch when toggle changes
   useEffect(() => {
@@ -216,12 +215,12 @@ const ContractAlter = () => {
       const tx = takeCoinTx(
         ownerCapObjects[0].data.objectId,
         vaultID,
-        assetName,
+        coinType,
         Number(amountInSmallestUnit),
         coinType
       );
 
-    // Execute transaction
+      // Execute transaction
       signAndExecuteTransaction(
         {
           transaction: tx,
@@ -246,15 +245,15 @@ const ContractAlter = () => {
       setIsWithdrawing(false);
     }
   };
-   // Add a function to refresh the data
-   const refreshData = useCallback(() => {
+  // Add a function to refresh the data
+  const refreshData = useCallback(() => {
     setToggle((prev) => !prev);
     coinData.refetch();
     // coinMetadataQueries.refetch();
     vaultList.refetch();
     vaultAndCap.refetch();
     console.log("refetching");
-  }, [toggle, coinData, coinMetadataQueries, vaultList, vaultAndCap]);
+  }, [toggle, coinData, coinMetadataQueries, vaultList, vaultAndCapQuery]);
 
   return (
     <div className='flex justify-center items-center w-full h-fit bg-white/30'>

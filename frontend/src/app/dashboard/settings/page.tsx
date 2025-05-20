@@ -181,6 +181,8 @@ export default function Dashboard() {
             );
             showWarningMessage("Successfully minted heir capabilities!");
             setIsProcessing(false);
+            // Redirect to dashboard page after successful transaction
+            router.push('/dashboard');
           },
           onError: (error) => {
             console.error("Minting capabilities error:", error);
