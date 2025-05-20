@@ -280,10 +280,12 @@ const ButtonInContractAlter = ({coinsInVault, onTransactionSuccess}) => {
       const selectedCoinIndex = availableCoins.findIndex(coin => 
         coin[0] === selectedCoin[0] && coin[1] === selectedCoin[1]
       );
-      const dec = coinMetadata?.[selectedCoinIndex]?.decimals || 9;
+      const dec = coinMetadata?.[selectedCoinIndex]?.decimals;
+      console.log("dec", dec)
       const amountInSmallestUnit = BigInt(
         Math.floor(amount * Math.pow(10, dec))
       );
+      console.log("amountInSmallestUnit", amountInSmallestUnit)
       
       // Get the correct vault object
       const vault = vaultObject.data.data;

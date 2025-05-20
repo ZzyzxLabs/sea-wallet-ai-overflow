@@ -52,6 +52,8 @@ type VaultFields = {
     }
   };
   is_warned: boolean;
+  last_update: number;
+  time_left: number;
   asset_withdrawn: {
     fields: {
       id: {
@@ -77,8 +79,13 @@ function HeirBox({heir, index}: {heir: HeirData, index: number}) {
   const [capActivated, setCapActivated] = useState(null)
   const [capPercentage, setCapPercentage] = useState(null)
   const [isVaultWarned, setIsVaultWarned] = useState(null)
+  const [lastUpdate, setLastUpdate] = useState(null)
+  const [timeLeft, setTimeLeft] = useState(null)
   const [isLoading, setIsLoading] = useState(true);
   const [isWithdrawing, setIsWithdrawing] = useState(false);
+  const [isAlreadyWithdrawn, setIsAlreadyWithdrawn] = useState(false);
+  const [isTimeLocked, setIsTimeLocked] = useState(false);
+  const [remainingLockTime, setRemainingLockTime] = useState(0);
   const memberWithdrawTx = useMoveStore((state) => state.memberWithdrawTx);
   const { mutate: signAndExecuteTransaction } = useSignAndExecuteTransaction();
 
@@ -99,14 +106,19 @@ function HeirBox({heir, index}: {heir: HeirData, index: number}) {
     },
     {
       enabled: !!vaultID,
-      staleTime: 5000,
+      refetchInterval: 1000,
+      refetchIntervalInBackground: true,
+      staleTime: 0, 
     }
   )
+  
+
 
   
 
   useEffect(() => {
     if (vaultObject.data) {
+      console.log("refreshing vault object")
       try {
         // Add type guard for SuiParsedData
         const content = vaultObject.data.data.content;
@@ -147,6 +159,8 @@ function HeirBox({heir, index}: {heir: HeirData, index: number}) {
 
           
           setIsVaultWarned(fields?.is_warned);
+          setLastUpdate(fields?.last_update);
+          setTimeLeft(fields?.time_left);
         }
       } catch (error) {
         console.error("Error parsing vault data:", error);
@@ -268,7 +282,45 @@ function HeirBox({heir, index}: {heir: HeirData, index: number}) {
     }
   }, [coinData.data]);
 
+  // Calculate time lock status and remaining time
+  useEffect(() => {
+    if (lastUpdate !== null && timeLeft !== null) {
+      const currentTime = Math.floor(Date.now()); // Current time in seconds
+      const timeSinceLastUpdate = currentTime - lastUpdate;
+      console.log("timeSinceLastUpdate", timeSinceLastUpdate)
+      console.log("timeLeft", timeLeft)
+      console.log("currentTime", currentTime)
+      
+      if (timeSinceLastUpdate < timeLeft) {
+        setIsTimeLocked(true);
+        const remainingTime = timeLeft - timeSinceLastUpdate;
+        setRemainingLockTime(remainingTime);
+      } else {
+        setIsTimeLocked(false);
+        setRemainingLockTime(0);
+      }
+    }
+  }, [lastUpdate, timeLeft]);
   
+  // Format remaining time to display
+  const formatRemainingTime = (milliseconds: number) => {
+    const seconds = milliseconds / 1000;
+    if (seconds <= 0) return "0m";
+    
+    const days = Math.floor(seconds / 86400);
+    const hours = Math.floor((seconds % 86400) / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
+    const secs = Math.floor(seconds % 60);
+    
+    let result = [];
+    
+    if (days > 0) result.push(`${days}d`);
+    if (hours > 0) result.push(`${hours}h`);
+    if (minutes > 0) result.push(`${minutes}m`);
+    if (secs > 0) result.push(`${secs}s`);
+    
+    return result.join(' ');
+  };
 
   const handleWithdraw = async () => {
     // if (!isVaultWarned) {
@@ -316,9 +368,9 @@ function HeirBox({heir, index}: {heir: HeirData, index: number}) {
           
           // Update component state directly (if possible from transaction results)
           if (!isVaultWarned) {
-            setIsVaultWarned(true);
+            // setIsVaultWarned(true);
           } else {
-            setWithdrawnCount(prev => prev + 1);
+            setWithdrawnCount(coinsInVault.length);
           }
           
           setTimeout(() => {
@@ -338,7 +390,14 @@ function HeirBox({heir, index}: {heir: HeirData, index: number}) {
     }
   };
   // Check if component should show a disabled "Already withdrawn" button
-  const isAlreadyWithdrawn = capActivated === false || coinsInVault.length === withdrawnCount;
+  useEffect(() => {
+    if ((capActivated === false || coinsInVault.length === withdrawnCount) && coinsInVault.length > 0) {
+      setIsAlreadyWithdrawn(true);
+    } else {
+      setIsAlreadyWithdrawn(false);
+    } 
+  }, [capActivated, coinsInVault, withdrawnCount]);
+  
 
   return (
     <div  className="border-2 rounded-xl p-5 shadow-md hover:shadow-lg transition-shadow bg-white border-blue-200 w-full">
@@ -355,6 +414,16 @@ function HeirBox({heir, index}: {heir: HeirData, index: number}) {
                   <span>Withdrawn</span>
                   <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 ml-1" viewBox="0 0 20 20" fill="currentColor">
                     <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                  </svg>
+                </button>
+              ) : isTimeLocked ? (
+                <button 
+                  className="bg-gray-500 text-white px-4 py-2 rounded-lg font-semibold transition-colors duration-300 flex items-center cursor-not-allowed"
+                  disabled={true}
+                >
+                  <span>Locked: {formatRemainingTime(remainingLockTime)}</span>
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 ml-1" viewBox="0 0 20 20" fill="currentColor">
+                    <path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" />
                   </svg>
                 </button>
               ) : isVaultWarned ? (

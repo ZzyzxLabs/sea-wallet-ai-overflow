@@ -107,10 +107,7 @@ const ContractAlter = () => {
     }
   }, [coinData.data]);
 
-  // Add a function to refresh the data
-  const refreshData = useCallback(() => {
-    setToggle((prev) => !prev);
-  }, []);
+   
 
   // Add effect to refetch when toggle changes
   useEffect(() => {
@@ -277,6 +274,15 @@ const ContractAlter = () => {
       setIsWithdrawing(false);
     }
   };
+   // Add a function to refresh the data
+   const refreshData = useCallback(() => {
+    setToggle((prev) => !prev);
+    coinData.refetch();
+    // coinMetadataQueries.refetch();
+    vaultList.refetch();
+    vaultAndCap.refetch();
+    console.log("refetching");
+  }, [toggle, coinData, coinMetadataQueries, vaultList, vaultAndCap]);
 
   return (
     <div className='flex justify-center items-center w-full h-fit bg-white/30'>
