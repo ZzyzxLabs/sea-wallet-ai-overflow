@@ -1,8 +1,10 @@
 "use client";
 
-import { ConnectButton } from "@mysten/dapp-kit";
+import { ConnectButton, useCurrentAccount, useSignAndExecuteTransaction, useSuiClientQuery } from "@mysten/dapp-kit";
 import { useState, useEffect } from "react";
-
+import { useSubscribeStore } from "@/store/subscribeStore";
+import { useVaultAndOwnerCap } from "@/utils/vaultUtils";
+import useMoveStore from "@/store/moveStore";
 const exampleService = [
   {
     name: "Cold Storage Protection",
@@ -95,14 +97,35 @@ export default function Subscriptions() {
   const [currentTime, setCurrentTime] = useState(Date.now());
   const [selectedService, setSelectedService] = useState(null);
   const [selectedProduct, setSelectedProduct] = useState(null);
-  const [showSubscribeModal, setShowSubscribeModal] = useState(false);
-  const [subscriptionDetails, setSubscriptionDetails] = useState({
+  const [showSubscribeModal, setShowSubscribeModal] = useState(false);  const [subscriptionDetails, setSubscriptionDetails] = useState({
     serviceAddress: "",
-    billingCycle: "monthly",
+    billingCycle: false, // false = monthly, true = yearly
   });
   const [isProcessing, setIsProcessing] = useState(false);
-
-  // Update current time every minute
+  const account = useCurrentAccount();
+  const packageName = useMoveStore((state) => state.packageName);
+  const SubService = useSubscribeStore((state) => state.subscribeTo);
+  
+  // Get vault and owner cap information
+  const { ownerCapId, vaultID } = useVaultAndOwnerCap(
+    account?.address,
+    packageName
+  );
+  
+  const { mutate: signAndExecuteTransaction } = useSignAndExecuteTransaction({
+    execute: async ({ bytes, signature }) =>
+      await client.executeTransactionBlock({
+        transactionBlock: bytes,
+        signature,
+        options: {
+          showEffects: true,
+          showEvents: true,
+          showObjectChanges: true,
+          showBalanceChanges: true,
+          showRawEffects: true,
+        },
+      }),
+  });  // Update current time every minute
   useEffect(() => {
     const interval = setInterval(() => {
       setCurrentTime(Date.now());
@@ -110,6 +133,15 @@ export default function Subscriptions() {
 
     return () => clearInterval(interval);
   }, []);
+
+  // Log vault and owner cap information when available
+  useEffect(() => {
+    if (ownerCapId && vaultID) {
+      console.log("Vault and Owner Cap information available:");
+      console.log("Owner Cap ID:", ownerCapId);
+      console.log("Vault ID:", vaultID);
+    }
+  }, [ownerCapId, vaultID]);
 
   // Filter services based on selected filter
   const getFilteredServices = () => {
@@ -172,40 +204,70 @@ export default function Subscriptions() {
     );
     return monthlyCost.toFixed(2);
   };
-
   // Handle subscription modal input changes
   const handleSubscriptionInputChange = (e) => {
     const { name, value } = e.target;
-    setSubscriptionDetails(prev => ({
-      ...prev,
-      [name]: value
-    }));
+    if (name === "billingCycle") {
+      // Convert the value to boolean: 'true' -> true, 'false' -> false
+      setSubscriptionDetails(prev => ({
+        ...prev,
+        [name]: value === 'true'
+      }));
+    } else {
+      setSubscriptionDetails(prev => ({
+        ...prev,
+        [name]: value
+      }));
+    }
   };
-
   // Close subscribe modal
   const closeSubscribeModal = () => {
     setShowSubscribeModal(false);
     setSubscriptionDetails({
       serviceAddress: "",
-      billingCycle: "monthly",
+      billingCycle: false, // false = monthly, true = yearly
     });
     setIsProcessing(false);
-  };
-
-  // Handle subscribe form submission
-  const handleSubscribeSubmit = (e) => {
+  };  // Handle subscribe form submission
+  const handleSubscribeSubmit = async (e) =>{
     e.preventDefault();
     setIsProcessing(true);
-    
-    // This is where you'll add your API/transaction logic
     console.log("Subscribing to service:", subscriptionDetails);
     
-    // For now, we'll just simulate a successful subscription
-    setTimeout(() => {
+    // Check if we have the required vault and owner cap values
+    if (!ownerCapId || !vaultID) {
+      console.error("Missing vault or owner cap information");
       setIsProcessing(false);
-      closeSubscribeModal();
-      // You could add a success notification here
-    }, 1500);
+      return;
+    }    // Create the transaction for subscription
+    const tx = await SubService(
+      ownerCapId, // ownerCap object format
+      vaultID, // vault ID
+      subscriptionDetails.serviceAddress,
+      subscriptionDetails.billingCycle
+    );
+    
+    signAndExecuteTransaction(
+      {
+        transaction: tx,
+        chain: "sui:testnet",
+      },
+      {
+        onSuccess: (response) => {
+          console.log("Transaction successful:", response);
+          setTimeout(() => {
+            setIsProcessing(false);
+            closeSubscribeModal();
+            // You could add a success notification here
+          }, 1500);
+        },
+        onError: (error) => {
+          console.error("Transaction failed:", error);
+          setIsProcessing(false);
+          // You could add an error notification here
+        }
+      }
+    );
   };
   return (
     <div className="p-6 ml-8 mx-auto bg-white text-black">      {/* Header */}
@@ -384,14 +446,13 @@ export default function Subscriptions() {
                   className="block text-sm font-medium text-gray-700 mb-1"
                 >
                   Billing Cycle
-                </label>
-                <div className="flex gap-4">
+                </label>                <div className="flex gap-4">
                   <label className="flex items-center">
                     <input
                       type="radio"
                       name="billingCycle"
-                      value="monthly"
-                      checked={subscriptionDetails.billingCycle === "monthly"}
+                      value="false"
+                      checked={subscriptionDetails.billingCycle === false}
                       onChange={handleSubscriptionInputChange}
                       className="mr-2"
                     />
@@ -401,8 +462,8 @@ export default function Subscriptions() {
                     <input
                       type="radio"
                       name="billingCycle"
-                      value="yearly"
-                      checked={subscriptionDetails.billingCycle === "yearly"}
+                      value="true"
+                      checked={subscriptionDetails.billingCycle === true}
                       onChange={handleSubscriptionInputChange}
                       className="mr-2"
                     />

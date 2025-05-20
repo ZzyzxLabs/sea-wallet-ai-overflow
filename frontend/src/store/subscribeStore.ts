@@ -28,5 +28,20 @@ export const useSubscribeStore = create<SubscribeState>((set, get) => ({
             typeArguments: [coinType],
         });
         return tx;
-    }
+    },
+async subscribeTo(OwCap, Vault, service, is_year) {
+    console.log("Subscribe", OwCap, Vault, service, is_year);
+    const tx = new Transaction();
+    tx.moveCall({
+        target: `${get().packageName}::seaVault::subscribe`, // or ::sea_vault::subscribe if that's the actual module name
+        arguments: [
+            tx.object(OwCap),
+            tx.object(Vault),
+            tx.object(service),
+            tx.pure.bool(is_year), // Pass boolean directly
+        ],
+        typeArguments: ['0x2::sui::SUI'],
+    });
+    return tx;
+}
 }));
