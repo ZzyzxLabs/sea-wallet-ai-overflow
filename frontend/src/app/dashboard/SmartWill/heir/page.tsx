@@ -42,7 +42,7 @@ export default function Dashboard() {
       // current detect all the membercap which generate by whatever contract we deploy 
       setHeirs(walletObjects.data.data.filter(item => item.data?.type?.includes("MemberCap") && item.data?.type?.includes(packageName)))
     }
-  }, [walletObjects.data]);
+  }, [packageName, walletObjects.data]);
 
   
   console.log("heirs",heirs)

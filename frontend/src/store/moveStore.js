@@ -1,80 +1,28 @@
 import { Transaction } from "@mysten/sui/transactions";
 import { create } from "zustand";
 import { ZkSendLinkBuilder } from "@mysten/zksend";
-import { BcsType, fromHex, toHex } from "@mysten/bcs";
+import { fromHex, toHex } from "@mysten/bcs";
 import { bcs } from "@mysten/sui/bcs";
 import { coinWithBalance } from "@mysten/sui/transactions";
 
-function VecMap<K extends BcsType<any>, V extends BcsType<any>>(K: K, V: V) {
+function VecMap(K, V) {
   return bcs.struct(`VecMap<${K.name}, ${V.name}>`, {
     keys: bcs.vector(K),
     values: bcs.vector(V),
   });
 }
+
 function stringToUint8Array(str) {
   const encoder = new TextEncoder();
   return encoder.encode(str);
 }
-// Define a TypeScript interface for your store state
-interface MoveStore {
-  packageName: string;
-  walletOwner: string;
-  setAddress: (address: string) => void;
-  createVaultTx: () => Transaction;
-  fuseTxFunctions: (
-    capId: string,
-    vaultId: string,
-    coinIds: string[],
-    amount: number,
-    name: string,
-    coinType: string,
-    senderAddress: string
-  ) => Transaction;
-  // coinSpTester: () => Transaction;
-  mintCap: (
-    cap: string,
-    vault: string,
-    sui: { keys: string[]; values: number[] },
-    email: { keys: string[]; values: number[] },
-    senderAddress: string
-  ) => Promise<Transaction>;
-  zkTransaction: (
-    sender: string,
-    network: "mainnet" | "testnet",
-    prope: string[]
-  ) => Promise<{ urls: string[]; tx: any }>;
-  resetState: () => void;
-  sendEmail: (to: string, url: any) => Promise<any>;
-  takeCoinTx: (
-    capId: string,
-    vaultId: string,
-    assetName: string,
-    amount: number,
-    coinType: string
-  ) => Transaction;
-  alterTx: (
-    capId: string,
-    vaultId: string,
-    coinIds: string[],
-    amount: number,
-    name: string,
-    coinType: string,
-    senderAddress: string
-  ) => Transaction;
-  memberWithdrawTx: (
-    capId: string,
-    vaultId: string,
-    assetNames: string[],
-    coinTypes: string[]
-  ) => Transaction;
-}
 
-const useMoveStore = create<MoveStore>((set, get) => ({
+const useMoveStore = create((set, get) => ({
   // main
   packageName:
     "0xd531064dfaa81276a6ce7779bc19dba58d4d246106d830f221d2c4cec1b96f87",
   walletOwner: "",
-  setAddress: (address: string) => {
+  setAddress: (address) => {
     set({ walletOwner: address });
   },
   createVaultTx: () => {
@@ -87,13 +35,13 @@ const useMoveStore = create<MoveStore>((set, get) => ({
   },
 
   alterTx: (
-    capId: string,
-    vaultId: string,
-    coinIds: string[],
-    amount: number,
-    name: string,
-    coinType: string,
-    senderAddress: string
+    capId,
+    vaultId,
+    coinIds,
+    amount,
+    name,
+    coinType,
+    senderAddress
   ) => {
     const tx = new Transaction();
     console.log("senderAddress", senderAddress);
@@ -143,13 +91,13 @@ const useMoveStore = create<MoveStore>((set, get) => ({
   },
 
   fuseTxFunctions: (
-    capId: string,
-    vaultId: string,
-    coinIds: string[],
-    amount: number,
-    name: string,
-    coinType: string,
-    senderAddress: string // required for coinWithBalance on SUI
+    capId,
+    vaultId,
+    coinIds,
+    amount,
+    name,
+    coinType,
+    senderAddress // required for coinWithBalance on SUI
   ) => {
     // Initialize a new transaction
     const tx = new Transaction();
@@ -217,11 +165,11 @@ const useMoveStore = create<MoveStore>((set, get) => ({
     return tx;
   },
   takeCoinTx: (
-    capId: string,
-    vaultId: string,
-    assetName: string,
-    amount: number,
-    coinType: string
+    capId,
+    vaultId,
+    assetName,
+    amount,
+    coinType
   ) => {
     const tx = new Transaction();
 
@@ -294,7 +242,7 @@ const useMoveStore = create<MoveStore>((set, get) => ({
       links.push(link);
     }
     const urls = links.map((link) => link.getLink());
-    // console.log("Your fucking urls", urls);
+    // console.log("Generated links:", urls);
     const sendEmail = get().sendEmail;
     for (let i = 0; i < urls.length; i++) {
       await sendEmail(email.keys[i], urls[i]);
@@ -304,8 +252,8 @@ const useMoveStore = create<MoveStore>((set, get) => ({
   },
 
   async zkTransaction(sender, network, prope) {
-    const urls: string[] = [];
-    const txs: any[] = [];
+    const urls = [];
+    const txs = [];
     for (let i = 0; i < prope.length; i++) {
       const zelda = new ZkSendLinkBuilder({
         sender: sender,
@@ -320,7 +268,7 @@ const useMoveStore = create<MoveStore>((set, get) => ({
 
     return { urls, tx: txs };
   },
-  async sendEmail(to: string, url: string): Promise<any> {
+  async sendEmail(to, url) {
     try {
       const response = await fetch("../api/mailService", {
         method: "POST",
@@ -346,10 +294,10 @@ const useMoveStore = create<MoveStore>((set, get) => ({
 
   // Add memberWithdrawTx implementation
   memberWithdrawTx: (
-    capId: string,
-    vaultId: string,
-    assetNames: string[],
-    coinTypes: string[]
+    capId,
+    vaultId,
+    assetNames,
+    coinTypes
   ) => {
     // Verify arrays have same length
     if (assetNames.length !== coinTypes.length) {
@@ -366,7 +314,6 @@ const useMoveStore = create<MoveStore>((set, get) => ({
     // Process each asset withdrawal
     for (let i = 0; i < assetNames.length; i++) {
       // BCS-serialize the asset name string
-
       const nameBC = bcs.string().serialize(assetNames[i]).toBytes();
 
       // Call the Move function to withdraw coins as an heir

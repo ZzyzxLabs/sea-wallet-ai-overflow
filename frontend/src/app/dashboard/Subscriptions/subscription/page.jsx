@@ -101,12 +101,11 @@ export default function Subscriptions() {
   const [subscriptionDetails, setSubscriptionDetails] = useState({
     serviceAddress: "",
     billingCycle: false, // false = monthly, true = yearly
-  });
-  const [isProcessing, setIsProcessing] = useState(false);
+  });  const [isProcessing, setIsProcessing] = useState(false);
   const account = useCurrentAccount();
   const packageName = useMoveStore((state) => state.packageName);
   const SubService = useSubscribeStore((state) => state.subscribeTo);
-  const [assetName, setAssetName] = useState<string>("");
+  const [assetName, setAssetName] = useState("");
   // Get vault and owner cap information
   const { ownerCapId, vaultID } = useVaultAndOwnerCap(
     account?.address,

@@ -188,7 +188,7 @@ export default function TestingP() {
         setIsConnecting(true);
       }, 100);
     }
-  }, [account, isConnecting]);
+  }, [account, isConnecting, setIsConnecting]);
     // Monitor account status changes, control animation sequence
   useEffect(() => {
     if (account && isConnecting) {
@@ -231,24 +231,24 @@ export default function TestingP() {
             // Card expand animation
             cardRef.current.style.transition = 'max-height 0.3s ease-out';
             cardRef.current.style.maxHeight = `${cardRef.current.scrollHeight + 80}px`;
-            
-            // Find the newly added heir field
+              // Find the newly added heir field
             const newHeirElements = document.querySelectorAll('[data-heir-id]');
             const newHeirElement = newHeirElements[newHeirElements.length - 1];
             
             if (newHeirElement) {
-              // Set animation initial state
-              newHeirElement.style.opacity = '0';
-              newHeirElement.style.transform = 'translateY(15px)';
+              // Set animation initial state - cast to HTMLElement
+              const htmlElement = newHeirElement as HTMLElement;
+              htmlElement.style.opacity = '0';
+              htmlElement.style.transform = 'translateY(15px)';
               
               // Force browser reflow
-              void newHeirElement.offsetWidth;
+              void htmlElement.offsetWidth;
               
               // Start element animation
               setTimeout(() => {
-                newHeirElement.style.transition = 'opacity 0.35s ease-out, transform 0.35s ease-out';
-                newHeirElement.style.opacity = '1';
-                newHeirElement.style.transform = 'translateY(0)';
+                htmlElement.style.transition = 'opacity 0.35s ease-out, transform 0.35s ease-out';
+                htmlElement.style.opacity = '1';
+                htmlElement.style.transform = 'translateY(0)';
               }, 50);
             }
             
@@ -312,9 +312,8 @@ export default function TestingP() {
             chain: "sui:testnet",
           },
           {
-            onSuccess: (result) => {
-              console.log("executed transaction", result);
-                // Extract vaultID and ownerCap from transaction result
+            onSuccess: (result) => {              console.log("executed transaction", result);
+              // Extract vaultID and ownerCap from transaction result
               const vaultObject = result.objectChanges.find(
                 (obj) =>
                   obj.type === "created" &&
@@ -327,8 +326,9 @@ export default function TestingP() {
               );
 
               if (vaultObject && ownerCapObject) {
-                const vaultIDFromTx = vaultObject.objectId;
-                const ownerCapFromTx = ownerCapObject.objectId;
+                // Access the objectId property correctly based on the type
+                const vaultIDFromTx = 'objectId' in vaultObject ? vaultObject.objectId : '';
+                const ownerCapFromTx = 'objectId' in ownerCapObject ? ownerCapObject.objectId : '';
 
                 console.log("Vault ID:", vaultIDFromTx);
                 console.log("Owner Cap:", ownerCapFromTx);
@@ -520,22 +520,10 @@ export default function TestingP() {
 
   // Create custom transaction B - enable auto distribution feature
   const executeCustomTxB = async () => {
-    try {
-      setIsProcessing(true);
+    try {      setIsProcessing(true);
       
-      const customTransaction = {
-        kind: "moveCall",
-        data: {
-          packageObjectId: "0x123...", // Replace with actual contract package ID
-          module: "smartwill",
-          function: "add_different_feature", 
-          typeArguments: [],
-          arguments: [
-            vaultID,
-            ownerCap,
-          ]
-        }
-      };
+      // Get the Transaction object from the SUI SDK
+      const customTransaction = createVaultTx(); // Using createVaultTx() as an example
       
       const result = await signAndExecuteTransaction(
         {
@@ -586,14 +574,14 @@ export default function TestingP() {
         keys: emailHeirs.map(heir => heir.address),
         values: emailHeirs.map(heir => parseInt(heir.ratio))
       };
-      
-      // Output formatted VecMap data for debugging
+        // Output formatted VecMap data for debugging
       console.log("VecMap data used for minting caps:");
       console.log("Sui address VecMap:", suiVecMap);
       console.log("Email address VecMap:", emailVecMap);
       
-      // Use SUI SDK's Transaction Builder format
-      const tx = await mintCap(ownerCap, vaultID, suiVecMap, emailVecMap);
+      // Use SUI SDK's Transaction Builder format with an additional parameter
+      // The fifth parameter is typically a configuration object or chainId
+      const tx = await mintCap(ownerCap, vaultID, suiVecMap, emailVecMap, "testnet");
       const result = await signAndExecuteTransaction(
         {
           transaction: tx,
@@ -663,7 +651,7 @@ export default function TestingP() {
         <h1 className="text-4xl text-black font-bold mb-8">
           Welcome, {formatAddress(account?.address)}
         </h1>
-        <p className="text-xl text-gray-700 mb-4">Let's get started.</p>
+        <p className="text-xl text-gray-700 mb-4">Let&apos;s get started.</p>
       </div>
 
       {/* Third card - set heirs */}

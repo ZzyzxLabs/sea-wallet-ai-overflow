@@ -171,7 +171,7 @@ export default function InitializeContract() {
         setIsConnecting(true);
       }, 100);
     }
-  }, [account, isConnecting]);
+  }, [account, isConnecting, setIsConnecting]);
 
   useEffect(() => {
     if (account) {
@@ -223,7 +223,7 @@ export default function InitializeContract() {
             
             // Find newly added heir fields
             const newHeirElements = document.querySelectorAll('[data-heir-id]');
-            const newHeirElement = newHeirElements[newHeirElements.length - 1];
+            const newHeirElement = newHeirElements[newHeirElements.length - 1] as HTMLElement;
             
             if (newHeirElement) {
               // Set initial animation state
@@ -316,8 +316,9 @@ export default function InitializeContract() {
               );
 
               if (vaultObject && ownerCapObject) {
-                const vaultIDFromTx = vaultObject.objectId;
-                const ownerCapFromTx = ownerCapObject.objectId;
+                // Type assertion to access the objectId property
+                const vaultIDFromTx = (vaultObject as any).objectId;
+                const ownerCapFromTx = (ownerCapObject as any).objectId;
 
                 console.log("Vault ID:", vaultIDFromTx);
                 console.log("Owner Cap:", ownerCapFromTx);
@@ -441,14 +442,6 @@ export default function InitializeContract() {
               getTotalRatio={getTotalRatio}
               handleVerify={executeTransaction}
               isProcessing={isProcessing}
-              theme={{
-                cardClassName: "card",
-                buttonClassName: "button",
-                inputClassName: "input",
-                heirItemClassName: "heir-item",
-                removeButtonClassName: "remove-button",
-                titleClassName: "title"
-              }}
             />
           </div>
         </div>

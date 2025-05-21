@@ -5,7 +5,7 @@ import {
   useCurrentAccount,
   useSignAndExecuteTransaction,
 } from "@mysten/dapp-kit";
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import useMoveStore from "../../../store/moveStore";
 import useHeirStore from "../../../store/heirStore";
@@ -50,7 +50,7 @@ const sendWillNotification = async (recipientEmail, secureLink) => {
   }
 };
 
-export default function Dashboard() {
+function DashboardContent() {
   const account = useCurrentAccount();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -356,51 +356,6 @@ export default function Dashboard() {
       setIsProcessing(false);
     }
   };
-
-  // 創建自定義交易 B - 啟用自動分配功能
-  const executeCustomTxB = async () => {
-    try {
-      setIsProcessing(true);
-
-      const customTransaction = {
-        kind: "moveCall",
-        data: {
-          packageObjectId: "0x123...", // 替換為實際合約包 ID
-          module: "smartwill",
-          function: "add_different_feature",
-          typeArguments: [],
-          arguments: [vaultID, ownerCap],
-        },
-      };
-
-      const result = await signAndExecuteTransaction(
-        {
-          transaction: customTransaction,
-          chain: "sui:testnet",
-        },
-        {
-          onSuccess: (result) => {
-            console.log("executed custom transaction B", result);
-            setIsProcessing(false);
-          },
-          onError: (error) => {
-            console.error("Custom transaction B error:", error);
-            showWarningMessage("Custom transaction B failed: " + error.message);
-            setIsProcessing(false);
-          },
-        }
-      );
-
-      return result;
-    } catch (error) {
-      console.error("Custom transaction B execution error:", error);
-      showWarningMessage(
-        "Custom transaction B execution error: " + error.message
-      );
-      setIsProcessing(false);
-    }
-  };
-
   // 格式化地址顯示
   const formatAddress = (address) => {
     if (!address) return "不可用";
@@ -516,5 +471,13 @@ export default function Dashboard() {
         </div>
       )}
     </div>
+  );
+}
+
+export default function Dashboard() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <DashboardContent />
+    </Suspense>
   );
 }

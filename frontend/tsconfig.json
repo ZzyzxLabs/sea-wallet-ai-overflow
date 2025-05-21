@@ -32,7 +32,7 @@
     ".next/types/**/*.ts",
     "**/*.ts",
     "**/*.tsx"
-, "src/app/dashboard/Subscriptions/subscription/page.tsx", "src/component/Initialize.tsx", "src/store/coinStore.js"  ],
+, "src/app/dashboard/Subscriptions/subscription/page.jsx", "src/component/Initialize.jsx", "src/store/coinStore.js"  ],
   "exclude": [
     "node_modules"
   ]
