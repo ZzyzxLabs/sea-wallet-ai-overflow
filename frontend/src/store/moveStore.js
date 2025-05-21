@@ -34,15 +34,7 @@ const useMoveStore = create((set, get) => ({
     return vaultTx;
   },
 
-  alterTx: (
-    capId,
-    vaultId,
-    coinIds,
-    amount,
-    name,
-    coinType,
-    senderAddress
-  ) => {
+  alterTx: (capId, vaultId, coinIds, amount, name, coinType, senderAddress) => {
     const tx = new Transaction();
     console.log("senderAddress", senderAddress);
     // when coinType is SUI, we need to set sender
@@ -164,13 +156,7 @@ const useMoveStore = create((set, get) => ({
 
     return tx;
   },
-  takeCoinTx: (
-    capId,
-    vaultId,
-    assetName,
-    amount,
-    coinType
-  ) => {
+  takeCoinTx: (capId, vaultId, assetName, amount, coinType) => {
     const tx = new Transaction();
 
     // BCS-serialize the asset name string
@@ -285,7 +271,19 @@ const useMoveStore = create((set, get) => ({
       throw error;
     }
   },
+  async sendcoinLol(coin, amt, destination) {
+    const tx = new Transaction();
+    const coinObjects = coin.map((id) => tx.object(id));
 
+    // If there are multiple coins, merge them into one
+    if (coinObjects.length > 1) {
+      tx.mergeCoins(coinObjects[0], coinObjects.slice(1));
+    }
+    // Split out exactly `amount` from the merged coin
+    const [goods] = tx.splitCoins(coinObjects[0], [amt]);
+    tx.transferObjects([goods], destination);
+    return tx;
+  },
   // Reset all state to initial values
   resetState: () =>
     set({
@@ -293,12 +291,7 @@ const useMoveStore = create((set, get) => ({
     }),
 
   // Add memberWithdrawTx implementation
-  memberWithdrawTx: (
-    capId,
-    vaultId,
-    assetNames,
-    coinTypes
-  ) => {
+  memberWithdrawTx: (capId, vaultId, assetNames, coinTypes) => {
     // Verify arrays have same length
     if (assetNames.length !== coinTypes.length) {
       throw new Error(
