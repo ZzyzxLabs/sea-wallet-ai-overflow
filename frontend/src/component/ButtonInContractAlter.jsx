@@ -307,7 +307,7 @@ const ButtonInContractAlter = ({coinsInVault, onTransactionSuccess}) => {
         tx = fuseTxFunctions(
           ownerCapObjects[0].data.objectId,
           vault.objectId, 
-          [coinObjectIds[0]],
+          coinObjectIds,
           amountInSmallestUnit,
           finalCoinType, // Using the coin name (first element in selectedCoin array)
           finalCoinType,
