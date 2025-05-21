@@ -30,6 +30,7 @@ module SeaWallet::seaVault {
     const ENotEnough: u64 = 8; // Error code for insufficient amount
     const EAlreadyWithdrawn: u64 = 9;
 
+    const TWO_MINUTES: u64 = 2 * 60 * 1000;
     const SIX_MONTHS: u64 = 6 * 30 * 24 * 60 * 60 * 1000;
     const SEVEN_DAYS: u64 = 7 * 24 * 60 * 60 * 1000;
     const THIRTY_DAYS: u64 = 30 * 24 * 60 * 60 * 1000;
@@ -55,6 +56,7 @@ module SeaWallet::seaVault {
         id: UID,
         vaultID: ID,
         capID: u8,
+        withdrawn_count: u8,
     }
 
     public struct ChargeCap has key, store {
@@ -72,7 +74,7 @@ module SeaWallet::seaVault {
         let vault = SeaVault {
             id: object::new(ctx),
             last_update: tx_context::epoch_timestamp_ms(ctx),
-            time_left: SIX_MONTHS,
+            time_left: TWO_MINUTES,
             is_warned: false,
             cap_percentage: vec_map::empty<u8, u8>(),
             cap_activated: vec_map::empty<u8, bool>(),
@@ -97,6 +99,7 @@ module SeaWallet::seaVault {
                 id: object::new(ctx),
                 vaultID: object::id(vault),
                 capID: capCount,
+                withdrawn_count: 0,
             };
             
             transfer::public_transfer(addrCap, address_list[i]);
@@ -116,6 +119,7 @@ module SeaWallet::seaVault {
             id: object::new(ctx),
             vaultID: object::id(vault),
             capID: capCount,
+            withdrawn_count: 0,
         };
         vault.cap_percentage.insert(capCount, percentage);
         vault.cap_activated.insert(capCount, true);
@@ -212,7 +216,7 @@ module SeaWallet::seaVault {
         assert!(cap.vaultID == object::id(vault), ENotYourVault);
         vault.last_update = clock.timestamp_ms();
         if (vault.is_warned) {
-            vault.time_left = SIX_MONTHS;
+            vault.time_left = TWO_MINUTES;
             vault.is_warned = false;
         }
     }
@@ -220,7 +224,7 @@ module SeaWallet::seaVault {
     /// for member to withdraw their share of asset, withdraw one coinType at a time
     #[allow(lint(self_transfer))]
     public fun member_withdraw<CoinType>(
-        cap: &MemberCap,
+        cap: &mut MemberCap,
         vault: &mut SeaVault,
 
         clock: &Clock,
@@ -239,6 +243,7 @@ module SeaWallet::seaVault {
         let withdrawn_list = table::borrow_mut(&mut vault.asset_withdrawn, asset_name);
         assert!(!vector::contains(withdrawn_list, &cap.capID), EAlreadyWithdrawn);
         vector::push_back(withdrawn_list, cap.capID);
+        cap.withdrawn_count = cap.withdrawn_count + 1;
 
         // calculate the amount to withdraw
         let full_amount = *table::borrow(&vault.asset_sum, asset_name);
@@ -255,7 +260,7 @@ module SeaWallet::seaVault {
     fun grace_period(cap: &MemberCap, vault: &mut SeaVault, clock: &Clock) {
         assert!(cap.vaultID == object::id(vault), ENotYourVault);
         vault.last_update = clock.timestamp_ms();
-        vault.time_left = SEVEN_DAYS;
+        vault.time_left = TWO_MINUTES;
         vault.is_warned = true;
     }
 
