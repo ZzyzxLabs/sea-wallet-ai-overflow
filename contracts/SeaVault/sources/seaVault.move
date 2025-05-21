@@ -296,7 +296,7 @@ module SeaWallet::seaVault {
         } else {
             next_date = next_date + THIRTY_DAYS;
         };
-        let payment: Coin<CoinType> = sea_pay(vault, service.get_service_asset_name(), payment_amount, ctx);
+        let payment: Coin<CoinType> = sea_pay<CoinType>(vault, service.get_service_asset_name(), payment_amount, ctx);
         transfer::public_transfer(payment, service.get_service_owner());
 
         // create ChargeCap for service owner

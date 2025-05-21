@@ -117,3 +117,17 @@
 //     };
 //     ts::end(scenario);
 // }
+
+
+    // fun pay_charge<CoinType>(cap: &ChargeCap, vault: &mut SeaVault, service: &Service<CoinType>, asset_name: vector<u8>, ctx: &mut TxContext) : Coin<CoinType> {
+    //     assert!(cap.vaultID == object::id(vault), ENotYourVault);
+    //     let amount = service.get_service_price();
+    //     assert!(amount <= *table::borrow(&vault.asset_sum, asset_name), ENotEnough);
+    //     // update table amount
+    //     let amount_mut = table::borrow_mut<vector<u8>, u64>(&mut vault.asset_sum, asset_name);
+    //     *amount_mut = *amount_mut - amount;
+
+    //     // pay from vault
+    //     let coin_from_vault = dof::borrow_mut<vector<u8>, Coin<CoinType>>(&mut vault.id, asset_name);
+    //     coin::split(coin_from_vault, amount, ctx)
+    // }
