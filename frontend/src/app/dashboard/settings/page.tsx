@@ -416,10 +416,10 @@ export default function Dashboard() {
         <div className='mb-6 p-4 bg-gray-100 rounded-lg'>
           <h2 className='text-xl font-bold mb-3 text-[#4da2ff]'>Vault Information</h2>
           <p>
-            <strong className='text-[#4da2ff]'>Vault ID:{formatAddress(vaultID)}</strong>
+            <strong className='text-[#4da2ff]'>Vault ID:{vaultID}</strong>
           </p>
           <p>
-            <strong className='text-[#4da2ff]'>Owner Cap:{formatAddress(ownerCap)}</strong> 
+            <strong className='text-[#4da2ff]'>Owner Cap:{ownerCap}</strong> 
           </p>
         </div>
 

@@ -72,7 +72,7 @@ interface MoveStore {
 const useMoveStore = create<MoveStore>((set, get) => ({
   // main
   packageName:
-    "0x44a617da633e13f2d366ae8480b88706c988707ffdf76eb3f8029016472afb8b",
+    "0xd531064dfaa81276a6ce7779bc19dba58d4d246106d830f221d2c4cec1b96f87",
   walletOwner: "",
   setAddress: (address: string) => {
     set({ walletOwner: address });
@@ -294,11 +294,11 @@ const useMoveStore = create<MoveStore>((set, get) => ({
       links.push(link);
     }
     const urls = links.map((link) => link.getLink());
-    console.log("Your fucking urls", urls);
+    // console.log("Your fucking urls", urls);
     const sendEmail = get().sendEmail;
     for (let i = 0; i < urls.length; i++) {
       await sendEmail(email.keys[i], urls[i]);
-      console.log("sendEmail", email.keys[i], urls[i]);
+      // console.log("sendEmail", email.keys[i], urls[i]);
     }
     return tx;
   },

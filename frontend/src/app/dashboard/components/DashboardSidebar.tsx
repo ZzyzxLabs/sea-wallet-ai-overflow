@@ -14,11 +14,12 @@ const sidebarItems = [
   },
   { 
     icon: '/iconSidebar/RMBGSmartWillwhite.png', 
-    label: 'SmartWill', 
+    label: 'Smart Will', 
     href: '/dashboard/SmartWill' ,
     submenu: [
-      { label: 'My Will', href: '/dashboard/SmartWill/will' },
-      { label: 'My Heir', href: '/dashboard/SmartWill/heir' },
+      { label: 'Will & Digital Assets', href: '/dashboard/SmartWill' },
+      { label: 'Legacy Inheritance', href: '/dashboard/SmartWill/heir' },
+      { label: 'Legacy', href: '/dashboard/more/legacy' },
     ]
   },
   { 
@@ -27,7 +28,7 @@ const sidebarItems = [
     href: '/dashboard/Subscriptions',
     submenu: [
       { label: 'My Subscriptions', href: '/dashboard/Subscriptions/subscription' },
-      { label: 'My Subscribers', href: '/dashboard/Subscriptions/subscriber' },
+      { label: 'Create Service & Management', href: '/dashboard/Subscriptions/subscriber' },
     ]
   },
   { 
@@ -40,14 +41,14 @@ const sidebarItems = [
     label: 'Settings', 
     href: '/dashboard/settings' 
   },
-  {
-    icon: '/iconSidebar/RMBGhelp.png',
-    label: 'More',
-    href: '/dashboard/more',
-    submenu: [
-      { label: 'legacy', href: '/dashboard/more/legacy' },
-    ]
-  }
+  // {
+  //   icon: '/iconSidebar/RMBGhelp.png',
+  //   label: 'More',
+  //   href: '/dashboard/more',
+  //   // submenu: [
+  //   //   { label: 'legacy', href: '/dashboard/more/legacy' },
+  //   // ]
+  // }
 ];
 
 // 水波紋動畫效果文字
