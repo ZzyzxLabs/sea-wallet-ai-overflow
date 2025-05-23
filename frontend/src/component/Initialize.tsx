@@ -158,11 +158,44 @@ export default function InitializeContract() {
   
   const { createVaultTx } = useMoveStore();
   
-  // Handle connect button click
-  const handleConnect = () => {
-    setIsConnecting(true);
+  // ... existing code ...
+  const handleConnect = async () => {
+    try {
+      console.log("Connect button clicked - handleConnect function");
+      console.log("Current connection state:", isConnecting);
+      
+      // The ConnectButton component from @mysten/dapp-kit will handle the actual connection
+      // We just need to wait for the account to be available
+      if (!account) {
+        console.log("Waiting for wallet connection...");
+        return;
+      }
+
+      // Once we have an account, update our state
+      if (account.address) {
+        console.log("Wallet connected with address:", account.address);
+        setIsConnecting(true);
+        setAddress(account.address); // Update the address in moveStore
+      }
+    } catch (error) {
+      console.error("Error connecting wallet:", error);
+      showWarningMessage("Failed to connect wallet: " + error.message);
+    }
   };
-  
+
+  // Monitor account changes
+  useEffect(() => {
+    if (account?.address) {
+      console.log("Account updated:", account.address);
+      setAddress(account.address);
+      
+      // If we have an account but not connected, update connection state
+      if (!isConnecting) {
+        setIsConnecting(true);
+      }
+    }
+  }, [account, isConnecting, setAddress, setIsConnecting]);
+
   // Automatically check account connection status
   useEffect(() => {
     if (account && account.address && !isConnecting) {
@@ -403,7 +436,7 @@ export default function InitializeContract() {
         <h1>Establish Your Digital Legacy</h1>
         <p>Connect your wallet to start planning your digital asset inheritance</p>
         <div className="connect-button" onClick={handleConnect}>
-          <CustomConnectButton />
+          <ConnectButton /> 
         </div>
       </div>
 
