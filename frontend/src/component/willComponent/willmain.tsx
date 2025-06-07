@@ -7,7 +7,7 @@ import { X, ArrowLeft, Plus, Upload, FileText, Waves } from 'lucide-react';
 import { isValidSuiAddress } from '@mysten/sui/utils';
 import { useNetworkVariable } from '../../app/networkConfig';
 import { getObjectExplorerLink } from '../../store/sealWill/Will_utils';
-import { getAllowlistedKeyServers, SealClient } from '@mysten/seal';
+import { getAllowlistedKeyServers, SealClient, SessionKey } from '@mysten/seal';
 import { fromHex, toHex } from '@mysten/sui/utils';
 
 // 海洋主題樣式
@@ -238,7 +238,10 @@ function WalrusUploader({ willlistId, capId }: { willlistId: string; capId: stri
   const suiClient = useSuiClient();
   const client = new SealClient({
     suiClient,
-    serverObjectIds: getAllowlistedKeyServers('testnet'),
+    serverConfigs: getAllowlistedKeyServers('testnet').map((id) => ({
+      objectId: id,
+      weight: 1,
+    })),
     verifyKeyServers: false,
   });
 

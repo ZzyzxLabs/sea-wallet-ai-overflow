@@ -7,10 +7,11 @@ import { X, ArrowLeft, Plus, Upload, FileText, Waves, Anchor, Fish, Droplet, Eye
 import { isValidSuiAddress } from '@mysten/sui/utils';
 import { useNetworkVariable } from '../../app/networkConfig';
 import { getObjectExplorerLink } from '../../store/sealWill/Will_utils';
-import { getAllowlistedKeyServers, SealClient, SessionKey, NoAccessError } from '@mysten/seal';
+import { KeyServerConfig, getAllowlistedKeyServers, SealClient, SessionKey, NoAccessError, type SessionKeyType, } from '@mysten/seal';
 import { fromHex, toHex } from '@mysten/sui/utils';
 import { downloadAndDecrypt } from './utils_download';
-
+import { set, get } from 'idb-keyval';
+import { getFullnodeUrl, SuiClient } from '@mysten/sui/client';
 const TTL_MIN = 10;
 
 // Define types
@@ -189,7 +190,10 @@ export const WillListDisplay = () => {
 
   const client = new SealClient({
     suiClient,
-    serverObjectIds: getAllowlistedKeyServers('testnet'),
+    serverConfigs: getAllowlistedKeyServers('testnet').map((id) => ({
+      objectId: id,
+      weight: 1,
+    })),
     verifyKeyServers: false,
   });
 
@@ -278,15 +282,31 @@ export const WillListDisplay = () => {
 
   const onView = async (blobIds: string[], allowlistId: string, capId: string) => {
     setDecrypting(true);
-    
-    // Ensure valid sessionKey
-    if (currentSessionKey && !currentSessionKey.isExpired() && currentSessionKey.getAddress() === currentAccount?.address) {
-      await handleDecrypt(blobIds, allowlistId, currentSessionKey, capId);
-      return;
+    const imported: SessionKeyType = await get('sessionKey');
+    if (imported) {
+      try {
+        const currentSessionKey = await SessionKey.import(
+          imported,
+          new SuiClient({url: getFullnodeUrl('testnet')}),
+        );
+        console.log('loaded currentSessionKey', currentSessionKey);
+        if (currentSessionKey && !currentSessionKey.isExpired() && currentSessionKey.getAddress() === currentAccount?.address) {
+          await handleDecrypt(blobIds, allowlistId, currentSessionKey, capId);
+        return;
+      }
     }
-    
+      catch (error) {
+        console.log('Imported session key is expired', error);
+      }
+    }
+    set('sessionKey', null);
     setCurrentSessionKey(null);
-    const sessionKey = new SessionKey({ address: currentAccount?.address!, packageId, ttlMin: TTL_MIN });
+    const sessionKey = await SessionKey.create({
+      address: currentAccount?.address!,
+      packageId,
+      ttlMin: TTL_MIN,
+      suiClient,
+    });
     signPersonalMessage(
       { message: sessionKey.getPersonalMessage() },
       {
