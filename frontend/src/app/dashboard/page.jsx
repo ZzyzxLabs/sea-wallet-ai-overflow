@@ -1,12 +1,13 @@
-import ContractAlter from "../../component/VaultList";
-import ContractAlterScroll from "../../component/VaultScroll"
+import VaultList from "../../component/VaultList";
+import ContractAlterScroll from "../../component/VaultScroll";
+import WaveEffect from "../../component/WaveEffect";
+
 export default function Dashboard() {
   return (
-    <div className="flex flex-col items-center justify-center h-screen bg-primary">
-      <h1 className="text-4xl font-bold mb-4">Dashboard</h1>
-      <p className="text-lg">Welcome to the Dashboard!</p>
-      <p className="text-lg">This is where you can manage your account and settings.</p>
-      <ContractAlter />
+    <div className="flex flex-col items-center justify-center h-screen bg-primary/30 relative overflow-hidden">
+      <WaveEffect isBackground={true} showInstructions={false} />
+      <h1 className="text-4xl font-bold mb-4 relative z-10">Vault Content</h1>
+      <VaultList />
     </div>
-  ); 
+  );
 }

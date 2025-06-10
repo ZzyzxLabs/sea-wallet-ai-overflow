@@ -9,7 +9,7 @@ import Image from 'next/image';
 const sidebarItems = [
   { 
     icon: '/iconSidebar/RMBGwalletOverview.png', 
-    label: 'Wallet Overview', 
+    label: 'Property Overview', 
     href: '/dashboard' 
   },
   { 
@@ -28,7 +28,7 @@ const sidebarItems = [
     href: '/dashboard/Subscriptions',
     submenu: [
       { label: 'My Subscriptions', href: '/dashboard/Subscriptions/subscription' },
-      { label: 'Create Service & Management', href: '/dashboard/Subscriptions/subscriber' },
+      { label: 'Create & Manage', href: '/dashboard/Subscriptions/subscriber' },
     ]
   },
   { 
