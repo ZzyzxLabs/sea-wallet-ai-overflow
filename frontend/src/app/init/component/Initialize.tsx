@@ -182,7 +182,6 @@ export default function InitializeContract() {
       showWarningMessage("Failed to connect wallet: " + error.message);
     }
   };
-
   // Monitor account changes
   useEffect(() => {
     if (account?.address) {
@@ -196,42 +195,17 @@ export default function InitializeContract() {
     }
   }, [account, isConnecting, setAddress, setIsConnecting]);
 
-  // Automatically check account connection status
-  useEffect(() => {
-    if (account && account.address && !isConnecting) {
-      console.log("Account already connected:", account.address);
-      setTimeout(() => {
-        setIsConnecting(true);
-      }, 100);
-    }
-  }, [account, isConnecting, setIsConnecting]);
-
   useEffect(() => {
     if (account) {
       setAddress(account.address); 
     }
   }, [account, setAddress]);
-
-  // Monitor account status changes, control animation sequence
-  useEffect(() => {
-    if (account && isConnecting) {
-      const timerShowWelcome = setTimeout(() => {
-        setShowWelcome(true);
-
-        const timerNextCard = setTimeout(() => {
-          setShowWelcome(false);
-
-          setTimeout(() => {
-            setShowNextCard(true);
-          }, 500);
-        }, 3000);
-
-        return () => clearTimeout(timerNextCard);
-      }, 500);
-
-      return () => clearTimeout(timerShowWelcome);
+  // Handle manual proceed to next step
+  const handleProceed = () => {
+    if (account && account.address) {
+      setShowNextCard(true);
     }
-  }, [account, isConnecting, setShowWelcome, setShowNextCard]);
+  };
 
   // Wave background animation
   useEffect(() => {
@@ -306,7 +280,7 @@ export default function InitializeContract() {
 
   // Format address display
   const formatAddress = (address) => {
-    if (!address) return "User";
+    if (!address) return " ";
     return `${address.slice(0, 5)}...${address.slice(-5)}`;
   };
 
@@ -426,36 +400,35 @@ export default function InitializeContract() {
           <span className="title-text">SeaVault</span>
         </h1>
         <p className="subtitle">Protect your digital assets, guard your journey</p>
-      </div>
-
-      {/* Connect card */}
-      <div className={`connect-card ${isConnecting ? 'hidden' : ''}`}>
+      </div>      {/* Connect card */}
+      <div className={`connect-card ${showNextCard ? 'hidden' : ''}`}>
         <div className="icon">
         </div>
         <h1>Establish Your Digital Legacy</h1>
         <p>Connect your wallet to start planning your digital asset inheritance</p>
-        <div className="connect-button" onClick={handleConnect}>
-          <ConnectButton /> 
-        </div>
-      </div>
-
-      {/* Welcome card */}
-      <div className={`welcome-card ${account && showWelcome ? '' : 'hidden'}`}>
-        <div className="icon">
-        </div>
-        <h1>Welcome, {formatAddress(account?.address)}</h1>
-        <div className="status">
-          <div>Wallet Connected</div>
-        </div>
-        <p>Ready to begin your digital legacy planning journey</p>
-        <div className="progress">
-          <div className="progress-bar">
-            <div className="fill">
-              <div className="pulse"></div>
-            </div>
+        
+        <div className="space-y-4">
+          {/* Always show ConnectButton for wallet connection/switching */}
+          <div className="connect-button" onClick={handleConnect}>
+            <ConnectButton /> 
           </div>
+          
+          {/* Show status and proceed button when wallet is connected */}
+
+            <div className="justify-between items-center flex flex-row">
+              <div className="status text-green-400 font-medium">
+                Wallet Used : {formatAddress(account?.address)}
+              </div>
+              <button 
+                className="px-6 py-3 bg-transparent hover:bg-white/15 text-white font-medium rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+                onClick={handleProceed}
+                disabled={!account?.address || isProcessing}
+              >
+                Proceed to Setup
+              </button>
+            </div>
+          
         </div>
-        <div className="progress-text">Loading data...</div>
       </div>
 
       {/* Set heirs card */}
