@@ -17,7 +17,7 @@ const formatAddress = (address) => {
   return `${address.slice(0, 8)}...${address.slice(-19)}`; 
 };
 
-const ButtonInContractAlter = ({coinsInVault, onTransactionSuccess}) => {
+const coinAdd = ({coinsInVault, onTransactionSuccess}) => {
   const account = useCurrentAccount();
   const autoConnectionStatus = useAutoConnectWallet();
   // Use the hook with custom execute function to get more detailed transaction results
@@ -549,4 +549,4 @@ const ButtonInContractAlter = ({coinsInVault, onTransactionSuccess}) => {
   );
 };
 
-export default ButtonInContractAlter;
+export default coinAdd;

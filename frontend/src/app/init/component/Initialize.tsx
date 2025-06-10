@@ -4,13 +4,13 @@ import "@mysten/dapp-kit/dist/index.css";
 import { ConnectButton, useSuiClient } from "@mysten/dapp-kit";
 import { useCurrentAccount, useSignAndExecuteTransaction } from "@mysten/dapp-kit";
 import { useState, useEffect, useRef } from "react";
-import useHeirStore from "../store/heirStore"; 
+import useHeirStore from "../../../store/heirStore"; 
 import { useRouter } from "next/navigation";
-import useMoveStore from "../store/moveStore";
+import useMoveStore from "../../../store/moveStore";
 import { bcs, BcsType } from '@mysten/bcs';
 import HeirCard from "./HeirCard";
 import Image from "next/image";
-import "../styles/InitializeContract.css"; // Import CSS styles
+import "./InitializeContract.css"; // Import CSS styles
 
 // VecMap function for serializing key-value pairs (remains unchanged)
 function VecMap<K extends BcsType<any>, V extends BcsType<any>>(K: K, V: V) {
@@ -431,7 +431,6 @@ export default function InitializeContract() {
       {/* Connect card */}
       <div className={`connect-card ${isConnecting ? 'hidden' : ''}`}>
         <div className="icon">
-          <Image src="/RMBGlogo.png" width={24} height={24} alt="Wallet" />
         </div>
         <h1>Establish Your Digital Legacy</h1>
         <p>Connect your wallet to start planning your digital asset inheritance</p>
@@ -443,7 +442,6 @@ export default function InitializeContract() {
       {/* Welcome card */}
       <div className={`welcome-card ${account && showWelcome ? '' : 'hidden'}`}>
         <div className="icon">
-          <Image src="/RMBGlogo.png" width={24} height={24} alt="Welcome" />
         </div>
         <h1>Welcome, {formatAddress(account?.address)}</h1>
         <div className="status">
@@ -465,7 +463,6 @@ export default function InitializeContract() {
         <div className="heir-card">
           <div className="container">
             <div className="icon">
-              <Image src="/RMBGlogo.png" width={24} height={24} alt="Heirs" />
             </div>
             <HeirCard
               heirs={heirs}

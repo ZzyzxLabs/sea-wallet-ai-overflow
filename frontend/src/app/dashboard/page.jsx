@@ -1,4 +1,4 @@
-import ContractAlter from "../../component/ContractAlter";
+import ContractAlter from "../../component/VaultList";
 import ContractAlterScroll from "../../component/VaultScroll"
 export default function Dashboard() {
   return (

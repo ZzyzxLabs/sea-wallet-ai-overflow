@@ -67,8 +67,8 @@ export default function HeirCard({ heirs, addHeir, removeHeir, updateHeir, getTo
   };
 
   return (
-    <div className="bg-primary rounded-lg p-8 shadow-none w-full max-w-3xl" ref={cardRef}>
-      <h1 className="text-4xl text-black font-bold mb-6">Set Your Heir</h1>
+    <div className="bg-primary/50 rounded-lg p-8 shadow-none w-full max-w-3xl" ref={cardRef}>
+      <h1 className="text-4xl text-white font-bold mb-6">Set Your Heir</h1>
 
       <div className="space-y-4">
         {heirs.map((heir, index) => (
@@ -82,17 +82,17 @@ export default function HeirCard({ heirs, addHeir, removeHeir, updateHeir, getTo
               transition: 'opacity 0.35s ease-out, transform 0.35s ease-out'
             }}
           >
-            <div className="font-bold text-black">Heir {index + 1}</div>
+            <div className="font-bold text-white">Heir {index + 1}</div>
             <input
               type="text"
-              className="p-2 border border-gray-300 rounded-md text-black"
+              className="p-2 border border-gray-300 rounded-md text-white"
               placeholder="Name"
               value={heir.name || ""}
               onChange={(e) => updateHeir(heir.id, "name", e.target.value)}
             />
             <input
               type="text"
-              className="p-2 border border-gray-300 rounded-md text-black"
+              className="p-2 border border-gray-300 rounded-md text-white"
               placeholder="% of Share"
               value={heir.ratio || ""}
               onChange={(e) => updateHeir(heir.id, "ratio", e.target.value)}
@@ -121,8 +121,8 @@ export default function HeirCard({ heirs, addHeir, removeHeir, updateHeir, getTo
                 </div>
                 <input
                   type="text"
-                  className="p-2 pl-8 border border-gray-300 rounded-md w-full text-black"
-                  placeholder="Wallet Address or Email"
+                  className="p-2 pl-8 border border-gray-300 rounded-md w-full text-white"
+                  placeholder="Address"
                   value={heir.address || ""}
                   onChange={(e) => updateHeir(heir.id, "address", e.target.value)}
                 />
@@ -130,7 +130,7 @@ export default function HeirCard({ heirs, addHeir, removeHeir, updateHeir, getTo
               {index > 0 && (
                 <button
                   onClick={() => removeHeir(heir.id)}
-                  className="ml-2 text-gray-600 hover:text-black"
+                  className="ml-2 text-gray-600 hover:text-white"
                   disabled={heirs.length <= 1}
                   title="Remove Heir"
                 >
@@ -147,7 +147,7 @@ export default function HeirCard({ heirs, addHeir, removeHeir, updateHeir, getTo
       <div className="mt-6">
         <button
           onClick={handleAddHeir}
-          className="flex items-center text-black font-bold"
+          className="flex items-center text-white font-bold"
         >
           <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
@@ -159,7 +159,7 @@ export default function HeirCard({ heirs, addHeir, removeHeir, updateHeir, getTo
       <div className="my-8 border-t border-gray-300"></div>
 
       <div className="flex justify-between items-center">
-        <div className="font-bold text-lg text-black">
+        <div className="font-bold text-lg text-white">
           Total % Now: <span>{getTotalRatio()}</span>%
         </div>
 
@@ -171,7 +171,7 @@ export default function HeirCard({ heirs, addHeir, removeHeir, updateHeir, getTo
           </button>
 
           <button
-            className={`px-6 py-3 bg-secondary text-white rounded-full hover:bg-secondary-dark transition ${isProcessing ? 'opacity-50 cursor-not-allowed' : ''}`}
+            className={`px-6 py-3 bg-secondary text-black rounded-full hover:bg-secondary-dark transition ${isProcessing ? 'opacity-50 cursor-not-allowed' : ''}`}
             onClick={handleVerify}
             disabled={isProcessing}
           >

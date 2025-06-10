@@ -6,13 +6,13 @@ import {
   useSuiClientQuery,
   useSignAndExecuteTransaction,
 } from "@mysten/dapp-kit";
-import ButtonInContractAlter from "./ButtonInContractAlter";
+import CoinAdd from "./coinAdd";
 import useMoveStore from "../store/moveStore";
 import useHeirStore from "../store/heirStore";
 import useCoinStore from "../store/coinStore";
 import { useVaultAndOwnerCap, useVaultList } from "../utils/vaultUtils";
 
-const ContractAlter = () => {
+const VaultList = () => {
   const account = useCurrentAccount();
   const packageName = useMoveStore((state) => state.packageName);
   const takeCoinTx = useMoveStore((state) => state.takeCoinTx);
@@ -262,7 +262,7 @@ const ContractAlter = () => {
           <h3 className='text-lg text-gray-800 font-medium'>
             Your SeaVault Assets
           </h3>
-          <ButtonInContractAlter
+          <CoinAdd
             coinsInVault={coinsInVault}
             onTransactionSuccess={refreshData}
           />
@@ -330,4 +330,4 @@ const ContractAlter = () => {
   );
 };
 
-export default ContractAlter;
+export default VaultList;
