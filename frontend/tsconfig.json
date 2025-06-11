@@ -24,15 +24,21 @@
     ],
     "baseUrl": ".",
     "paths": {
-      "@/*": ["./src/*"]
-    }
+      "@/*": [
+        "./src/*"
+      ]
+    },
+    "strictNullChecks": true
   },
   "include": [
     "next-env.d.ts",
     ".next/types/**/*.ts",
     "**/*.ts",
-    "**/*.tsx"
-, "src/app/dashboard/Subscriptions/subscription/page.jsx", "src/component/Initialize.jsx", "src/store/coinStore.js"  ],
+    "**/*.tsx",
+    "src/app/dashboard/Subscriptions/subscription/page.jsx",
+    "src/component/Initialize.jsx",
+    "src/store/coinStore.js"
+  ],
   "exclude": [
     "node_modules"
   ]
