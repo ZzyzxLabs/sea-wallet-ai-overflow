@@ -370,11 +370,11 @@ export default function Subscriptions() {
 
 
   return (
-    <div className="p-6 ml-8 mx-auto bg-white text-black">      {/* Header */}
+    <div className="p-6 ml-8 mx-auto bg-white/40 text-black">      {/* Header */}
       <div className="mb-8 flex justify-between items-center">
         <div>
           <h1 className="text-3xl font-bold mb-2">Subscription</h1>
-          <p className="text-gray-600">
+          <p className="text-gray-800">
             Manage your active service subscriptions and collect monthly fees
             from your subscribers
           </p>
@@ -382,7 +382,7 @@ export default function Subscriptions() {
         <div className="flex items-center gap-4">
           <button 
             onClick={() => setShowSubscribeModal(true)}
-            className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+            className="px-4 py-2 bg-blue-600/70 text-white rounded-md hover:bg-blue-700/80 transition-colors"
           >
             Subscribe to New Service
           </button>
@@ -393,14 +393,14 @@ export default function Subscriptions() {
       <div className="mb-6">
         <div className="flex space-x-4 mb-6">
           <button
-            className={`px-4 py-1.5 ${activeTab === "mySubscriptions" ? "border-b-2 border-black font-medium" : "text-gray-600"}`}
+            className={`px-4 py-1.5 ${activeTab === "mySubscriptions" ? "border-b-2 border-black font-medium" : "text-gray-800"}`}
             onClick={() => setActiveTab("mySubscriptions")}
           >
             My Subscriptions
           </button>{" "}
           <a
             href="/dashboard/Subscriptions/subscriber"
-            className="px-4 py-1.5 text-gray-600 hover:text-gray-900"
+            className="px-4 py-1.5 text-gray-800 hover:text-gray-900"
           >
             My Subscribers
           </a>
@@ -460,14 +460,14 @@ export default function Subscriptions() {
                 <p className="text-sm my-2 text-black/90">{service.description}</p>
                 
                 {/* Show service owner */}
-                <div className="text-xs text-gray-600 mb-1">
+                <div className="text-xs text-gray-800 mb-1">
                   <span className="opacity-80">Provider: </span>
                   {formatAddress(service.address)}
                 </div>
                 
                 {/* Show receipt ID if available */}
                 {service.receiptId && (
-                  <div className="text-xs text-gray-600 mb-1">
+                  <div className="text-xs text-gray-800 mb-1">
                     <span className="opacity-80">Receipt ID: </span>
                     {formatAddress(service.receiptId)}
                   </div>
