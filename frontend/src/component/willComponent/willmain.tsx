@@ -190,7 +190,7 @@ if (typeof document !== 'undefined' && !document.querySelector('#ocean-theme-sty
 // 原有的接口定義保持不變
 export interface Cap {
   id: string;
-  service_id: string;
+  vault_id: string;
 }
 
 export interface CardItem {
@@ -477,7 +477,7 @@ function WalrusUploader({ willlistId, capId }: { willlistId: string; capId: stri
   async function handlePublish() {
     const tx = new Transaction();
     tx.moveCall({
-      target: `${packageId}::will::publish`,
+      target: `${packageId}::seaVault::publish`,
       arguments: [tx.object(willlistId), tx.object(capId), tx.pure.string(info!.blobId)],
     });
 
@@ -1034,7 +1034,7 @@ export function AllWilllist({ width, height, maxWidth = '1200px', style = {} }: 
         showType: true,
       },
       filter: {
-        StructType: `${packageId}::will::Cap`,
+        StructType: `${packageId}::seaVault::OwnerCap`,
       },
     });
     const caps = res.data
@@ -1042,20 +1042,20 @@ export function AllWilllist({ width, height, maxWidth = '1200px', style = {} }: 
         const fields = (obj!.data!.content as { fields: any }).fields;
         return {
           id: fields?.id.id,
-          service_id: fields?.service_id,
+          vault_id: fields?.vaultID,
         };
       })
       .filter((item) => item !== null) as Cap[];
     const cardItems: CardItem[] = await Promise.all(
       caps.map(async (cap) => {
         const willlist = await suiClient.getObject({
-          id: cap.service_id,
+          id: cap.vault_id,
           options: { showContent: true },
         });
         const fields = (willlist.data?.content as { fields: any })?.fields || {};
         return {
           cap_id: cap.id,
-          willlist_id: cap.service_id,
+          willlist_id: cap.vault_id,
           list: fields.list,
           name: fields.name,
         };

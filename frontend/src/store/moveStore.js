@@ -20,7 +20,7 @@ function stringToUint8Array(str) {
 const useMoveStore = create((set, get) => ({
   // main
   packageName:
-    "0xc2dc132251baf91095abfc5e883c1a72a834c1897b91ded63670c0b5ffddc7f5",
+    "0x3a170d85bde412b9657499dcdbb40446fd540640e2718fcc95656b710585252e",
   walletOwner: "",
   setAddress: (address) => {
     set({ walletOwner: address });

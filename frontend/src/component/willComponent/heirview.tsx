@@ -17,7 +17,7 @@ const TTL_MIN = 10;
 // Define types
 interface Cap {
   id: string;
-  service_id: string;
+  vault_id: string;
 }
 
 interface CardItem {
@@ -36,7 +36,7 @@ interface FeedData {
 function constructMoveCall(packageId: string, allowlistId: string, cap_id: string) {
   return (tx: Transaction, id: string) => {
     tx.moveCall({
-      target: `${packageId}::will::seal_approve`,
+      target: `${packageId}::seaVault::seal_approve_owner`,
       arguments: [tx.pure.vector('u8', fromHex(id)), tx.object(cap_id), tx.object(allowlistId)],
     });
   };
@@ -209,7 +209,7 @@ export const WillListDisplay = () => {
           showType: true,
         },
         filter: {
-          StructType: `${packageId}::will::AccessNFT`,
+          StructType: `${packageId}::seaVault::OwnerCap`,
         },
       });
       
@@ -218,7 +218,7 @@ export const WillListDisplay = () => {
           const fields = (obj!.data!.content as { fields: any }).fields;
           return {
             id: fields?.id.id,
-            service_id: fields?.service_id,
+            vault_id: fields?.vaultID,
           };
         })
         .filter((item) => item !== null) as Cap[];
@@ -226,13 +226,13 @@ export const WillListDisplay = () => {
       const cardItems: CardItem[] = await Promise.all(
         caps.map(async (cap) => {
           const willlist = await suiClient.getObject({
-            id: cap.service_id,
+            id: cap.vault_id,
             options: { showContent: true },
           });
           const fields = (willlist.data?.content as { fields: any })?.fields || {};
           return {
             cap_id: cap.id,
-            willlist_id: cap.service_id,
+            willlist_id: cap.vault_id,
             list: fields.list,
             name: fields.name,
           };

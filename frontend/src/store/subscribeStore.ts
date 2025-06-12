@@ -24,7 +24,7 @@ interface SubscribeState {
 export const useSubscribeStore = create<SubscribeState>((set, get) => ({
   email: "",
   packageName:
-    "0xc2dc132251baf91095abfc5e883c1a72a834c1897b91ded63670c0b5ffddc7f5",
+    "0x3a170d85bde412b9657499dcdbb40446fd540640e2718fcc95656b710585252e",
   setEmail: (email: string) => set({ email }),
   async createService(coinType, price, name, serviceAddr, yDiscount) {
     console.log("Create", coinType, price, name, serviceAddr, yDiscount);
