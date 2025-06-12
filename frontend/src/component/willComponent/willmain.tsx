@@ -751,7 +751,7 @@ function WalrusUploader({ willlistId, capId }: { willlistId: string; capId: stri
         disabled={!info || isUploading || !willlistId || !capId}
         style={{ marginTop: '24px', width: '100%' }}
       >
-        step 2: attach to sui object
+        step 2: attach to seal service
       </Button>
     </Card>
   );
