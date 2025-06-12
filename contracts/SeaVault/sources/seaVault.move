@@ -5,6 +5,7 @@ module SeaWallet::seaVault {
         type_name::{Self, TypeName},
     };
     use sui::{
+        dynamic_field as df,
         dynamic_object_field as dof,
         balance::{Self, Balance},
         coin::{Self, Coin},
@@ -30,6 +31,7 @@ module SeaWallet::seaVault {
     const ENotEnough: u64 = 8; // Error code for insufficient amount
     const EAlreadyWithdrawn: u64 = 9;
 
+    const MARKER: u64 = 2;
     const TWO_MINUTES: u64 = 2 * 60 * 1000;
     const SIX_MONTHS: u64 = 6 * 30 * 24 * 60 * 60 * 1000;
     const SEVEN_DAYS: u64 = 7 * 24 * 60 * 60 * 1000;
@@ -269,6 +271,9 @@ module SeaWallet::seaVault {
         object::id(vault)
     }
 
+    public(package) fun get_ownerCapID(cap: &OwnerCap): ID {
+        object::id(cap)
+    }
     /// for owner to use vault to pay (can only be used within seaVault)
     /// coin need to be processed within the vault
     public(package) fun sea_pay<CoinType>(vault: &mut SeaVault, asset_name: String, amount: u64, ctx: &mut TxContext) : Coin<CoinType> {
@@ -336,4 +341,25 @@ module SeaWallet::seaVault {
         transfer::public_transfer(receipt, chargeCap.subscriber);
     }
 
+
+    entry fun seal_approve_owner(id: vector<u8>, ownerCap: &OwnerCap, seaVault: &SeaVault) {
+        assert!(approve_internal_owner(id, ownerCap, seaVault), ENotYourVault);
+    }
+
+    entry fun seal_approve(id: vector<u8>, memberCap: &MemberCap, seaVault: &SeaVault) {
+        assert!(approve_internal(id, memberCap, seaVault), ENotYourVault);
+    }
+    // Only holder of a valid AccessNFT can approve
+    fun approve_internal(id: vector<u8>, memberCap: &MemberCap, seaVault: &SeaVault): bool {
+        // Check NFT matches service
+        object::id(seaVault) == memberCap.vaultID
+    }
+    fun approve_internal_owner(id: vector<u8>, ownerCap: &OwnerCap, seaVault: &SeaVault): bool {
+        // Check NFT matches service
+        object::id(seaVault) == ownerCap.vaultID
+    }
+    public fun publish(seaVault: &mut SeaVault, ownerCap: &OwnerCap, blob_id: String) {
+        assert!(ownerCap.vaultID == object::id(seaVault), EWrongVaultId);
+        df::add(&mut seaVault.id, blob_id, MARKER);
+    }
 }
