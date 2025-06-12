@@ -74,6 +74,11 @@ const globalStyles = `
     100% { transform: scale(1.2); opacity: 0; }
   }
   
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.7; }
+  }
+  
   .ocean-gradient {
     background: ${oceanTheme.gradients.ocean};
   }
@@ -1150,7 +1155,7 @@ export function AllWilllist({ width, height, maxWidth = '1200px', style = {} }: 
 
   // 顯示列表界面
   return (
-    <Box style={{ 
+    <Box         className="rounded-lg" style={{ 
       minHeight: height || '100vh',
       width: width || '100%',
       background: oceanTheme.gradients.oceanLight,
@@ -1158,35 +1163,61 @@ export function AllWilllist({ width, height, maxWidth = '1200px', style = {} }: 
       boxSizing: 'border-box',
       ...style
     }}>
-      <Card className="ocean-card" style={{ 
+      <Card className="ocean-card " style={{ 
         maxWidth: maxWidth,
         margin: '0 auto', 
         padding: 0, 
         overflow: 'hidden',
         height: height ? 'calc(100% - 80px)' : 'auto'
-      }}>
-        <Box className="ocean-header" style={{ padding: '32px' }}>
-          <Flex justify="between" align="center">
+      }}>        <Box className="ocean-header" style={{ padding: '32px', position: 'relative' }}>
+          <Box style={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: 'url("data:image/svg+xml,%3Csvg width="60" height="60" viewBox="0 0 60 60" xmlns="http://www.w3.org/2000/svg"%3E%3Cpath d="M30 5C30 15 20 25 10 25C20 25 30 35 30 45C30 35 40 25 50 25C40 25 30 15 30 5Z" fill="rgba(255,255,255,0.05)"/%3E%3C/svg%3E")',
+            backgroundSize: '60px 60px',
+            animation: 'float 6s ease-in-out infinite'
+          }} />
+          <Flex justify="between" align="center" style={{ position: 'relative', zIndex: 1 }}>
             <Box>
-              <Heading size="6" style={{ marginBottom: '12px' }}>
-                Admin View: Owned Willlists
-              </Heading>
+              <Flex align="center" gap="3" style={{ marginBottom: '12px' }}>
+                <Box style={{
+                  padding: '8px',
+                  borderRadius: '8px',
+                  background: 'rgba(255,255,255,0.2)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center'
+                }}>
+                  <Waves size={24} style={{ color: 'white' }} />
+                </Box>
+                <Heading size="6" style={{ margin: 0, color: 'white' }}>
+                  SeaWill Dashboard
+                </Heading>
+              </Flex>
               <Text size="3" style={{ color: 'rgba(255,255,255,0.9)' }}>
-                Mange your willlists and upload files
+                Manage your digital wills and upload secure files
               </Text>
             </Box>
             <Button
               className="ocean-button"
               onClick={() => setShowCreateModal(true)}
               size="3"
+              style={{
+                background: 'rgba(255,255,255,0.2)',
+                backdropFilter: 'blur(10px)',
+                border: '1px solid rgba(255,255,255,0.3)',
+                color: 'white'
+              }}
             >
               <Plus size={20} style={{ marginRight: '8px' }} />
               Create New Will
             </Button>
           </Flex>
         </Box>
-        
-        {/* 創建新 Will 的模態框 */}
+          {/* 創建新 Will 的模態框 */}
         {showCreateModal && (
           <Box style={{
             position: 'fixed',
@@ -1194,17 +1225,22 @@ export function AllWilllist({ width, height, maxWidth = '1200px', style = {} }: 
             left: 0,
             right: 0,
             bottom: 0,
-            backgroundColor: 'rgba(0, 0, 0, 0.5)',
+            backgroundColor: 'rgba(0, 0, 0, 0.6)',
+            backdropFilter: 'blur(8px)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
             zIndex: 1000,
+            animation: 'pulse 0.3s ease-out'
           }}>
             <Card className="ocean-card" style={{
               width: '90%',
               maxWidth: '500px',
-              padding: '32px',
+              padding: '40px',
               position: 'relative',
+              border: `1px solid ${oceanTheme.colors.wave.medium}`,
+              boxShadow: oceanTheme.shadows.wave,
+              animation: 'float 0.3s ease-out'
             }}>
               <Button
                 variant="ghost"
@@ -1215,39 +1251,58 @@ export function AllWilllist({ width, height, maxWidth = '1200px', style = {} }: 
                   top: '16px',
                   color: oceanTheme.colors.text.secondary,
                   borderRadius: '8px',
+                  padding: '8px',
+                  transition: 'all 0.2s ease'
                 }}
               >
-                <X size={24} />
+                <X size={20} />
               </Button>
               
-              <Heading size="5" style={{ marginBottom: '24px', color: oceanTheme.colors.text.primary }}>
-                Create New Will
-              </Heading>
+              <Box style={{ textAlign: 'center', marginBottom: '32px' }}>
+                <Box style={{
+                  display: 'inline-flex',
+                  padding: '16px',
+                  borderRadius: '50%',
+                  background: oceanTheme.gradients.oceanLight,
+                  marginBottom: '16px'
+                }}>
+                  <Waves size={32} style={{ color: oceanTheme.colors.primary }} />
+                </Box>
+                <Heading size="5" style={{ margin: 0, color: oceanTheme.colors.text.primary }}>
+                  Create New Will
+                </Heading>
+              </Box>
               
               <Flex direction="column" gap="4">
-                <Text size="3" style={{ color: oceanTheme.colors.text.secondary }}>
-                  Please enter a name for your new Will:
+                <Text size="3" style={{ color: oceanTheme.colors.text.secondary, textAlign: 'center' }}>
+                  Enter a name for your new digital will:
                 </Text>
                 <input
                   type="text"
                   value={newWillName}
                   onChange={(e) => setNewWillName(e.target.value)}
-                  placeholder="input will name..."
+                  placeholder="My Digital Will..."
                   className="ocean-input"
-                  style={{ marginBottom: '16px' }}
+                  style={{ 
+                    marginBottom: '16px',
+                    fontSize: '16px',
+                    textAlign: 'center'
+                  }}
                   autoFocus
                 />
                 
-                <Flex gap="3" justify="end">
+                <Flex gap="3" justify="center">
                   <Button
                     variant="soft"
                     onClick={() => {
                       setShowCreateModal(false);
                       setNewWillName('');
                     }}
+                    size="3"
                     style={{
-                      borderRadius: '8px',
+                      borderRadius: '12px',
                       color: oceanTheme.colors.text.secondary,
+                      padding: '12px 24px'
                     }}
                   >
                     Cancel
@@ -1256,6 +1311,11 @@ export function AllWilllist({ width, height, maxWidth = '1200px', style = {} }: 
                     className="ocean-button"
                     onClick={createWillList}
                     disabled={isCreating || newWillName.trim() === ''}
+                    size="3"
+                    style={{
+                      padding: '12px 24px',
+                      minWidth: '120px'
+                    }}
                   >
                     {isCreating ? (
                       <Flex align="center" gap="2">
@@ -1263,7 +1323,10 @@ export function AllWilllist({ width, height, maxWidth = '1200px', style = {} }: 
                         Creating...
                       </Flex>
                     ) : (
-                      'Create'
+                      <Flex align="center" gap="2">
+                        <Plus size={16} />
+                        Create
+                      </Flex>
                     )}
                   </Button>
                 </Flex>
@@ -1271,45 +1334,113 @@ export function AllWilllist({ width, height, maxWidth = '1200px', style = {} }: 
             </Card>
           </Box>
         )}
-        
-        <Box style={{ padding: '32px' }}>
+          <Box style={{ padding: '32px' }}>
           {cardItems.length === 0 && (
             <Card style={{ 
-              padding: '48px', 
+              padding: '64px', 
               textAlign: 'center',
-              background: oceanTheme.colors.wave.light,
-              borderRadius: '16px'
+              background: oceanTheme.colors.background.card,
+              borderRadius: '20px',
+              border: `1px solid ${oceanTheme.colors.wave.medium}`,
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              minHeight: '300px'
             }}>
-              <Waves size={64} style={{ marginBottom: '16px', color: oceanTheme.colors.primary }} />
-              <Text size="4" style={{ color: oceanTheme.colors.text.secondary }}>
-                Will not found, please create one.
+              <Box style={{ 
+                marginBottom: '24px',
+                padding: '20px',
+                borderRadius: '50%',
+                background: oceanTheme.gradients.oceanLight,
+                display: 'inline-flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}>
+                <Waves size={48} style={{ color: oceanTheme.colors.primary }} />
+              </Box>
+              <Heading size="5" style={{ 
+                marginBottom: '12px', 
+                color: oceanTheme.colors.text.primary 
+              }}>
+                No Wills Found
+              </Heading>              <Text size="3" style={{ 
+                color: oceanTheme.colors.text.secondary,
+                marginBottom: '24px',
+                maxWidth: '400px',
+                lineHeight: '1.5'
+              }}>
+                You haven&apos;t created any wills yet. Create your first will to get started with managing your digital assets.
               </Text>
               <Button
                 className="ocean-button"
                 onClick={() => setShowCreateModal(true)}
-                style={{ marginTop: '16px' }}
+                size="3"
+                style={{
+                  padding: '12px 24px',
+                  fontSize: '16px',
+                  fontWeight: '600'
+                }}
               >
-                <Plus size={16} style={{ marginRight: '8px' }} />
+                <Plus size={20} style={{ marginRight: '8px' }} />
                 Create your first Will
               </Button>
             </Card>
           )}
-          
-          <Box style={{ display: 'grid', gap: '16px' }}>
+            <Box style={{ display: 'grid', gap: '20px', gridTemplateColumns: 'repeat(auto-fit, minmax(350px, 1fr))' }}>
             {cardItems.map((item) => (
-              <Card key={`${item.cap_id} - ${item.willlist_id}`} className="ocean-card" style={{ padding: '24px' }}>
-                <Flex justify="between" align="center">
-                  <Box>
-                    <Heading size="4" style={{ marginBottom: '8px', color: oceanTheme.colors.text.primary }}>
-                      {item.name}
-                    </Heading>
-                    <Text size="2" style={{ color: oceanTheme.colors.text.secondary }}>
-                      ID: {getObjectExplorerLink(item.willlist_id)}
+              <Card key={`${item.cap_id} - ${item.willlist_id}`} className="ocean-card" style={{ 
+                padding: '24px',
+                transition: 'all 0.3s ease',
+                cursor: 'pointer',
+                position: 'relative',
+                overflow: 'hidden'
+              }}>
+                <Box style={{
+                  position: 'absolute',
+                  top: 0,
+                  right: 0,
+                  width: '60px',
+                  height: '60px',
+                  background: oceanTheme.gradients.oceanLight,
+                  borderRadius: '0 0 0 60px',
+                  opacity: 0.3
+                }} />
+                <Flex justify="between" align="center" style={{ position: 'relative', zIndex: 1 }}>
+                  <Box style={{ flex: 1 }}>
+                    <Flex align="center" gap="2" style={{ marginBottom: '12px' }}>
+                      <Waves size={20} style={{ color: oceanTheme.colors.primary }} />
+                      <Heading size="4" style={{ 
+                        margin: 0, 
+                        color: oceanTheme.colors.text.primary,
+                        fontWeight: '600'
+                      }}>
+                        {item.name}
+                      </Heading>
+                    </Flex>
+                    <Text size="2" style={{ 
+                      color: oceanTheme.colors.text.secondary,
+                      fontFamily: 'monospace',
+                      wordBreak: 'break-all'
+                    }}>
+                      Will ID: {item.willlist_id.slice(0, 8)}...{item.willlist_id.slice(-8)}
+                    </Text>
+                    <Text size="2" style={{ 
+                      color: oceanTheme.colors.text.light,
+                      marginTop: '4px',
+                      display: 'block'
+                    }}>
+                      Addresses: {item.list?.length || 0}
                     </Text>
                   </Box>
                   <Button
                     className="ocean-button"
                     onClick={() => handleManage(item.willlist_id, item.cap_id)}
+                    size="2"
+                    style={{
+                      marginLeft: '16px',
+                      minWidth: '80px'
+                    }}
                   >
                     Manage
                   </Button>

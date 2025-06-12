@@ -3,6 +3,7 @@ import DashboardSidebar from './components/DashboardSidebar';
 import DashboardHeader from './components/DashboardHeader';
 import DashboardFooter from './components/DashboardFooter';
 import DashboardChatSupport from './components/DashboardChatSupport';
+import WaveEffect from './../../component/WaveEffect';
 
 export default function DashboardLayout({
   children,
@@ -19,6 +20,7 @@ export default function DashboardLayout({
         <main className="w-full pl-10 flex-grow">
           {/* pl-20 提供左側間距，確保內容不會被側邊欄覆蓋 */}
           <div className="min-h-full">
+                              <WaveEffect className="relative -z-5"> </WaveEffect>
             {children}
           </div>
         </main>

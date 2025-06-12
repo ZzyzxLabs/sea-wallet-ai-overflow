@@ -341,16 +341,15 @@ export const WillListDisplay = () => {
   };
 
   return (
-    <Box
+    <Box className='rounded-md bg-[#e3f2fd]/50'
       style={{
-        background: 'linear-gradient(180deg, #e3f2fd 0%, #bbdefb 100%)',
-        minHeight: '100vh',
+        minHeight: '80vh',
         padding: '24px',
       }}
     >
       {/* Title area */}
       <Flex direction="column" align="center" mb="6">
-        <Heading size="8" mb="2" style={{ color: '#0d47a1', textAlign: 'center' }}>
+        <Heading size="8" mb="2" className='' style={{ color: '#0d47a1', textAlign: 'center' }}>
           Ocean Will Management System
         </Heading>
         <Text size="3" style={{ color: '#1976d2' }}>

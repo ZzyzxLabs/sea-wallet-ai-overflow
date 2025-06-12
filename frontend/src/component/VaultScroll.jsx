@@ -221,7 +221,7 @@ const ContractAlterScroll = () => {
         {isLoading ? (
           <div className="h-full flex items-center justify-center">
             <div className="inline-block animate-spin rounded-full h-6 w-6 border-t-2 border-b-2 border-indigo-500 mr-3"></div>
-            <p className="text-gray-700 font-medium">正在載入資產...</p>
+            <p className="text-gray-700 font-medium">Loading assets...</p>
           </div>
         ) : coinsInVault.length > 0 ? (
           <div className="relative h-full">
@@ -243,7 +243,7 @@ const ContractAlterScroll = () => {
                 <div className="flex-1 max-w-xs mx-6">
                   <div className="bg-gradient-to-r from-gray-50/70 to-white/80 rounded-xl p-2.5 transform transition-all duration-300 hover:scale-102 hover:shadow-sm">
                     <div className="flex justify-between items-center">
-                      <div className="text-gray-800 font-medium text-xs uppercase tracking-wider">數量</div>
+                      <div className="text-gray-800 font-medium text-xs uppercase tracking-wider">Amount</div>
                       <div className="text-lg font-bold text-gray-900 tracking-tight">
                         {formattedAmounts[currentIndex] || "0"}
                       </div>
@@ -252,7 +252,7 @@ const ContractAlterScroll = () => {
                 </div>
                 <div className="flex items-center space-x-5">
                   <div className="text-right">
-                    <div className="text-gray-800 font-medium text-xs uppercase tracking-wider">估算價值</div>
+                    <div className="text-gray-800 font-medium text-xs uppercase tracking-wider">Estimated Value</div>
                     <div className="text-lg font-bold text-gray-900 tracking-tight">-</div>
                   </div>
                   {coinsInVault.length > 1 && (
@@ -260,7 +260,7 @@ const ContractAlterScroll = () => {
                       <button
                         onClick={goToPrevious}
                         className="text-gray-700 hover:text-indigo-600 transition-all p-1 rounded-full hover:bg-white/80 active:scale-95"
-                        aria-label="前一個資產"
+                        aria-label="Previous asset"
                       >
                         <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15 19l-7-7 7-7" />
@@ -292,7 +292,7 @@ const ContractAlterScroll = () => {
                       <button
                         onClick={goToNext}
                         className="text-gray-700 hover:text-indigo-600 transition-all p-1 rounded-full hover:bg-white/80 active:scale-95"
-                        aria-label="下一個資產"
+                        aria-label="Next asset"
                       >
                         <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" />
@@ -312,8 +312,8 @@ const ContractAlterScroll = () => {
               </svg>
             </div>
             <div>
-              <p className="text-gray-700 font-semibold">您的金庫中沒有資產</p>
-              <p className="text-gray-500 text-xs">添加資產來查看它們</p>
+              <p className="text-gray-700 font-semibold">No assets in your vault</p>
+              <p className="text-gray-500 text-xs">Add assets to see them</p>
             </div>
           </div>
         )}

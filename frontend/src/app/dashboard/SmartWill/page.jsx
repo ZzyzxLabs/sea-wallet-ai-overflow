@@ -119,7 +119,7 @@ export default function Dashboard() {
   ];
 
   return (
-    <div className="flex-1 px-8 py-8 bg-white">
+    <div className="flex-1 px-8 py-8 bg-white/50">
       {/* 頂部標題與錢包按鈕 */}
       <div className="flex justify-between items-center mb-6">
         <div>
@@ -132,7 +132,7 @@ export default function Dashboard() {
       </div>
 
       {/* 倒計時卡片 */}
-      <div className="bg-blue-500 rounded-lg mb-6 overflow-hidden">
+      <div className="bg-blue-500/40 rounded-lg mb-6 overflow-hidden">
         <div className="flex flex-col p-6  items-center">
           <div className="flex justify-end mb-2">
           </div>
@@ -166,12 +166,12 @@ export default function Dashboard() {
       </p>
       <AllWilllist
         width="100%"
-        height="400px"
-        maxWidth="600px"
-        style={{ margin: "20px auto" }}
+        height="80vh"
+        maxWidth="80vw"
+
       ></AllWilllist>
       {/* 繼承人列表 */}
-      <div className="mb-6">
+      <div className="mb-6 mt-12">
         <h2 className="text-lg font-semibold mb-4">Nominated Heirs</h2>
         <div className="border rounded-lg overflow-hidden">
           {/* 表頭 */}

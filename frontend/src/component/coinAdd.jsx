@@ -383,7 +383,7 @@ const coinAdd = ({coinsInVault, onTransactionSuccess}) => {
       {showModal && (
         <div
           className={`fixed inset-0 bg-black/50 flex items-center justify-center z-50 ${modalAnimation}`}
-          onClick={closeModal}
+          
         >
           <div
             className={`bg-white rounded-lg shadow-md p-6 w-96 max-w-full ${modalAnimation === "animate-fadeIn" ? "animate-scaleIn" : "animate-scaleOut"}`}

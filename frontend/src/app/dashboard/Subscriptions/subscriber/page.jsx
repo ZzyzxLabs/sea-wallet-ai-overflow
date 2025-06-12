@@ -264,13 +264,13 @@ export default function ServiceDirectory() {
   };
 
   return (
-    <div className="p-6 ml-8 mx-auto bg-white text-black">
+    <div className="p-6 ml-8 mx-auto bg-white/40 text-black">
       {" "}
       {/* Header */}{" "}
       <div className="mb-8 flex justify-between items-center">
         <div>
           <h1 className="text-3xl font-bold mb-2">Service Directory</h1>
-          <p className="text-gray-600">
+          <p className="text-gray-800">
             Browse available services and manage subscriptions
           </p>
         </div>
@@ -282,7 +282,7 @@ export default function ServiceDirectory() {
         <div className="flex space-x-4 mb-6">
           <a
             href="/dashboard/Subscriptions/subscription"
-            className="px-4 py-1.5 text-gray-600 hover:text-gray-900"
+            className="px-4 py-1.5 text-gray-800 hover:text-gray-900"
           >
             My Subscriptions
           </a>
@@ -344,7 +344,7 @@ export default function ServiceDirectory() {
               className={`rounded-lg overflow-hidden shadow-md ${
                 isActive
                   ? "bg-gradient-to-br from-blue-400 to-blue-600"
-                  : "bg-gradient-to-br from-gray-400 to-gray-600"
+                  : "bg-gradient-to-br from-gray-400 to-gray-800"
               }`}
             >
               <div className="px-4 pt-4 pb-2 text-white">
