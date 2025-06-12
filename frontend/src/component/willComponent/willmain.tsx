@@ -4,7 +4,6 @@ import { Transaction } from '@mysten/sui/transactions';
 import { Button, Card, Flex, Box, Text, Heading, Separator, Tabs, TextArea, Spinner } from '@radix-ui/themes';
 import { useCallback, useEffect, useState, useRef } from 'react';
 import { X, ArrowLeft, Plus, Upload, FileText, Waves } from 'lucide-react';
-import { isValidSuiAddress } from '@mysten/sui/utils';
 import { useNetworkVariable } from '../../app/networkConfig';
 import { getObjectExplorerLink } from '../../store/sealWill/Will_utils';
 import { getAllowlistedKeyServers, SealClient, SessionKey } from '@mysten/seal';
@@ -758,13 +757,11 @@ function WalrusUploader({ willlistId, capId }: { willlistId: string; capId: stri
 }
 
 // Will管理組件
-function WilllistManager({ willlistId, capId, onBack, style }: { willlistId: string; capId: string; onBack: () => void; style?: React.CSSProperties }) {
+export function WilllistManager({ willlistId, capId, onBack, style }: { willlistId: string; capId: string; onBack: () => void; style?: React.CSSProperties }) {
   const packageId = useNetworkVariable('packageId');
   const suiClient = useSuiClient();
   const currentAccount = useCurrentAccount();
   const [willlist, setWilllist] = useState<Willlist>();
-  const [newAddress, setNewAddress] = useState('');
-  const [activeTab, setActiveTab] = useState('addresses'); // 'addresses' 或 'upload'
 
   useEffect(() => {
     async function getWilllist() {
@@ -797,7 +794,6 @@ function WilllistManager({ willlistId, capId, onBack, style }: { willlistId: str
       clearInterval(intervalId);
     };
   }, [willlistId, suiClient, currentAccount]);
-
   const { mutate: signAndExecute } = useSignAndExecuteTransaction({
     execute: async ({ bytes, signature }) => {
       const result = await suiClient.executeTransactionBlock({
@@ -811,69 +807,6 @@ function WilllistManager({ willlistId, capId, onBack, style }: { willlistId: str
       return result;
     },
   });
-
-  const grantAccess = (addressToGrant: string) => {
-    if (addressToGrant.trim() !== '') {
-      if (!isValidSuiAddress(addressToGrant.trim())) {
-        alert('invalid address');
-        return;
-      }
-      const tx = new Transaction();
-      tx.moveCall({
-        arguments: [
-          tx.object(addressToGrant),
-          tx.object(willlistId),
-          tx.object(capId),
-        ],
-        target: `${packageId}::will::grant_access`,
-      });
-
-      signAndExecute(
-        {
-          transaction: tx,
-        },
-        {
-          onSuccess: async (result) => {
-            console.log('[grantAccess] success:', result);
-            setNewAddress(''); // 清空輸入框
-          },
-          onError: (error) => {
-            console.error('[grantAccess] fail:', error);
-          }
-        },
-      );
-    } else {
-      console.warn('[grantAccess] null');
-    }
-  };
-
-  const removeAccess = (address: string) => {
-    if (!address || !willlistId || !capId) return;
-    
-    const tx = new Transaction();
-    tx.moveCall({
-      arguments: [
-        tx.object(address),
-        tx.object(willlistId),
-        tx.object(capId),
-      ],
-      target: `${packageId}::will::remove_access`,
-    });
-
-    signAndExecute(
-      {
-        transaction: tx,
-      },
-      {
-        onSuccess: async (result) => {
-          console.log('[removeAccess] Success:', result);
-        },
-        onError: (error) => {
-          console.error('[removeAccess] Failed:', error);
-        }
-      },
-    );
-  };
 
   return (
     <Card className="ocean-card" style={{ padding: 0, borderRadius: '20px', overflow: 'hidden' }}>
@@ -891,104 +824,43 @@ function WilllistManager({ willlistId, capId, onBack, style }: { willlistId: str
             >
               <ArrowLeft size={20} />
             </Button>
-            <Heading size="5" style={{ margin: 0 }}>{willlist?.name || 'Will 管理'}</Heading>
+            <Heading size="5" style={{ margin: 0 }}>{willlist?.name || 'File Upload'}</Heading>
           </Flex>
         </Flex>
-      </Box>
-      
-      <Box style={{ padding: '24px' }}>
-        <Tabs.Root value={activeTab} onValueChange={setActiveTab}>
-          <Tabs.List style={{ 
-            background: oceanTheme.gradients.oceanLight, 
-            borderRadius: '12px',
-            padding: '4px',
-            marginBottom: '20px'
+      </Box>        <Box style={{ padding: '24px' }}>
+        <WalrusUploader willlistId={willlistId} capId={capId} />
+        
+        {/* Dashboard Navigation Button */}
+        <Card style={{ 
+          marginTop: '24px',
+          padding: '20px',
+          background: oceanTheme.gradients.card,
+          borderRadius: '16px',
+          border: `1px solid ${oceanTheme.colors.wave.medium}`,
+          textAlign: 'center'
+        }}>
+          <Text size="3" style={{ 
+            color: oceanTheme.colors.text.secondary,
+            marginBottom: '16px',
+            display: 'block'
           }}>
-            <Tabs.Trigger value="addresses" style={{ 
-              borderRadius: '8px', 
-              padding: '8px 16px',
-              color: oceanTheme.colors.text.primary,
-              fontWeight: '600'
-            }}>
-              Manage addresses
-            </Tabs.Trigger>
-            <Tabs.Trigger value="upload" style={{ 
-              borderRadius: '8px', 
-              padding: '8px 16px',
-              color: oceanTheme.colors.text.primary,
-              fontWeight: '600'
-            }}>
-              File upload
-            </Tabs.Trigger>
-          </Tabs.List>
-          
-          <Box style={{ padding: '16px 0' }}>
-            <Tabs.Content value="addresses">
-              <Box style={{ marginBottom: '24px' }}>
-                <Flex gap="3" style={{ marginBottom: '24px' }}>
-                  <input
-                    type="text"
-                    value={newAddress}
-                    onChange={(e) => setNewAddress(e.target.value)}
-                    placeholder="Please enter address"
-                    className="ocean-input"
-                    style={{ flex: 1 }}
-                  />
-                  <Button 
-                    className="ocean-button"
-                    onClick={() => grantAccess(newAddress)}
-                  >
-                    <Plus size={16} style={{ marginRight: '8px' }} />
-                    Add New Address
-                  </Button>
-                </Flex>
-                
-                <Text size="3" style={{ marginBottom: '12px', color: oceanTheme.colors.text.secondary, fontWeight: '600' }}>
-                  Address list
-                </Text>
-                <div className="flex flex-col gap-2">
-                  {willlist?.list?.length === 0 && (
-                    <Card style={{ 
-                      padding: '24px', 
-                      textAlign: 'center',
-                      background: oceanTheme.colors.wave.light,
-                      borderRadius: '12px'
-                    }}>
-                      <Text size="3" style={{ color: oceanTheme.colors.text.light }}>
-                        Currently no addresses added.
-                      </Text>
-                    </Card>
-                  )}
-                  
-                  {willlist?.list?.map((address) => (
-                    <Card key={address} className="ocean-card" style={{ padding: '16px' }}>
-                      <Flex align="center" justify="between">
-                        <Text size="3" style={{ fontFamily: 'monospace', color: oceanTheme.colors.text.primary }}>
-                          {address}
-                        </Text>
-                        <Button 
-                          variant="ghost" 
-                          size="2"
-                          onClick={() => removeAccess(address)}
-                          style={{ 
-                            color: oceanTheme.colors.accent,
-                            borderRadius: '8px'
-                          }}
-                        >
-                          <X size={18} />
-                        </Button>
-                      </Flex>
-                    </Card>
-                  ))}
-                </div>
-              </Box>
-            </Tabs.Content>
-            
-            <Tabs.Content value="upload">
-              <WalrusUploader willlistId={willlistId} capId={capId} />
-            </Tabs.Content>
-          </Box>
-        </Tabs.Root>
+            Finished managing your files? Return to the main dashboard.
+          </Text>
+          <Button
+            className="ocean-button"
+            onClick={() => window.location.href = '/dashboard'}
+            size="3"
+            style={{
+              padding: '12px 24px',
+              fontSize: '16px',
+              fontWeight: '600',
+              minWidth: '200px'
+            }}
+          >
+            <Waves size={20} style={{ marginRight: '8px' }} />
+            Go to Dashboard
+          </Button>
+        </Card>
       </Box>
     </Card>
   );
@@ -1201,20 +1073,7 @@ export function AllWilllist({ width, height, maxWidth = '1200px', style = {} }: 
                 Manage your digital wills and upload secure files
               </Text>
             </Box>
-            <Button
-              className="ocean-button"
-              onClick={() => setShowCreateModal(true)}
-              size="3"
-              style={{
-                background: 'rgba(255,255,255,0.2)',
-                backdropFilter: 'blur(10px)',
-                border: '1px solid rgba(255,255,255,0.3)',
-                color: 'white'
-              }}
-            >
-              <Plus size={20} style={{ marginRight: '8px' }} />
-              Create New Will
-            </Button>
+
           </Flex>
         </Box>
           {/* 創建新 Will 的模態框 */}
