@@ -1,9 +1,9 @@
 "use client"
 import { useCurrentAccount, useSignAndExecuteTransaction, useSuiClient, useSignPersonalMessage } from '@mysten/dapp-kit';
 import { Transaction } from '@mysten/sui/transactions';
-import { Button, Card, Flex, Box, Text, Heading, Separator, Tabs, TextArea, Spinner, Dialog, AlertDialog } from '@radix-ui/themes';
-import { useCallback, useEffect, useState, useRef } from 'react';
-import { X, ArrowLeft, Plus, Upload, FileText, Waves, Anchor, Fish, Droplet, Eye } from 'lucide-react';
+import { Button, Card, Flex, Box, Text, Heading, Separator, Badge, Spinner, Dialog, AlertDialog } from '@radix-ui/themes';
+import { useCallback, useEffect, useState, useMemo } from 'react';
+import { Eye, Crown, Users, Anchor, Fish, Droplet, Waves, Shield } from 'lucide-react';
 import { isValidSuiAddress } from '@mysten/sui/utils';
 import { useNetworkVariable } from '../../app/networkConfig';
 import { getObjectExplorerLink } from '../../store/sealWill/Will_utils';
@@ -12,71 +12,115 @@ import { fromHex, toHex } from '@mysten/sui/utils';
 import { downloadAndDecrypt } from './utils_download';
 import { set, get } from 'idb-keyval';
 import { getFullnodeUrl, SuiClient } from '@mysten/sui/client';
+
 const TTL_MIN = 10;
 
-// Define types
-interface Cap {
+// Define Cap Type Enum
+enum CapType {
+  OWNER = 'OWNER',
+  MEMBER = 'MEMBER'
+}
+
+// Update interface definitions
+interface BaseCap {
   id: string;
   vault_id: string;
+  type: CapType;
 }
+
+interface OwnerCap extends BaseCap {
+  type: CapType.OWNER;
+}
+
+interface MemberCap extends BaseCap {
+  type: CapType.MEMBER;
+}
+
+type Cap = OwnerCap | MemberCap;
 
 interface CardItem {
   cap_id: string;
   willlist_id: string;
   list: any[];
   name: string;
+  cap_type: CapType;
+  permissions?: string[];
 }
 
 interface FeedData {
   allowlistId: string;
   allowlistName: string;
   blobIds: string[];
+  capType: CapType;
 }
 
-function constructMoveCall(packageId: string, allowlistId: string, cap_id: string) {
+// Construct different types of MoveCalls
+function constructMoveCall(packageId: string, allowlistId: string, cap_id: string, capType: CapType) {
   return (tx: Transaction, id: string) => {
+    const target = capType === CapType.OWNER 
+      ? `${packageId}::seaVault::seal_approve_owner`
+      : `${packageId}::seaVault::seal_approve`;
+      
     tx.moveCall({
-      target: `${packageId}::seaVault::seal_approve_owner`,
+      target,
       arguments: [tx.pure.vector('u8', fromHex(id)), tx.object(cap_id), tx.object(allowlistId)],
     });
   };
 }
 
-const OceanCard = ({ 
+const UnifiedOceanCard = ({ 
   item, 
-  index, 
+  index,
   onViewDetails 
 }: { 
   item: CardItem; 
   index: number;
-  onViewDetails: (capId: string, willlistId: string) => void;
+  onViewDetails: (capId: string, willlistId: string, capType: CapType) => void;
 }) => {
-  // Ocean style gradient colors
-  const gradients = [
-    'linear-gradient(135deg, #1e3c72 0%, #2a5298 100%)',
-    'linear-gradient(135deg, #0077be 0%, #0099cc 100%)',
-    'linear-gradient(135deg, #006994 0%, #00b4d8 100%)',
-    'linear-gradient(135deg, #0d47a1 0%, #42a5f5 100%)',
-  ];
-
-  // Wave animation style
-  const waveAnimation = {
-    animation: `waves ${3 + index * 0.5}s ease-in-out infinite`,
+  // Choose different visual styles based on Cap type
+  const getCardStyle = (capType: CapType, index: number) => {
+    const ownerGradients = [
+      'linear-gradient(135deg, #1e3c72 0%, #2a5298 100%)',
+      'linear-gradient(135deg, #0077be 0%, #0099cc 100%)',
+      'linear-gradient(135deg, #006994 0%, #00b4d8 100%)',
+      'linear-gradient(135deg, #0d47a1 0%, #42a5f5 100%)',
+    ];
+    
+    const memberGradients = [
+      'linear-gradient(135deg, #2e7d32 0%, #4caf50 100%)',
+      'linear-gradient(135deg, #388e3c 0%, #66bb6a 100%)',
+      'linear-gradient(135deg, #43a047 0%, #81c784 100%)',
+      'linear-gradient(135deg, #1b5e20 0%, #4caf50 100%)',
+    ];
+    
+    const gradients = capType === CapType.OWNER ? ownerGradients : memberGradients;
+    
+    return {
+      background: gradients[index % gradients.length],
+      border: 'none',
+      boxShadow: '0 8px 32px 0 rgba(31, 38, 135, 0.37)',
+      backdropFilter: 'blur(10px)',
+      borderRadius: '16px',
+      overflow: 'hidden',
+      position: 'relative' as const,
+      transform: `translateY(${Math.sin(Date.now() / 1000 + index) * 5}px)`,
+      transition: 'all 0.3s ease',
+    };
   };
+
+  const getCapIcon = (capType: CapType) => {
+    return capType === CapType.OWNER ? Crown : Users;
+  };
+
+  const getCapLabel = (capType: CapType) => {
+    return capType === CapType.OWNER ? 'Will Owner' : 'Will Member';
+  };
+
+  const CapIcon = getCapIcon(item.cap_type);
 
   return (
     <Card
-      style={{
-        background: gradients[index % gradients.length],
-        border: 'none',
-        boxShadow: '0 8px 32px 0 rgba(31, 38, 135, 0.37)',
-        backdropFilter: 'blur(10px)',
-        borderRadius: '16px',
-        overflow: 'hidden',
-        position: 'relative' as const,
-        transform: `translateY(${Math.sin(Date.now() / 1000 + index) * 5}px)`,
-        transition: 'all 0.3s ease',
-      }}
+      style={getCardStyle(item.cap_type, index)}
       className="ocean-card"
     >
       {/* Wave background decoration */}
@@ -89,28 +133,41 @@ const OceanCard = ({
           bottom: 0,
           opacity: 0.1,
           background: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100' preserveAspectRatio='none'%3E%3Cpath d='M0,50 Q25,${30 + Math.sin(Date.now() / 1000) * 10} 50,50 T100,50 L100,100 L0,100 Z' fill='%23ffffff' /%3E%3C/svg%3E")`,
-          ...waveAnimation,
+          animation: `waves ${3 + index * 0.5}s ease-in-out infinite`,
         }}
       />
 
       <Box p="5">
-        {/* Title area */}
-        <Flex align="center" gap="3" mb="4">
-          <Box
-            style={{
-              background: 'rgba(255, 255, 255, 0.2)',
-              borderRadius: '50%',
-              padding: '10px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
+        {/* Title area with Cap type indicator */}
+        <Flex align="center" justify="between" mb="4">
+          <Flex align="center" gap="3">
+            <Box
+              style={{
+                background: 'rgba(255, 255, 255, 0.2)',
+                borderRadius: '50%',
+                padding: '10px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              <CapIcon size={24} color="white" />
+            </Box>
+            <Heading size="4" style={{ color: 'white', textShadow: '0 2px 4px rgba(0,0,0,0.2)' }}>
+              {item.name || 'Unnamed Will'}
+            </Heading>
+          </Flex>
+          
+          <Badge 
+            size="2" 
+            style={{ 
+              background: 'rgba(255, 255, 255, 0.2)', 
+              color: 'white',
+              border: '1px solid rgba(255, 255, 255, 0.3)'
             }}
           >
-            <Anchor size={24} color="white" />
-          </Box>
-          <Heading size="4" style={{ color: 'white', textShadow: '0 2px 4px rgba(0,0,0,0.2)' }}>
-            {item.name || 'Unnamed Will'}
-          </Heading>
+            {getCapLabel(item.cap_type)}
+          </Badge>
         </Flex>
 
         <Separator size="4" style={{ background: 'rgba(255, 255, 255, 0.3)' }} mb="4" />
@@ -143,7 +200,16 @@ const OceanCard = ({
               <Flex align="center" gap="2">
                 <Waves size={16} color="white" />
                 <Text size="2" style={{ color: 'rgba(255, 255, 255, 0.9)' }}>
-                  Number of list items: {item.list.length}
+                  List Items: {item.list.length}
+                </Text>
+              </Flex>
+            )}
+
+            {item.cap_type === CapType.MEMBER && (
+              <Flex align="center" gap="2">
+                <Shield size={16} color="white" />
+                <Text size="2" style={{ color: 'rgba(255, 255, 255, 0.9)' }}>
+                  Limited Member Permissions
                 </Text>
               </Flex>
             )}
@@ -160,7 +226,7 @@ const OceanCard = ({
               color: 'white',
               border: '1px solid rgba(255, 255, 255, 0.3)',
             }}
-            onClick={() => onViewDetails(item.cap_id, item.willlist_id)}
+            onClick={() => onViewDetails(item.cap_id, item.willlist_id, item.cap_type)}
           >
             <Eye size={16} style={{ marginRight: '8px' }} />
             View Details
@@ -178,11 +244,11 @@ export const WillListDisplay = () => {
   const [cardItems, setCardItems] = useState<CardItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [selectedWillId, setSelectedWillId] = useState<string | null>(null);
+  const [selectedCapType, setSelectedCapType] = useState<CapType | null>(null);
   const [decryptedTexts, setDecryptedTexts] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [currentSessionKey, setCurrentSessionKey] = useState<SessionKey | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [reloadKey, setReloadKey] = useState(0);
   const [feedData, setFeedData] = useState<FeedData | null>(null);
   const [decrypting, setDecrypting] = useState(false);
 
@@ -197,34 +263,66 @@ export const WillListDisplay = () => {
     verifyKeyServers: false,
   });
 
-  const getCapObj = useCallback(async () => {
+  // Unified retrieval of both types of Caps
+  const getUnifiedCapObj = useCallback(async () => {
     if (!currentAccount?.address) return;
     
     setLoading(true);
     try {
-      const res = await suiClient.getOwnedObjects({
-        owner: currentAccount?.address,
-        options: {
-          showContent: true,
-          showType: true,
-        },
-        filter: {
-          StructType: `${packageId}::seaVault::OwnerCap`,
-        },
-      });
+      // Parallel retrieval of both types of Caps
+      const [ownerRes, memberRes] = await Promise.all([
+        suiClient.getOwnedObjects({
+          owner: currentAccount.address,
+          options: {
+            showContent: true,
+            showType: true,
+          },
+          filter: {
+            StructType: `${packageId}::seaVault::OwnerCap`,
+          },
+        }),
+        suiClient.getOwnedObjects({
+          owner: currentAccount.address,
+          options: {
+            showContent: true,
+            showType: true,
+          },
+          filter: {
+            StructType: `${packageId}::seaVault::MemberCap`,
+          },
+        })
+      ]);
       
-      const caps = res.data
+      // Process OwnerCap
+      const ownerCaps: Cap[] = ownerRes.data
         .map((obj) => {
           const fields = (obj!.data!.content as { fields: any }).fields;
           return {
             id: fields?.id.id,
             vault_id: fields?.vaultID,
-          };
+            type: CapType.OWNER,
+          } as OwnerCap;
         })
-        .filter((item) => item !== null) as Cap[];
+        .filter((item) => item !== null);
+
+      // Process MemberCap  
+      const memberCaps: Cap[] = memberRes.data
+        .map((obj) => {
+          const fields = (obj!.data!.content as { fields: any }).fields;
+          return {
+            id: fields?.id.id,
+            vault_id: fields?.vaultID,
+            type: CapType.MEMBER,
+          } as MemberCap;
+        })
+        .filter((item) => item !== null);
+
+      // Merge both types of Caps
+      const allCaps = [...ownerCaps, ...memberCaps];
         
+      // Get corresponding will details for each Cap
       const cardItems: CardItem[] = await Promise.all(
-        caps.map(async (cap) => {
+        allCaps.map(async (cap) => {
           const willlist = await suiClient.getObject({
             id: cap.vault_id,
             options: { showContent: true },
@@ -235,27 +333,31 @@ export const WillListDisplay = () => {
             willlist_id: cap.vault_id,
             list: fields.list,
             name: fields.name,
+            cap_type: cap.type,
+            permissions: cap.type === CapType.MEMBER ? ['view', 'decrypt'] : ['full'],
           };
         }),
       );
+      
       setCardItems(cardItems);
     } catch (error) {
-      console.error('Error while fetching data:', error);
+      console.error('Error occurred while fetching data:', error);
+      setError('Unable to fetch will data');
     } finally {
       setLoading(false);
     }
   }, [currentAccount?.address, packageId, suiClient]);
 
   useEffect(() => {
-    getCapObj();
-  }, [getCapObj]);
+    getUnifiedCapObj();
+  }, [getUnifiedCapObj]);
 
-  const handleViewDetails = async (capId: string, willlistId: string) => {
+  const handleViewDetails = async (capId: string, willlistId: string, capType: CapType) => {
     setSelectedWillId(willlistId);
+    setSelectedCapType(capType);
     setIsDialogOpen(true);
     setDecryptedTexts([]);
     
-    // Get encrypted objects
     try {
       const allowlist = await suiClient.getObject({ id: willlistId, options: { showContent: true } });
       const encryptedObjects = await suiClient.getDynamicFields({ parentId: willlistId }).then(res =>
@@ -263,56 +365,60 @@ export const WillListDisplay = () => {
       );
       const fields = (allowlist.data?.content as { fields: any })?.fields || {};
       
-      const feed = { 
+      const feed: FeedData = { 
         allowlistId: willlistId, 
         allowlistName: fields.name, 
-        blobIds: encryptedObjects 
+        blobIds: encryptedObjects,
+        capType
       };
       setFeedData(feed);
       
       // Automatically start decryption
       if (encryptedObjects.length > 0) {
-        await onView(encryptedObjects, willlistId, capId);
+        await onView(encryptedObjects, willlistId, capId, capType);
       }
     } catch (error) {
-      console.error('Error while retrieving encrypted data:', error);
-      setError('Unable to retrieve encrypted data');
+      console.error('Error occurred while fetching encrypted data:', error);
+      setError('Unable to fetch encrypted data');
     }
   };
 
-  const onView = async (blobIds: string[], allowlistId: string, capId: string) => {
+  const onView = async (blobIds: string[], allowlistId: string, capId: string, capType: CapType) => {
     setDecrypting(true);
     const imported: SessionKeyType = await get('sessionKey');
+    
     if (imported) {
       try {
         const currentSessionKey = await SessionKey.import(
           imported,
           new SuiClient({url: getFullnodeUrl('testnet')}),
         );
-        console.log('loaded currentSessionKey', currentSessionKey);
+        
         if (currentSessionKey && !currentSessionKey.isExpired() && currentSessionKey.getAddress() === currentAccount?.address) {
-          await handleDecrypt(blobIds, allowlistId, currentSessionKey, capId);
-        return;
+          await handleDecrypt(blobIds, allowlistId, currentSessionKey, capId, capType);
+          return;
+        }
+      } catch (error) {
+        console.log('Imported session key has expired', error);
       }
     }
-      catch (error) {
-        console.log('Imported session key is expired', error);
-      }
-    }
+    
     set('sessionKey', null);
     setCurrentSessionKey(null);
+    
     const sessionKey = await SessionKey.create({
       address: currentAccount?.address!,
       packageId,
       ttlMin: TTL_MIN,
       suiClient,
     });
+    
     signPersonalMessage(
       { message: sessionKey.getPersonalMessage() },
       {
         onSuccess: async result => {
           await sessionKey.setPersonalMessageSignature(result.signature);
-          await handleDecrypt(blobIds, allowlistId, sessionKey, capId);
+          await handleDecrypt(blobIds, allowlistId, sessionKey, capId, capType);
           setCurrentSessionKey(sessionKey);
         },
         onError: () => {
@@ -323,8 +429,16 @@ export const WillListDisplay = () => {
     );
   };
 
-  const handleDecrypt = async (blobIds: string[], allowlistId: string, sessionKey: SessionKey, capId: string) => {
-    const moveCallConstructor = constructMoveCall(packageId, allowlistId, capId);
+  const handleDecrypt = async (
+    blobIds: string[], 
+    allowlistId: string, 
+    sessionKey: SessionKey, 
+    capId: string, 
+    capType: CapType
+  ) => {
+    // Construct different MoveCalls based on Cap type
+    const moveCallConstructor = constructMoveCall(packageId, allowlistId, capId, capType);
+    
     await downloadAndDecrypt(
       blobIds,
       sessionKey,
@@ -335,13 +449,22 @@ export const WillListDisplay = () => {
       setDecryptedTexts,
       setIsDialogOpen,
       setDecryptedTexts,
-      setReloadKey
+      () => {}
     );
     setDecrypting(false);
   };
 
+  // Statistics information
+  const stats = useMemo(() => {
+    const ownerCount = cardItems.filter(item => item.cap_type === CapType.OWNER).length;
+    const memberCount = cardItems.filter(item => item.cap_type === CapType.MEMBER).length;
+    
+    return { ownerCount, memberCount, total: cardItems.length };
+  }, [cardItems]);
+
   return (
-    <Box className='rounded-md bg-[#e3f2fd]/50'
+    <Box 
+      className='rounded-md bg-[#e3f2fd]/50'
       style={{
         minHeight: '80vh',
         padding: '24px',
@@ -349,12 +472,27 @@ export const WillListDisplay = () => {
     >
       {/* Title area */}
       <Flex direction="column" align="center" mb="6">
-        <Heading size="8" mb="2" className='' style={{ color: '#0d47a1', textAlign: 'center' }}>
+        <Heading size="8" mb="2" style={{ color: '#0d47a1', textAlign: 'center' }}>
           Ocean Will Management System
         </Heading>
         <Text size="3" style={{ color: '#1976d2' }}>
-          Protecting your digital legacy, as deep and eternal as the ocean
+          Protecting your digital heritage, as profound and eternal as the ocean
         </Text>
+        
+        {/* Statistics information */}
+        <Flex gap="4" mt="4">
+          <Badge size="3" style={{ background: '#1e3c72', color: 'white' }}>
+            <Crown size={16} style={{ marginRight: '8px' }} />
+            Owners: {stats.ownerCount}
+          </Badge>
+          <Badge size="3" style={{ background: '#2e7d32', color: 'white' }}>
+            <Users size={16} style={{ marginRight: '8px' }} />
+            Members: {stats.memberCount}
+          </Badge>
+          <Badge size="3" style={{ background: '#0d47a1', color: 'white' }}>
+            Total: {stats.total}
+          </Badge>
+        </Flex>
       </Flex>
 
       {/* Loading state */}
@@ -379,8 +517,8 @@ export const WillListDisplay = () => {
           }}
         >
           {cardItems.map((item, index) => (
-            <OceanCard 
-              key={item.cap_id} 
+            <UnifiedOceanCard 
+              key={`${item.cap_type}-${item.cap_id}`} 
               item={item} 
               index={index}
               onViewDetails={handleViewDetails}
@@ -406,10 +544,10 @@ export const WillListDisplay = () => {
         >
           <Waves size={64} color="#0d47a1" />
           <Text size="5" mt="4" style={{ color: '#0d47a1', textAlign: 'center' }}>
-            No will data yet
+            No will data available
           </Text>
           <Text size="3" mt="2" style={{ color: '#1976d2', textAlign: 'center' }}>
-            Your digital legacy will be safely stored here
+            Your digital heritage will be securely stored here
           </Text>
         </Flex>
       )}
@@ -433,8 +571,17 @@ export const WillListDisplay = () => {
               gap: '12px'
             }}
           >
-            <Anchor size={24} />
+            {selectedCapType === CapType.OWNER ? <Crown size={24} /> : <Users size={24} />}
             {feedData?.allowlistName || 'Will Details'}
+            <Badge 
+              size="2" 
+              style={{ 
+                background: selectedCapType === CapType.OWNER ? '#1e3c72' : '#2e7d32', 
+                color: 'white' 
+              }}
+            >
+              {selectedCapType === CapType.OWNER ? 'Owner' : 'Member'}
+            </Badge>
           </Dialog.Title>
           
           <Box mt="4">
@@ -448,7 +595,7 @@ export const WillListDisplay = () => {
             {!decrypting && decryptedTexts.length > 0 && (
               <Box>
                 <Text size="3" mb="3" style={{ color: '#1565c0' }}>
-                  Decrypted content:
+                  Decrypted Content:
                 </Text>
                 <Box
                   style={{
@@ -503,6 +650,7 @@ export const WillListDisplay = () => {
                 onClick={() => {
                   setDecryptedTexts([]);
                   setFeedData(null);
+                  setSelectedCapType(null);
                 }}
               >
                 Close
@@ -527,7 +675,7 @@ export const WillListDisplay = () => {
         </AlertDialog.Content>
       </AlertDialog.Root>
 
-      {/* CSS animation */}
+      {/* CSS animations */}
       <style jsx>{`
         @keyframes waves {
           0%, 100% {
