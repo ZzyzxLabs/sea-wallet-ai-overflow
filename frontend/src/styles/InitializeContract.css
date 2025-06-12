@@ -294,11 +294,11 @@ body {
     color: #94a3b8;
     text-align: center;
   }
-  
-  /* 設置繼承人卡片 */
+    /* 設置繼承人卡片 */
   .heir-card {
     width: 100%;
-    max-width: 42rem;
+    max-width: 50vw;
+    min-width: 42rem;
     padding: 0 1rem;
   }
   
@@ -357,8 +357,7 @@ body {
     background: linear-gradient(to right, #4338ca, #1d4ed8);
     box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
   }
-  
-  .heir-card .input {
+    .heir-card .input {
     width: 100%;
     padding: 0.75rem 1rem;
     border: 1px solid #334155;
@@ -367,6 +366,10 @@ body {
     color: white;
     backdrop-filter: blur(10px);
     transition: all 0.3s;
+  }
+
+  .heir-card .input.pl-10 {
+    padding-left: 2.5rem !important;
   }
   
   .heir-card .input:focus {

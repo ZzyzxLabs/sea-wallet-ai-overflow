@@ -2,109 +2,113 @@
 "use client";
 import "@mysten/dapp-kit/dist/index.css";
 import { ConnectButton, useSuiClient } from "@mysten/dapp-kit";
-import { useCurrentAccount, useSignAndExecuteTransaction } from "@mysten/dapp-kit";
+import {
+  useCurrentAccount,
+  useSignAndExecuteTransaction,
+} from "@mysten/dapp-kit";
 import { useState, useEffect, useRef } from "react";
-import useHeirStore from "../../../store/heirStore"; 
+import useHeirStore from "../../../store/heirStore";
 import { useRouter } from "next/navigation";
 import useMoveStore from "../../../store/moveStore";
-import { bcs, BcsType } from '@mysten/bcs';
+import { bcs, BcsType } from "@mysten/bcs";
 import HeirCard from "./HeirCard";
 import Image from "next/image";
 import "./InitializeContract.css"; // Import CSS styles
-
+import { AllWilllist, WilllistManager } from "@/component/willComponent/willmain";
 // VecMap function for serializing key-value pairs (remains unchanged)
 function VecMap<K extends BcsType<any>, V extends BcsType<any>>(K: K, V: V) {
-  return bcs.struct(
-    `VecMap<${K.name}, ${V.name}>`,
-    {
-      keys: bcs.vector(K),
-      values: bcs.vector(V),
-    }
-  );
+  return bcs.struct(`VecMap<${K.name}, ${V.name}>`, {
+    keys: bcs.vector(K),
+    values: bcs.vector(V),
+  });
 }
-
+let WillWrite = false;
 // Other helper functions remain unchanged
 function separateHeirsByAddressType(heirs) {
   const suiAddressHeirs = [];
   const emailHeirs = [];
-  
-  heirs.forEach(heir => {
-    if (heir.address && heir.address.startsWith("0x") && !heir.address.includes("@")) {
-      suiAddressHeirs.push({...heir});
+
+  heirs.forEach((heir) => {
+    if (
+      heir.address &&
+      heir.address.startsWith("0x") &&
+      !heir.address.includes("@")
+    ) {
+      suiAddressHeirs.push({ ...heir });
     } else {
-      emailHeirs.push({...heir});
+      emailHeirs.push({ ...heir });
     }
   });
-  
+
   return {
     suiAddressHeirs,
-    emailHeirs
+    emailHeirs,
   };
 }
 
 function prepareHeirsForVecMap(heirs, keyField, valueField) {
   return {
-    keys: heirs.map(heir => heir[keyField]),
-    values: heirs.map(heir => heir[valueField])
+    keys: heirs.map((heir) => heir[keyField]),
+    values: heirs.map((heir) => heir[valueField]),
   };
 }
 
 function serializeHeirsToVecMaps(heirs) {
   // Separate heirs
   const { suiAddressHeirs, emailHeirs } = separateHeirsByAddressType(heirs);
-  
+
   // Prepare VecMap data for Sui address heirs
   const suiNameRatioMap = {
-    keys: suiAddressHeirs.map(heir => heir.name),
-    values: suiAddressHeirs.map(heir => heir.ratio)
+    keys: suiAddressHeirs.map((heir) => heir.name),
+    values: suiAddressHeirs.map((heir) => heir.ratio),
   };
-  
+
   const suiAddressRatioMap = {
-    keys: suiAddressHeirs.map(heir => heir.address),
-    values: suiAddressHeirs.map(heir => heir.ratio)
+    keys: suiAddressHeirs.map((heir) => heir.address),
+    values: suiAddressHeirs.map((heir) => heir.ratio),
   };
-  
+
   // Prepare VecMap data for email heirs
   const emailNameRatioMap = {
-    keys: emailHeirs.map(heir => heir.name),
-    values: emailHeirs.map(heir => heir.ratio)
+    keys: emailHeirs.map((heir) => heir.name),
+    values: emailHeirs.map((heir) => heir.ratio),
   };
-  
+
   const emailAddressRatioMap = {
-    keys: emailHeirs.map(heir => heir.address),
-    values: emailHeirs.map(heir => heir.ratio)
+    keys: emailHeirs.map((heir) => heir.address),
+    values: emailHeirs.map((heir) => heir.ratio),
   };
-  
+
   // Create raw data version for debugging (not serialized)
   const rawData = {
     suiNameRatio: suiNameRatioMap,
     suiAddressRatio: suiAddressRatioMap,
     emailNameRatio: emailNameRatioMap,
-    emailAddressRatio: emailAddressRatioMap
+    emailAddressRatio: emailAddressRatioMap,
   };
-  
+
   // Serialize data
   const serializedData = {
     suiNameRatio: VecMap(bcs.string(), bcs.string())
       .serialize(suiNameRatioMap)
       .toBytes(),
-      
+
     suiAddressRatio: VecMap(bcs.string(), bcs.string())
       .serialize(suiAddressRatioMap)
       .toBytes(),
-      
+
     emailNameRatio: VecMap(bcs.string(), bcs.string())
       .serialize(emailNameRatioMap)
       .toBytes(),
-      
+
     emailAddressRatio: VecMap(bcs.string(), bcs.string())
       .serialize(emailAddressRatioMap)
-      .toBytes()
+      .toBytes(),
   };
-  
+
   return {
     raw: rawData,
-    serialized: serializedData
+    serialized: serializedData,
   };
 }
 
@@ -124,12 +128,12 @@ export default function InitializeContract() {
         },
       }),
   });
-  
+
   // Store previous heirs count and animation state refs
   const prevHeirsCountRef = useRef(0);
   const animationInProgressRef = useRef(false);
   const cardRef = useRef(null);
-  
+
   // State management
   const [vaultID, setVaultID] = useState("");
   const [ownerCap, setOwnerCap] = useState("");
@@ -155,15 +159,15 @@ export default function InitializeContract() {
     handleVerify,
     showWarningMessage,
   } = useHeirStore();
-  
+
   const { createVaultTx } = useMoveStore();
-  
+
   // ... existing code ...
   const handleConnect = async () => {
     try {
       console.log("Connect button clicked - handleConnect function");
       console.log("Current connection state:", isConnecting);
-      
+
       // The ConnectButton component from @mysten/dapp-kit will handle the actual connection
       // We just need to wait for the account to be available
       if (!account) {
@@ -187,7 +191,7 @@ export default function InitializeContract() {
     if (account?.address) {
       console.log("Account updated:", account.address);
       setAddress(account.address);
-      
+
       // If we have an account but not connected, update connection state
       if (!isConnecting) {
         setIsConnecting(true);
@@ -197,7 +201,7 @@ export default function InitializeContract() {
 
   useEffect(() => {
     if (account) {
-      setAddress(account.address); 
+      setAddress(account.address);
     }
   }, [account, setAddress]);
   // Handle manual proceed to next step
@@ -210,44 +214,51 @@ export default function InitializeContract() {
   // Wave background animation
   useEffect(() => {
     const waveAnimation = setInterval(() => {
-      setWavesPosition(prev => (prev + 1) % 100);
+      setWavesPosition((prev) => (prev + 1) % 100);
     }, 50);
-    
+
     return () => clearInterval(waveAnimation);
   }, []);
 
   // Monitor changes in heirs count, control card animation
   useEffect(() => {
-    if (heirs.length !== prevHeirsCountRef.current && !animationInProgressRef.current) {
+    if (
+      heirs.length !== prevHeirsCountRef.current &&
+      !animationInProgressRef.current
+    ) {
       animationInProgressRef.current = true;
-      
+
       requestAnimationFrame(() => {
         if (heirs.length > prevHeirsCountRef.current) {
           if (cardRef.current) {
             // Card expansion animation
-            cardRef.current.style.transition = 'max-height 0.5s cubic-bezier(0.4, 0, 0.2, 1)';
+            cardRef.current.style.transition =
+              "max-height 0.5s cubic-bezier(0.4, 0, 0.2, 1)";
             cardRef.current.style.maxHeight = `${cardRef.current.scrollHeight + 80}px`;
-            
+
             // Find newly added heir fields
-            const newHeirElements = document.querySelectorAll('[data-heir-id]');
-            const newHeirElement = newHeirElements[newHeirElements.length - 1] as HTMLElement;
-            
+            const newHeirElements = document.querySelectorAll("[data-heir-id]");
+            const newHeirElement = newHeirElements[
+              newHeirElements.length - 1
+            ] as HTMLElement;
+
             if (newHeirElement) {
               // Set initial animation state
-              newHeirElement.style.opacity = '0';
-              newHeirElement.style.transform = 'translateY(15px)';
-              
+              newHeirElement.style.opacity = "0";
+              newHeirElement.style.transform = "translateY(15px)";
+
               // Force browser repaint
               void newHeirElement.offsetWidth;
-              
+
               // Start element animation
               setTimeout(() => {
-                newHeirElement.style.transition = 'opacity 0.5s cubic-bezier(0.4, 0, 0.2, 1), transform 0.5s cubic-bezier(0.4, 0, 0.2, 1)';
-                newHeirElement.style.opacity = '1';
-                newHeirElement.style.transform = 'translateY(0)';
+                newHeirElement.style.transition =
+                  "opacity 0.5s cubic-bezier(0.4, 0, 0.2, 1), transform 0.5s cubic-bezier(0.4, 0, 0.2, 1)";
+                newHeirElement.style.opacity = "1";
+                newHeirElement.style.transform = "translateY(0)";
               }, 50);
             }
-            
+
             setTimeout(() => {
               animationInProgressRef.current = false;
             }, 500);
@@ -255,9 +266,10 @@ export default function InitializeContract() {
         } else {
           // Shrink animation when removing heirs
           if (cardRef.current) {
-            cardRef.current.style.transition = 'max-height 0.5s cubic-bezier(0.4, 0, 0.2, 1)';
+            cardRef.current.style.transition =
+              "max-height 0.5s cubic-bezier(0.4, 0, 0.2, 1)";
             cardRef.current.style.maxHeight = `${cardRef.current.scrollHeight}px`;
-            
+
             setTimeout(() => {
               animationInProgressRef.current = false;
             }, 500);
@@ -265,7 +277,7 @@ export default function InitializeContract() {
             animationInProgressRef.current = false;
           }
         }
-        
+
         // Update heirs count
         prevHeirsCountRef.current = heirs.length;
       });
@@ -290,7 +302,7 @@ export default function InitializeContract() {
     if (handleVerify()) {
       try {
         setIsProcessing(true);
-        
+
         // Output data to console
         const { raw } = serializeHeirsToVecMaps(heirs);
         console.log("=== VecMap data at transaction execution ===");
@@ -300,7 +312,7 @@ export default function InitializeContract() {
         console.log("Email heirs:");
         console.table(raw.emailNameRatio);
         console.table(raw.emailAddressRatio);
-        
+
         // Execute transaction
         const transactionResult = await signAndExecuteTransaction(
           {
@@ -308,7 +320,7 @@ export default function InitializeContract() {
             chain: "sui:testnet",
           },
           {
-            onSuccess: (result) => {
+            onSuccess: (result: any) => {
               console.log("executed transaction", result);
               // Extract vaultID and ownerCap from transaction result
               const vaultObject = result.objectChanges.find(
@@ -333,33 +345,35 @@ export default function InitializeContract() {
                 // Save values for later use
                 setVaultID(vaultIDFromTx);
                 setOwnerCap(ownerCapFromTx);
-                
+
                 // Store vaultID and ownerCap in localStorage for use on other pages
-                localStorage.setItem('vaultID', vaultIDFromTx);
-                localStorage.setItem('ownerCap', ownerCapFromTx);
-                
+                localStorage.setItem("vaultID", vaultIDFromTx);
+                localStorage.setItem("ownerCap", ownerCapFromTx);
+
                 // Display success message and animation
                 showSuccessMessage();
-                
                 // Redirect to dashboard page after delay
-                setTimeout(() => {
-                  router.push(`/dashboard/settings`);
-                }, 2000);
+                WillWrite = true
+                setShowNextCard(false);
               } else {
-                console.error("Failed to retrieve Vault ID or Owner Cap from the result.");
-                showWarningMessage("Unable to retrieve vault information from transaction result.");
+                console.error(
+                  "Failed to retrieve Vault ID or Owner Cap from the result."
+                );
+                showWarningMessage(
+                  "Unable to retrieve vault information from transaction result."
+                );
               }
-              
+
               setIsProcessing(false);
             },
             onError: (error) => {
               console.error("Transaction error:", error);
               showWarningMessage("Transaction failed: " + error.message);
               setIsProcessing(false);
-            }
+            },
           }
         );
-        
+
         return transactionResult;
       } catch (error) {
         console.error("Transaction execution error:", error);
@@ -371,7 +385,9 @@ export default function InitializeContract() {
 
   // Display success message
   const showSuccessMessage = () => {
-    showWarningMessage("Vault created successfully! Navigating to dashboard...");
+    // showWarningMessage(
+    //   "Vault created successfully! Navigating to dashboard..."
+    // );
   };
 
   const CustomConnectButton = () => (
@@ -392,51 +408,53 @@ export default function InitializeContract() {
           <div className="wave2"></div>
         </div>
       </div>
-
       {/* Main title */}
       <div className="header">
         <h1 className="title">
-          <Image src="/RMBGlogo.png" width={36} height={36} alt="Anchor" className="title-logo" />
+          <Image
+            src="/RMBGlogo.png"
+            width={36}
+            height={36}
+            alt="Anchor"
+            className="title-logo"
+          />
           <span className="title-text">SeaVault</span>
         </h1>
-        <p className="subtitle">Protect your digital assets, guard your journey</p>
-      </div>      {/* Connect card */}
-      <div className={`connect-card ${showNextCard ? 'hidden' : ''}`}>
-        <div className="icon">
-        </div>
+        <p className="subtitle">
+          Protect your digital assets, guard your journey
+        </p>
+      </div>{" "}
+      {/* Connect card */}
+      <div className={`connect-card ${showNextCard || WillWrite ? "hidden" : ""}`}>
         <h1>Establish Your Digital Legacy</h1>
-        <p>Connect your wallet to start planning your digital asset inheritance</p>
-        
+        <p>
+          Connect your wallet to start planning your digital asset inheritance
+        </p>
+
         <div className="space-y-4">
           {/* Always show ConnectButton for wallet connection/switching */}
           <div className="connect-button" onClick={handleConnect}>
-            <ConnectButton /> 
+            <ConnectButton />
           </div>
-          
+
           {/* Show status and proceed button when wallet is connected */}
 
-            <div className="justify-between items-center flex flex-row">
-              <div className="status text-green-400 font-medium">
-                Wallet Used : {formatAddress(account?.address)}
-              </div>
-              <button 
-                className="px-6 py-3 bg-transparent hover:bg-white/15 text-white font-medium rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
-                onClick={handleProceed}
-                disabled={!account?.address || isProcessing}
-              >
-                Proceed to Setup
-              </button>
-            </div>
-          
+          <div className="justify-between items-center flex flex-row-reverse">
+            <button
+              className="px-6 py-3 bg-transparent hover:bg-white/15 text-white font-medium rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+              onClick={handleProceed}
+              disabled={!account?.address || isProcessing}
+            >
+              Proceed to Setup
+            </button>
+          </div>
         </div>
       </div>
-
       {/* Set heirs card */}
       {showNextCard && (
         <div className="heir-card">
           <div className="container">
-            <div className="icon">
-            </div>
+            <div className="icon"></div>
             <HeirCard
               heirs={heirs}
               addHeir={addHeir}
@@ -449,38 +467,29 @@ export default function InitializeContract() {
           </div>
         </div>
       )}
+      {WillWrite && (
+        <WilllistManager
+         willlistId= {vaultID}
+         capId={ownerCap}
+         onBack={() => {
+          WillWrite = false;
+          setShowNextCard(true);
+        }}
+       />
+      )}
 
       {/* Warning dialog */}
       {showWarning && (
-        <div className="fixed inset-0 flex items-center justify-center z-50 bg-black/50 backdrop-blur-sm">
+        <div className="fixed inset-0 flex items-center justify-center z-50 bg-black/50 backdrop-blur-sm" onClick={closeWarning}>
           <div className="bg-white dark:bg-slate-800 rounded-xl shadow-xl w-full max-w-md mx-4 overflow-hidden transform transition-all">
-            <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
-              <h3 className="text-lg font-medium text-gray-900 dark:text-white flex items-center">
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-amber-500 mr-2" viewBox="0 0 20 20" fill="currentColor">
-            <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
-          </svg>
-          System Warning
-              </h3>
-            </div>
             <div className="px-6 py-4">
-              <p className="text-sm text-gray-700 dark:text-gray-300">{warningMessage}</p>
-            </div>
-            <div className="px-6 py-3 bg-gray-50 dark:bg-slate-700 flex justify-end">
-              <button 
-          className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-md transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
-          onClick={closeWarning}
-              >
-          Confire
-              </button>
+              <p className="text-l text-gray-700 dark:text-gray-300">
+                {warningMessage}
+              </p>
             </div>
           </div>
         </div>
       )}
-
-      {/* Footer */}
-      <div className="footer">
-        <p>© 2025 SeaVault. Protecting your digital seas. Sail with trust.</p>
-      </div>
     </div>
   );
 }

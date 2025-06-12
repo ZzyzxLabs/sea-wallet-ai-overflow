@@ -3,28 +3,28 @@ import { create } from 'zustand';
 
 const packageName = "0x1";
 const useHeirStore = create((set, get) => ({
-  // 連接狀態
+  // Connection state
   isConnecting: false,
   showWelcome: false,
   showNextCard: false,
   showDashboardIndicator: false,
-  // 警告狀態
+  // Warning state
   showWarning: false,
   warningMessage: "",
   addressContent: true,
-  // 繼承人資料
+  // Heir data
   heirs: [{ id: Date.now(), name: "", address: "", ratio: "" }],
-  //Vault
+  // Vault
   VaultName: [],
   setHeirs: (newHeirs) => set({ heirs: newHeirs }),
 
-  // 設置連接狀態
+  // Set connection state
   setIsConnecting: (value) => set({ isConnecting: value }),
   setShowWelcome: (value) => set({ showWelcome: value }),
   setShowNextCard: (value) => set({ showNextCard: value }),
   setShowDashboardIndicator: (value) => set({ showDashboardIndicator: value }),
   setVaultName: (value) => set({ VaultName: value }),
-  // 重置所有狀態到初始值
+  // Reset all state to initial values
   resetState: () => set({
     isConnecting: false,
     showWelcome: false,
@@ -36,11 +36,11 @@ const useHeirStore = create((set, get) => ({
     heirs: [{ id: Date.now(), name: "", address: "", ratio: "" }]
   }),
   
-  // 設置警告狀態
+  // Set warning state
   setShowWarning: (value) => set({ showWarning: value }),
   setWarningMessage: (message) => set({ warningMessage: message }),
   
-  // 顯示警告
+  // Show warning
   showWarningMessage: (message) => {
     set({ 
       warningMessage: message,
@@ -48,10 +48,10 @@ const useHeirStore = create((set, get) => ({
     });
   },
   
-  // 關閉警告
+  // Close warning
   closeWarning: () => set({ showWarning: false }),
   
-  // 繼承人管理
+  // Heir management
   addHeir: () => {
     const heirs = get().heirs;
     set({ heirs: [...heirs, { id: Date.now(), name: "", address: "", ratio: "" }] });
@@ -65,15 +65,15 @@ const useHeirStore = create((set, get) => ({
   },
   
   updateHeir: (id, field, value) => {
-    // 如果是比例欄位，確保不能輸入負數
+    // If it's the ratio field, ensure no negative numbers
     if (field === "ratio") {
-      // 移除所有非數字字符（保留小數點）
+      // Remove all non-numeric characters (keep decimal point)
       const numericValue = value.replace(/[^\d.]/g, '');
       
-      // 確保值為正數（移除負號）
+      // Ensure value is positive (remove minus sign)
       const positiveValue = numericValue.replace(/-/g, '');
       
-      // 使用處理後的值
+      // Use the processed value
       value = positiveValue;
     }
     
@@ -88,76 +88,76 @@ const useHeirStore = create((set, get) => ({
     set({ heirs: updatedHeirs });
   },
   
-  // 計算總比例
+  // Calculate total ratio
   getTotalRatio: () => {
     const heirs = get().heirs;
     return heirs.reduce((sum, heir) => sum + (parseFloat(heir.ratio) || 0), 0);
   },
   
-  // 驗證表單
+  // Validate form
   validateForm: () => {
     const { heirs, showWarningMessage } = get();
     
-    // 檢查所有欄位是否都已填寫
+    // Check if all fields are filled
     const isAnyFieldEmpty = heirs.some(heir => !heir.name || !heir.address || !heir.ratio);
     if (isAnyFieldEmpty) {
-      showWarningMessage("請填寫所有繼承人的姓名、地址和比例欄位。");
+      showWarningMessage("Please fill in all heir name, address, and ratio fields.");
       return false;
     }
 
-    // 檢查地址格式 - 支持 Sui 地址或電子郵件
+    // Check address format - support Sui address or email
     const isAnyAddressInvalid = heirs.some(heir => {
-      // 檢查是否為有效的 Sui 地址或電子郵件
+      // Check if it's a valid Sui address or email
       const isSuiAddress = heir.address.startsWith("0x") && !heir.address.includes("@");
       const isEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(heir.address);
       return !(isSuiAddress || isEmail);
     });
     
     if (isAnyAddressInvalid) {
-      showWarningMessage("請確保所有地址為有效的 Sui 地址或電子郵件格式。");
+      showWarningMessage("Please ensure all addresses are valid Sui addresses or email formats.");
       return false;
     }
 
-    // 檢查比例是否為有效的正數
+    // Check if ratio is a valid positive number
     const isAnyRatioInvalid = heirs.some(heir => {
       const value = parseFloat(heir.ratio);
       return isNaN(value) || value <= 0;
     });
     
     if (isAnyRatioInvalid) {
-      showWarningMessage("請確保所有比例欄位均為有效的正數。");
+      showWarningMessage("Please ensure all ratio fields are valid positive numbers.");
       return false;
     }
 
-    // 計算總比例
+    // Calculate total ratio
     const totalRatio = get().getTotalRatio();
     
-    // 檢查總比例是否等於100%
-    if (Math.abs(totalRatio - 100) > 0.01) { // 使用小誤差範圍來處理浮點數精度問題
-      showWarningMessage(`繼承人總比例必須等於100%，當前總比例為${totalRatio}%。`);
+    // Check if total ratio equals 100%
+    if (Math.abs(totalRatio - 100) > 0.01) { // Use small error margin for floating point precision
+      showWarningMessage(`Total heir ratio must be 100%. Current total is ${totalRatio}%.`);
       return false;
     }
 
     return true;
   },
   
-  // 處理驗證
+  // Handle validation
   handleVerify: () => {
     const { validateForm, closeWarning, setShowDashboardIndicator, setShowNextCard } = get();
     
-    // 關閉任何已開啟的警告
+    // Close any open warnings
     closeWarning();
     
-    // 驗證表單
+    // Validate form
     if (validateForm()) {
-      // 表單驗證通過，顯示儀表板指示器並準備重定向
+      // Form validation passed, show dashboard indicator and prepare to redirect
       console.log("Validated heirs:", get().heirs.map(heir => ({
         name: heir.name,
         address: heir.address,
         ratio: heir.ratio + "%"
       })));
       
-      // 隱藏當前卡片，顯示指示器
+      // Hide current card, show indicator
       // setShowNextCard(false);
       // setShowDashboardIndicator(true);
       
