@@ -848,7 +848,7 @@ export function WilllistManager({ willlistId, capId, onBack, style }: { willlist
           </Text>
           <Button
             className="ocean-button"
-            onClick={() => window.location.href = '/dashboard'}
+            onClick={() => window.location.href = '/dashboard/settings'}
             size="3"
             style={{
               padding: '12px 24px',
