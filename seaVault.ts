@@ -1,4 +1,18 @@
-import { useSuiClientQuery } from "@mysten/dapp-kit"
+import { useSuiClientQuery, useSuiClientQueries } from "@mysten/dapp-kit"
+import { useMemo, useCallback } from "react"
+
+// Type definitions for better type safety
+export interface ProcessedCoin {
+  symbol: string;
+  formattedType: string;
+  fullType: string;
+  balance: string;
+  displayBalance: number;
+  decimals: number;
+  metadata: any;
+  objectId: string;
+  rawCoinObject: any;
+}
 
 /**
  * Custom hook to get vault and ownerCap information
@@ -19,26 +33,24 @@ export const useVaultAndOwnerCap = (accountAddress: string, packageName: string)
       staleTime: 30000,
     }
   );
-
   // Extract vault ID and ownerCap objects
   const getVaultAndCap = () => {
-    let ownerCapObjects: any[] | null = null;
+    let ownerCapObjects: any[] = [];
     let vaultID: string | null = null;
     
     if (vaultAndCapQuery.data) {
       ownerCapObjects = vaultAndCapQuery.data.data.filter((obj: any) =>
         obj.data?.type?.includes(packageName + "::seaVault::OwnerCap")
       );
-      vaultID = ownerCapObjects[0]?.data?.content?.fields?.vaultID;
+      vaultID = ownerCapObjects[0]?.data?.content?.fields?.vaultID || null;
     }
     
     return { ownerCapObjects, vaultID };
   };
 
   const { ownerCapObjects, vaultID } = getVaultAndCap();
-
   // Get the owner cap ID for transaction parameters
-  const ownerCapId = ownerCapObjects?.[0]?.data?.objectId;
+  const ownerCapId = ownerCapObjects?.[0]?.data?.objectId || null;
 
   return {
     vaultAndCapQuery,
@@ -134,10 +146,10 @@ export const useSeaVault = (accountAddress: string, packageName: string) => {
   const vaultObjectData = useVaultObject(vaultID || "");
 
   // Get object IDs from vault list
-  const getObjectIds = () => {
+  const getObjectIds = useCallback(() => {
     if (!vaultListData?.data?.data) return [];
     return vaultListData.data.data.map((item: any) => item.objectId);
-  };
+  }, [vaultListData?.data]);
 
   const objectIds = getObjectIds();
 
@@ -154,13 +166,105 @@ export const useSeaVault = (accountAddress: string, packageName: string) => {
     }
   );
 
+  // Extract coin types from vault contents
+  const coinTypes = useMemo(() => {
+    return (
+      vaultContentsQuery.data
+        ?.map((coinObj: any) => {
+          const type = coinObj?.data?.type || "";
+          const typeMatch = type.match(/<(.+)>/);
+          return typeMatch ? typeMatch[1] : null;
+        })
+        .filter(Boolean) || []
+    );
+  }, [vaultContentsQuery.data]);
+
+  // Query metadata for each coin type
+  const coinMetadataQueries = useSuiClientQueries({
+    queries: coinTypes.map((coinType: string) => ({
+      method: "getCoinMetadata" as const,
+      params: {
+        coinType: coinType,
+      },
+    })),
+    combine: (result: any) => {
+      return {
+        data: result.map((res: any) => res.data),
+        isSuccess: result.every((res: any) => res.isSuccess),
+        isPending: result.some((res: any) => res.isPending),
+        isError: result.some((res: any) => res.isError),
+      };
+    },
+    enabled: coinTypes.length > 0,
+    staleTime: 30000,
+  });
+
+  // Process coins data for easy consumption
+  const processedCoins = useMemo(() => {
+    if (!vaultContentsQuery.data || !coinMetadataQueries.data) return [];
+
+    try {
+      return vaultContentsQuery.data
+        .map((coinObj: any, index: number) => {
+          if (!coinObj?.data?.content) return null;
+
+          const type = coinObj.data.type || "";
+          const typeMatch = type.match(/<(.+)>/);
+          const fullCoinType = typeMatch ? typeMatch[1] : "Unknown";
+
+          // Format coin type for display
+          let formattedCoinType = "Unknown";
+          if (fullCoinType !== "Unknown") {
+            const parts = fullCoinType.split("::");
+            if (parts.length > 0) {
+              const address = parts[0];
+              if (address.length > 10) {
+                const prefix = address.substring(0, 7);
+                const suffix = address.substring(address.length - 5);
+                const remainingParts = parts.slice(1).join("::");
+                formattedCoinType = `${prefix}...${suffix}::${remainingParts}`;
+              } else {
+                formattedCoinType = fullCoinType;
+              }
+            }
+          }
+
+          const coinSymbol = fullCoinType.split("::").pop() || "Unknown";
+          const balance = coinObj.data?.content?.fields?.balance || "0";
+          const metadata = coinMetadataQueries.data[index];
+          const decimals = metadata?.decimals || 0;
+          const displayBalance = parseFloat(balance) / Math.pow(10, decimals);
+
+          return {
+            symbol: coinSymbol,
+            formattedType: formattedCoinType,
+            fullType: fullCoinType,
+            balance: balance,
+            displayBalance: displayBalance,
+            decimals: decimals,
+            metadata: metadata,
+            objectId: coinObj.data.objectId,
+            rawCoinObject: coinObj
+          };
+        })
+        .filter((coin: any) => coin !== null);
+    } catch (error) {
+      console.error("Error processing coin data:", error);
+      return [];
+    }
+  }, [vaultContentsQuery.data, coinMetadataQueries.data]);
+
+  // Normalize coin type addresses helper
+  const normalizeType = useCallback((typeStr: string) => {
+    return typeStr.replace(/^0x0+/, "0x");
+  }, []);
   // Refetch all vault-related data
-  const refetchAll = () => {
+  const refetchAll = useCallback(() => {
     vaultAndCapData.vaultAndCapQuery.refetch();
     vaultListData.refetch();
     vaultObjectData.refetch();
     vaultContentsQuery.refetch();
-  };
+  }, [vaultAndCapData.vaultAndCapQuery, vaultListData, vaultObjectData, vaultContentsQuery]);
 
   // Get methods for easy access
   const getMethods = {
@@ -171,18 +275,27 @@ export const useSeaVault = (accountAddress: string, packageName: string) => {
     getVaultObject: () => vaultObjectData.data,
     getVaultList: () => vaultListData.data,
     getObjectIds: getObjectIds,
+    getProcessedCoins: () => processedCoins,
+    getCoinTypes: () => coinTypes,
+    getCoinMetadata: () => coinMetadataQueries.data,
+    normalizeType: normalizeType,
   };
-
   return {
     // Current data
     vaultID,
     ownerCap: ownerCapObjects?.[0],
     ownerCapId,
-    ownerCapObjects,
+    ownerCapObjects: ownerCapObjects || [],
     vaultContents: vaultContentsQuery.data,
     vaultObject: vaultObjectData.data,
     vaultList: vaultListData.data,
     objectIds,
+    
+    // Coin-specific data
+    coinTypes,
+    coinMetadata: coinMetadataQueries.data,
+    processedCoins,
+    coinsInVault: processedCoins, // Alias for backward compatibility
 
     // Query states
     data: {
@@ -190,6 +303,7 @@ export const useSeaVault = (accountAddress: string, packageName: string) => {
       vaultList: vaultListData.data,
       vaultObject: vaultObjectData.data,
       vaultContents: vaultContentsQuery.data,
+      coinMetadata: coinMetadataQueries.data,
     },
 
     // Error states
@@ -198,6 +312,7 @@ export const useSeaVault = (accountAddress: string, packageName: string) => {
       vaultList: vaultListData.error,
       vaultObject: vaultObjectData.error,
       vaultContents: vaultContentsQuery.error,
+      coinMetadata: coinMetadataQueries.isError,
     },
 
     // Loading states
@@ -206,10 +321,12 @@ export const useSeaVault = (accountAddress: string, packageName: string) => {
       vaultList: vaultListData.isPending,
       vaultObject: vaultObjectData.isPending,
       vaultContents: vaultContentsQuery.isPending,
+      coinMetadata: coinMetadataQueries.isPending,
       any: vaultAndCapData.vaultAndCapQuery.isPending || 
            vaultListData.isPending || 
            vaultObjectData.isPending || 
-           vaultContentsQuery.isPending,
+           vaultContentsQuery.isPending ||
+           coinMetadataQueries.isPending,
     },
 
     // Success states
@@ -218,10 +335,12 @@ export const useSeaVault = (accountAddress: string, packageName: string) => {
       vaultList: vaultListData.isSuccess,
       vaultObject: vaultObjectData.isSuccess,
       vaultContents: vaultContentsQuery.isSuccess,
+      coinMetadata: coinMetadataQueries.isSuccess,
       all: vaultAndCapData.vaultAndCapQuery.isSuccess && 
            vaultListData.isSuccess && 
            vaultObjectData.isSuccess && 
-           vaultContentsQuery.isSuccess,
+           vaultContentsQuery.isSuccess &&
+           coinMetadataQueries.isSuccess,
     },
 
     // Refetch methods
@@ -230,6 +349,11 @@ export const useSeaVault = (accountAddress: string, packageName: string) => {
       vaultList: vaultListData.refetch,
       vaultObject: vaultObjectData.refetch,
       vaultContents: vaultContentsQuery.refetch,
+      coinMetadata: () => {
+        // Since useSuiClientQueries doesn't return refetch directly, 
+        // we'll trigger a refetch through the parent
+        vaultContentsQuery.refetch();
+      },
       all: refetchAll,
     },
 
@@ -241,7 +365,12 @@ export const useSeaVault = (accountAddress: string, packageName: string) => {
       hasVault: () => !!vaultID,
       hasOwnerCap: () => !!ownerCapId,
       isEmpty: () => objectIds.length === 0,
+      hasCoins: () => processedCoins.length > 0,
       isReady: () => !!vaultID && !!ownerCapId && vaultContentsQuery.isSuccess,
+      getCoinBySymbol: (symbol: string) => processedCoins.find(coin => coin.symbol === symbol),
+      getCoinByType: (type: string) => processedCoins.find(coin => coin.fullType === type),
+      getTotalUniqueCoins: () => processedCoins.length,
+      normalizeType: normalizeType,
     }
   };
 };

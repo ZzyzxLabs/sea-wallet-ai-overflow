@@ -1,8 +1,11 @@
 // store.js
 import { create } from 'zustand';
+import { persist } from 'zustand/middleware';
 
 const packageName = "0x1";
-const useHeirStore = create((set, get) => ({
+const useHeirStore = create(
+  persist(
+    (set, get) => ({
   // Connection state
   isConnecting: false,
   showWelcome: false,
@@ -162,10 +165,19 @@ const useHeirStore = create((set, get) => ({
       // setShowDashboardIndicator(true);
       
       return true;
-    }
-    
+    }    
     return false;
   }
-}));
+}),
+    {
+      name: 'heir-store', // name of the item in the storage (must be unique)
+      partialize: (state) => ({
+        heirs: state.heirs,
+        VaultName: state.VaultName,
+        // Only persist essential data, not UI states
+      }),
+    }
+  )
+);
 
 export default useHeirStore;

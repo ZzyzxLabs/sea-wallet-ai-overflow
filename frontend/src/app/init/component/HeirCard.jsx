@@ -56,15 +56,6 @@ export default function HeirCard({ heirs, addHeir, removeHeir, updateHeir, getTo
     if (animationInProgressRef.current) return;
     addHeir();
   };
-
-  const getAddressType = (address) => {
-    if (address && address.startsWith("0x") && !address.includes("@")) {
-      return "sui";
-    } else if (address && address.includes("@")) {
-      return "email";
-    }
-    return "";
-  };
   return (
     <div className="heir-card">
       <div className="container" ref={cardRef}>

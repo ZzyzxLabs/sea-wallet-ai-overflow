@@ -188,7 +188,7 @@ const useMoveStore = create((set, get) => ({
     // console.log("emailPer", emailPer);
     const tx = new Transaction();
     tx.setSender(senderAddress);
-
+    console.log(email)
     // handle addresses
     tx.moveCall({
       target: `${get().packageName}::seaVault::add_member_by_addresses`,
@@ -207,7 +207,6 @@ const useMoveStore = create((set, get) => ({
         sender: get().walletOwner,
         network: "testnet",
       });
-
       let emailCap = tx.moveCall({
         target: `${get().packageName}::seaVault::add_member_by_email`,
         arguments: [

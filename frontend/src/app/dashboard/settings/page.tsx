@@ -142,7 +142,7 @@ function DashboardContent() {
 
       // 正確分類繼承人並準備 VecMap 數據格式
       const { suiAddressHeirs, emailHeirs } = separateHeirsByAddressType(heirs);
-
+      console.log("heirs:", heirs);
       // 準備 Sui 地址繼承人的 VecMap（按建議格式）
       const suiVecMap = {
         keys: suiAddressHeirs.map((heir) => heir.address),
@@ -182,7 +182,6 @@ function DashboardContent() {
             showWarningMessage("Successfully minted heir capabilities!");
             setIsProcessing(false);
             // Redirect to dashboard page after successful transaction
-            router.push("/dashboard");
           },
           onError: (error) => {
             console.error("Minting capabilities error:", error);
@@ -522,29 +521,6 @@ function DashboardContent() {
             </button>
           </div>
 
-          {/* 通過電子郵件發送能力卡片 
-            <div className='w-full md:w-1/3 p-4 border border-blue-200 rounded-lg bg-blue-50'>
-              <h3 className='font-bold text-lg mb-2 text-blue-800'>
-                Send via Email
-              </h3>
-              <p className='text-gray-700 mb-4'>
-                Securely send capabilities to heirs via encrypted email.
-              </p>
-              <button
-                onClick={executeCustomTxA}
-                className={`w-full p-3 bg-blue-500 text-white rounded hover:bg-blue-600 transition ${isProcessing ? "opacity-50 cursor-not-allowed" : ""}`}
-                disabled={isProcessing}
-              >
-                {isProcessing ? (
-                  <>
-                    <span className='inline-block animate-spin mr-2'>⟳</span>
-                    Processing...
-                  </>
-                ) : (
-                  "Send with zksend"
-                )}
-              </button>
-            </div> */}
         </div>
       </div>
       {/* 警告/消息對話框 */}
