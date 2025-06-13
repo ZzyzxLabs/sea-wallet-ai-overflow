@@ -3,6 +3,7 @@
 
 import { useState, useEffect } from "react";
 import ContractAlterScroll from "../../../component/VaultScroll";
+import { ConnectButton } from "@mysten/dapp-kit";
 
 // 社交媒體連結資料
 const socialLinks = [
@@ -61,7 +62,7 @@ export default function DashboardFooter() {
 
       {/* 內容 */}
       <div className="relative py-4 px-6 backdrop-blur-sm bg-gradient-to-b from-blue-50/80 to-white">
-        <div className="flex justify-between items-center flex-wrap gap-4 max-w-7xl mx-auto">
+        <div className="flex justify-between items-center flex-wrap gap-2 max-w-7xl mx-auto">
           {/* 左側：連結、社交媒體、版權和時間 */}
           <div className="flex items-center space-x-12">
             <div className="flex space-x-6">
@@ -115,7 +116,7 @@ export default function DashboardFooter() {
               </div>
             </div>
           </div>
-
+          <ConnectButton /> {/* 右側：連接按鈕 */}
           {/* 右側：ContractAlterScroll */}
           <div>
             <ContractAlterScroll />
