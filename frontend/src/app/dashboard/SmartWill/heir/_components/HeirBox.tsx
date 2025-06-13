@@ -333,7 +333,6 @@ function HeirBox({ heir, index }: { heir: HeirData; index: number }) {
 
     return result.join(" ");
   };
-
   const handleWithdraw = async () => {
     // if (!isVaultWarned) {
     //   console.error("Vault is not in withdrawal state yet");
@@ -343,9 +342,15 @@ function HeirBox({ heir, index }: { heir: HeirData; index: number }) {
     try {
       setIsWithdrawing(true);
       console.log("Withdraw from vault", vaultID);
-      // Collect asset names and coin types from coinsInVault
-      let assetNames = coinsInVault.map((coin) => coin[0]);
-      let coinTypes = coinsInVault.map((coin) => coin[3]); // Full coin type is at index 3
+      
+      // Filter coins with amount > 0 before processing
+      const coinsWithBalance = coinsInVault.filter((coin) => {
+        return coin && coin[2] && BigInt(coin[2]) > BigInt(0);
+      });
+      
+      // Collect asset names and coin types from coinsWithBalance
+      let assetNames = coinsWithBalance.map((coin) => coin[0]);
+      let coinTypes = coinsWithBalance.map((coin) => coin[3]); // Full coin type is at index 3
 
       // for the first time to trigger the grace period
       // just need to send one tx to the contract
