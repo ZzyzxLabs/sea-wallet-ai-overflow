@@ -110,7 +110,6 @@ const ContractAlterScroll = () => {
     });
     setFormattedAmounts(formatted);
   }, [coinMetadataQueries?.data, coinsInVault]);
-
   useEffect(() => {
     if (!coinData.data) return;
     const processedCoins = [];
@@ -132,8 +131,12 @@ const ContractAlterScroll = () => {
       }
       const coinSymbol = fullCoinType.split("::").pop() || "Unknown";
       const amount = coinObj.data?.content?.fields?.balance || "0";
-      processedCoins.push([coinSymbol, formattedCoinType, amount, fullCoinType]);
-      extractedCoinTypes.push(fullCoinType);
+      
+      // Only add coins with amount greater than 0
+      if (BigInt(amount) > BigInt(0)) {
+        processedCoins.push([coinSymbol, formattedCoinType, amount, fullCoinType]);
+        extractedCoinTypes.push(fullCoinType);
+      }
     });
     setCoinsInVault(processedCoins);
     setCoinTypes(extractedCoinTypes);
