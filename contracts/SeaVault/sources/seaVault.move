@@ -32,6 +32,7 @@ module SeaWallet::seaVault {
     const EAlreadyWithdrawn: u64 = 9;
 
     const MARKER: u64 = 2;
+    const FIFTEEN_SECONDS: u64 = 15 * 1000;
     const TWO_MINUTES: u64 = 2 * 60 * 1000;
     const SIX_MONTHS: u64 = 6 * 30 * 24 * 60 * 60 * 1000;
     const SEVEN_DAYS: u64 = 7 * 24 * 60 * 60 * 1000;
@@ -76,7 +77,7 @@ module SeaWallet::seaVault {
         let vault = SeaVault {
             id: object::new(ctx),
             last_update: tx_context::epoch_timestamp_ms(ctx),
-            time_left: TWO_MINUTES,
+            time_left: FIFTEEN_SECONDS,
             is_warned: false,
             cap_percentage: vec_map::empty<u8, u8>(),
             cap_activated: vec_map::empty<u8, bool>(),
@@ -218,7 +219,7 @@ module SeaWallet::seaVault {
         assert!(cap.vaultID == object::id(vault), ENotYourVault);
         vault.last_update = clock.timestamp_ms();
         if (vault.is_warned) {
-            vault.time_left = TWO_MINUTES;
+            vault.time_left = FIFTEEN_SECONDS;
             vault.is_warned = false;
         }
     }
@@ -262,7 +263,7 @@ module SeaWallet::seaVault {
     fun grace_period(cap: &MemberCap, vault: &mut SeaVault, clock: &Clock) {
         assert!(cap.vaultID == object::id(vault), ENotYourVault);
         vault.last_update = clock.timestamp_ms();
-        vault.time_left = TWO_MINUTES;
+        vault.time_left = FIFTEEN_SECONDS;
         vault.is_warned = true;
     }
 
