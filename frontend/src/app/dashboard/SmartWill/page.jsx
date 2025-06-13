@@ -31,12 +31,11 @@ export default function Dashboard() {
       }
     }
   }, [heirs, router]);
-
-  // 倒計時狀態 - 從截圖調整為 30 天
-  const [daysRemaining, setDaysRemaining] = useState(30);
-  const [hours, setHours] = useState(11);
-  const [minutes, setMinutes] = useState(59);
-  const [seconds, setSeconds] = useState(14);
+  // 倒計時狀態 - 設置為 2 分鐘
+  const [daysRemaining, setDaysRemaining] = useState(0);
+  const [hours, setHours] = useState(0);
+  const [minutes, setMinutes] = useState(2);
+  const [seconds, setSeconds] = useState(0);
 
   // 完成度狀態 - 根據截圖添加
   const [completionPercentage, setCompletionPercentage] = useState(86.7);
