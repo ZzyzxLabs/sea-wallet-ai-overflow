@@ -14,7 +14,6 @@ import { bcs, BcsType } from "@mysten/bcs";
 import HeirCard from "./HeirCard";
 import Image from "next/image";
 import "./InitializeContract.css"; // Import CSS styles
-import { AllWilllist, WilllistManager } from "@/component/willComponent/willmain";
 // VecMap function for serializing key-value pairs (remains unchanged)
 function VecMap<K extends BcsType<any>, V extends BcsType<any>>(K: K, V: V) {
   return bcs.struct(`VecMap<${K.name}, ${V.name}>`, {
@@ -22,7 +21,6 @@ function VecMap<K extends BcsType<any>, V extends BcsType<any>>(K: K, V: V) {
     values: bcs.vector(V),
   });
 }
-let WillWrite = false;
 // Other helper functions remain unchanged
 function separateHeirsByAddressType(heirs) {
   const suiAddressHeirs = [];
@@ -133,12 +131,12 @@ export default function InitializeContract() {
   const prevHeirsCountRef = useRef(0);
   const animationInProgressRef = useRef(false);
   const cardRef = useRef(null);
-
   // State management
   const [vaultID, setVaultID] = useState("");
   const [ownerCap, setOwnerCap] = useState("");
   const [isProcessing, setIsProcessing] = useState(false);
   const [wavesPosition, setWavesPosition] = useState(0);
+  const [showRedirectButton, setShowRedirectButton] = useState(false);
 
   // Get states and methods from Zustand store
   const {
@@ -348,12 +346,9 @@ export default function InitializeContract() {
 
                 // Store vaultID and ownerCap in localStorage for use on other pages
                 localStorage.setItem("vaultID", vaultIDFromTx);
-                localStorage.setItem("ownerCap", ownerCapFromTx);
-
-                // Display success message and animation
+                localStorage.setItem("ownerCap", ownerCapFromTx);                // Display success message and redirect button
                 showSuccessMessage();
-                // Redirect to dashboard page after delay
-                WillWrite = true
+                setShowRedirectButton(true);
                 setShowNextCard(false);
               } else {
                 console.error(
@@ -382,12 +377,14 @@ export default function InitializeContract() {
       }
     }
   };
-
   // Display success message
   const showSuccessMessage = () => {
-    // showWarningMessage(
-    //   "Vault created successfully! Navigating to dashboard..."
-    // );
+    // You can add any success message logic here if needed
+  };
+
+  // Handle redirect to dashboard
+  const handleRedirectToDashboard = () => {
+    router.push('/dashboard');
   };
 
   const CustomConnectButton = () => (
@@ -423,9 +420,8 @@ export default function InitializeContract() {
         <p className="subtitle">
           Protect your digital assets, guard your journey
         </p>
-      </div>{" "}
-      {/* Connect card */}
-      <div className={`connect-card ${showNextCard || WillWrite ? "hidden" : ""}`}>
+      </div>{" "}      {/* Connect card */}
+      <div className={`connect-card ${showNextCard || showRedirectButton ? "hidden" : ""}`}>
         <h1>Establish Your Digital Legacy</h1>
         <p>
           Connect your wallet to start planning your digital asset inheritance
@@ -465,17 +461,28 @@ export default function InitializeContract() {
               isProcessing={isProcessing}
             />
           </div>
+        </div>      )}
+        {/* Success card with redirect button */}
+      {showRedirectButton && (
+        <div className="connect-card">
+
+          <h1>Vault Created Successfully!</h1>
+          <p>
+            Your SeaVault has been created and configured. You can now proceed to the dashboard to manage your digital assets.
+          </p>
+          <div className="space-y-2 mb-6">
+            <p className="text-sm text-slate-300">Vault ID: {formatAddress(vaultID)}</p>
+            <p className="text-sm text-slate-300">Owner Cap: {formatAddress(ownerCap)}</p>
+          </div>
+          <div className="flex justify-center">
+            <button
+              onClick={handleRedirectToDashboard}
+              className="px-8 py-3 bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-700 hover:to-blue-700 text-white font-medium rounded-lg transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 shadow-lg hover:shadow-xl transform hover:scale-105"
+            >
+              Go to Dashboard
+            </button>
+          </div>
         </div>
-      )}
-      {WillWrite && (
-        <WilllistManager
-         willlistId= {vaultID}
-         capId={ownerCap}
-         onBack={() => {
-          WillWrite = false;
-          setShowNextCard(true);
-        }}
-       />
       )}
 
       {/* Warning dialog */}

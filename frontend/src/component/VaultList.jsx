@@ -279,7 +279,7 @@ const VaultList = () => {
           ) : coinsInVault.length > 0 ? (
             coinsInVault.map((coin, index) => {
               // Only render if coin exists and has valid data
-              if (!coin || !coin[2]) return null;
+              if (!coin || !coin[2] || coin[2] == "0") return null;
 
               return (
                 <React.Fragment key={index}>

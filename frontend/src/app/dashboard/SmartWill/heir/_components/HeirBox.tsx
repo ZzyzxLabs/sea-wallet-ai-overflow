@@ -541,31 +541,35 @@ function HeirBox({ heir, index }: { heir: HeirData; index: number }) {
                       Your Share
                     </div>
 
-                    {coinsInVault.map((coin, index) => (
-                      <React.Fragment key={index}>
-                        <div className='p-2 border-t border-gray-200 text-gray-500'>
-                          {coin[0]}
-                        </div>
-                        <div className='p-2 border-t border-gray-200 text-xs text-gray-500'>
-                          {coin[1]}
-                        </div>
-                        <div className='p-2 border-t border-gray-200 text-gray-500'>
-                          {Number(coin[2]) /
-                            Math.pow(
-                              10,
-                              coinMetadataQueries?.data?.[index]?.decimals || 0
-                            )}
-                        </div>
-                        <div className='p-2 border-t border-gray-200 text-gray-500'>
-                          {(Number(coin[2]) /
-                            Math.pow(
-                              10,
-                              coinMetadataQueries?.data?.[index]?.decimals || 0
-                            )) *
-                            (capPercentage || 0)}
-                        </div>
-                      </React.Fragment>
-                    ))}
+                    {coinsInVault.map((coin, index) => {
+                      if (!coin || !coin[2] || coin[2] == "0") return null;
+
+                      return (
+                        <React.Fragment key={index}>
+                          <div className='p-2 border-t border-gray-200 text-gray-500'>
+                            {coin[0]}
+                          </div>
+                          <div className='p-2 border-t border-gray-200 text-xs text-gray-500'>
+                            {coin[1]}
+                          </div>
+                          <div className='p-2 border-t border-gray-200 text-gray-500'>
+                            {Number(coin[2]) /
+                              Math.pow(
+                                10,
+                                coinMetadataQueries?.data?.[index]?.decimals || 0
+                              )}
+                          </div>
+                          <div className='p-2 border-t border-gray-200 text-gray-500'>
+                            {(Number(coin[2]) /
+                              Math.pow(
+                                10,
+                                coinMetadataQueries?.data?.[index]?.decimals || 0
+                              )) *
+                              (capPercentage || 0)}
+                          </div>
+                        </React.Fragment>
+                      );
+                    })}
                   </div>
                 ) : (
                   <div className='p-4 text-center text-gray-500'>
