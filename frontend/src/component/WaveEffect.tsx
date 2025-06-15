@@ -1,9 +1,13 @@
 "use client";
 import React, { useEffect, useRef } from 'react';
 
-const WaveEffect = () => {
-  const svgRef = useRef(null);
-  const pathRefs = useRef([]);  // Define configurations for multiple waves with varying Y positions and speeds
+interface WaveEffectProps {
+  className?: string;
+}
+
+const WaveEffect: React.FC<WaveEffectProps> = ({ className }) => {
+  const svgRef = useRef<SVGSVGElement | null>(null);
+  const pathRefs = useRef<Array<SVGPathElement | null>>([]);
   const waveConfigs = [
     { amplitude: 70, frequency: 0.025, phaseOffset: 0, yOffset: 0.7, speed: 0.0003, color: "rgba(135, 206, 250, 0.15)" },
     { amplitude: 65, frequency: 0.023, phaseOffset: 0.3, yOffset: 0.65, speed: 0.0004, color: "rgba(100, 149, 237, 0.2)" },
@@ -23,9 +27,9 @@ const WaveEffect = () => {
     const svg = svgRef.current;
     if (!svg) return;
 
-    let animationFrameId;
+    let animationFrameId: number;
 
-    const handleMouseMove = (event) => {
+    const handleMouseMove = (event: MouseEvent) => {
       const mouseY = event.clientY;
       const windowHeight = window.innerHeight;
       waveControls.current.mouseInfluence = (windowHeight - mouseY) / windowHeight;
@@ -44,20 +48,21 @@ const WaveEffect = () => {
       }
 
       pathRefs.current.forEach((path, index) => {
-        if (!path) return;        const config = waveConfigs[index];
+        if (!path) return;
+        const config = waveConfigs[index];
         const currentPhase = now * config.speed + config.phaseOffset;
-        
+
         // Generate angular waves by finding peaks and valleys
-        const points = [];
+        const points: [number, number][] = [];
         const waveLength = (2 * Math.PI) / config.frequency; // One complete wave cycle
         const numPeaks = Math.ceil(svgWidth / (waveLength / 2)); // Number of peaks and valleys
-          for (let i = 0; i <= numPeaks; i++) {
+        for (let i = 0; i <= numPeaks; i++) {
           const x = (i * svgWidth) / numPeaks;
           const baseWave = config.amplitude * Math.sin(x * config.frequency + currentPhase);
           const influencedWave = baseWave + (config.amplitude * waveControls.current.mouseInfluence * Math.sin(x * config.frequency * 0.5 + currentPhase * 0.8));
           points.push([x, svgHeight * config.yOffset + influencedWave]);
         }
-        
+
         // Ensure we have the end point
         if (points[points.length - 1][0] < svgWidth) {
           const x = svgWidth;
@@ -73,7 +78,8 @@ const WaveEffect = () => {
           d += ` L ${points[i][0]} ${points[i][1]}`;
         }
         d += ` L ${svgWidth} ${svgHeight} L 0 ${svgHeight} Z`;
-        path.setAttribute('d', d);      });
+        path.setAttribute('d', d);
+      });
 
       animationFrameId = requestAnimationFrame(animate);
     };
@@ -89,7 +95,7 @@ const WaveEffect = () => {
   }, []);
 
   return (
-    <div className="max-w-full"> {/* Use React.Fragment to return multiple elements */}
+    <div className={`max-w-full ${className}`}>
       <svg
         ref={svgRef}
         style={{
@@ -104,7 +110,8 @@ const WaveEffect = () => {
         {waveConfigs.map((config, index) => (
           <path
             key={index}
-            ref={(el) => (pathRefs.current[index] = el)}            fill={config.color}
+            ref={(el) => (pathRefs.current[index] = el)}
+            fill={config.color}
           />
         ))}
       </svg>

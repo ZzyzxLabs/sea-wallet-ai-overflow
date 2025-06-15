@@ -20,7 +20,7 @@ export default function DashboardLayout({
         <main className="w-full pl-10 flex-grow">
           {/* pl-20 提供左側間距，確保內容不會被側邊欄覆蓋 */}
           <div className="min-h-full">
-                              <WaveEffect className="relative -z-5"> </WaveEffect>
+            <WaveEffect className="relative -z-5" />
             {children}
           </div>
         </main>

@@ -11,10 +11,16 @@ import useMoveStore from "../../../store/moveStore";
 import useHeirStore from "../../../store/heirStore";
 import axios from "axios";
 
+// 定義繼承人類型
+interface Heir {
+  address: string;
+  ratio: string | number;
+}
+
 // 分隔繼承人函數
-function separateHeirsByAddressType(heirs) {
-  const suiAddressHeirs = [];
-  const emailHeirs = [];
+function separateHeirsByAddressType(heirs: Heir[]) {
+  const suiAddressHeirs: Heir[] = [];
+  const emailHeirs: Heir[] = [];
 
   heirs.forEach((heir) => {
     if (
@@ -93,10 +99,9 @@ function DashboardContent() {
       showWarningMessage("請先連接您的錢包");
     }
   }, [account, showWarningMessage]);
-
   // 使用 useSuiClientQuery 查詢用戶擁有的對象
   const ownedObjectsQuery = useSuiClientQuery("getOwnedObjects", {
-    owner: account?.address,
+    owner: account?.address || "",
     filter: {
       StructType: `${packageName}::seaVault::OwnerCap`,
     },
@@ -108,7 +113,6 @@ function DashboardContent() {
   if (!ownedObjectsQuery.isPending) {
     console.log("Owned objects query result:", ownedObjectsQuery.data);
   }
-
   // 將所有 OwnerCap objectIds 放入列表
   let ownerCapObjectIds: string[] = [];
   if (
@@ -116,9 +120,9 @@ function DashboardContent() {
     ownedObjectsQuery.data &&
     Array.isArray(ownedObjectsQuery.data.data)
   ) {
-    ownerCapObjectIds = ownedObjectsQuery.data.data.map(
-      (item) => item.data.objectId
-    );
+    ownerCapObjectIds = ownedObjectsQuery.data.data
+      .filter(item => item.data?.objectId)
+      .map(item => item.data!.objectId);
     console.log("OwnerCap object IDs:", ownerCapObjectIds);
   }
 
@@ -134,9 +138,13 @@ function DashboardContent() {
         },
       }),
   });
-
   // Mint Capabilities (Mint Caps) 函數
   const mintCaps = async () => {
+    if (!account) {
+      showWarningMessage("請先連接您的錢包");
+      return;
+    }
+
     try {
       setIsProcessing(true);
 
@@ -146,13 +154,13 @@ function DashboardContent() {
       // 準備 Sui 地址繼承人的 VecMap（按建議格式）
       const suiVecMap = {
         keys: suiAddressHeirs.map((heir) => heir.address),
-        values: suiAddressHeirs.map((heir) => parseInt(heir.ratio)),
+        values: suiAddressHeirs.map((heir) => parseInt(String(heir.ratio))),
       };
 
       // 準備電子郵件繼承人的 VecMap（按建議格式）
       const emailVecMap = {
         keys: emailHeirs.map((heir) => heir.address),
-        values: emailHeirs.map((heir) => parseInt(heir.ratio)),
+        values: emailHeirs.map((heir) => parseInt(String(heir.ratio))),
       };
 
       // 輸出格式化的 VecMap 數據用於調試
@@ -200,9 +208,13 @@ function DashboardContent() {
       setIsProcessing(false);
     }
   };
-
   // 執行自定義交易 A - 發送能力給繼承人
   const executeCustomTxA = async () => {
+    if (!account) {
+      showWarningMessage("請先連接您的錢包");
+      return;
+    }
+
     try {
       setIsProcessing(true);
       console.log("Current account address:", account.address);
@@ -355,7 +367,7 @@ function DashboardContent() {
       setIsProcessing(false);
     }
   };  // 格式化地址顯示
-  const formatAddress = (address) => {
+  const formatAddress = (address: string) => {
     if (!address) return "不可用";
     return `${address.slice(0, 5)}...${address.slice(-5)}`;
   };
@@ -363,9 +375,8 @@ function DashboardContent() {
   // 控制地址顯示的狀態
   const [owAddCensor, setOwAddCensor] = useState(true);
   const [vaAddCensor, setVaAddCensor] = useState(true);
-
   // 複製地址到剪貼簿
-  const copyToClipboard = async (text, type) => {
+  const copyToClipboard = async (text: string, type: string) => {
     try {
       await navigator.clipboard.writeText(text);
       showWarningMessage(`${type} copied to clipboard!`);

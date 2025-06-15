@@ -67,5 +67,5 @@ export async function searchVectorDB(collectionName: string, query: string) {
     vector: queryVec,
     limit: 3,
   });
-  return searchRes.map((r) => r.payload.text).join("\n");
+  return searchRes.map((r) => r.payload?.text ?? "").join("\n");
 }
