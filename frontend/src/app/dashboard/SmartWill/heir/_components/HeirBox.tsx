@@ -77,17 +77,17 @@ type CoinContent = {
 function HeirBox({ heir, index }: { heir: HeirData; index: number }) {
   const router = useRouter();
   const account = useCurrentAccount();
-  const [coinsInVault, setCoinsInVault] = useState([]);
+  const [coinsInVault, setCoinsInVault] = useState<string[][]>([]);
   const [capID, setCapID] = useState(heir.data?.content?.fields?.capID);
   const [vaultID, setVaultID] = useState(heir.data?.content?.fields?.vaultID);
   const [withdrawnCount, setWithdrawnCount] = useState(
     heir.data?.content?.fields?.withdrawn_count
   );
-  const [capActivated, setCapActivated] = useState(null);
-  const [capPercentage, setCapPercentage] = useState(null);
-  const [isVaultWarned, setIsVaultWarned] = useState(null);
-  const [lastUpdate, setLastUpdate] = useState(null);
-  const [timeLeft, setTimeLeft] = useState(null);
+  const [capActivated, setCapActivated] = useState<boolean | null>(null);
+  const [capPercentage, setCapPercentage] = useState<number | null>(null);
+  const [isVaultWarned, setIsVaultWarned] = useState<boolean | null>(null);
+  const [lastUpdate, setLastUpdate] = useState<number | null>(null);
+  const [timeLeft, setTimeLeft] = useState<number | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isWithdrawing, setIsWithdrawing] = useState(false);
   const [isAlreadyWithdrawn, setIsAlreadyWithdrawn] = useState(false);
@@ -118,9 +118,8 @@ function HeirBox({ heir, index }: { heir: HeirData; index: number }) {
       staleTime: 0,
     }
   );
-
   useEffect(() => {
-    if (vaultObject.data) {
+    if (vaultObject.data?.data) {
       console.log("refreshing vault object");
       try {
         // Add type guard for SuiParsedData
@@ -135,12 +134,11 @@ function HeirBox({ heir, index }: { heir: HeirData; index: number }) {
             if (
               capActivatedField.fields?.contents &&
               Array.isArray(capActivatedField.fields.contents)
-            ) {
-              const capItem = capActivatedField.fields.contents.find(
+            ) {              const capItem = capActivatedField.fields.contents.find(
                 (item) => item.fields && item.fields.key === capID
               );
 
-              setCapActivated(capItem?.fields?.value);
+              setCapActivated(capItem?.fields?.value ?? null);
             }
           }
 
@@ -313,7 +311,6 @@ function HeirBox({ heir, index }: { heir: HeirData; index: number }) {
       }
     }
   }, [lastUpdate, timeLeft]);
-
   // Format remaining time to display
   const formatRemainingTime = (milliseconds: number) => {
     const seconds = milliseconds / 1000;
@@ -324,7 +321,7 @@ function HeirBox({ heir, index }: { heir: HeirData; index: number }) {
     const minutes = Math.floor((seconds % 3600) / 60);
     const secs = Math.floor(seconds % 60);
 
-    let result = [];
+    let result: string[] = [];
 
     if (days > 0) result.push(`${days}d`);
     if (hours > 0) result.push(`${hours}h`);
@@ -342,15 +339,13 @@ function HeirBox({ heir, index }: { heir: HeirData; index: number }) {
     try {
       setIsWithdrawing(true);
       console.log("Withdraw from vault", vaultID);
-      
-      // Filter coins with amount > 0 before processing
-      const coinsWithBalance = coinsInVault.filter((coin) => {
+        // Filter coins with amount > 0 before processing
+      const coinsWithBalance = coinsInVault.filter((coin: string[]) => {
         return coin && coin[2] && BigInt(coin[2]) > BigInt(0);
       });
-      
-      // Collect asset names and coin types from coinsWithBalance
-      let assetNames = coinsWithBalance.map((coin) => coin[0]);
-      let coinTypes = coinsWithBalance.map((coin) => coin[3]); // Full coin type is at index 3
+        // Collect asset names and coin types from coinsWithBalance
+      let assetNames = coinsWithBalance.map((coin: string[]) => coin[0]);
+      let coinTypes = coinsWithBalance.map((coin: string[]) => coin[3]); // Full coin type is at index 3
 
       // for the first time to trigger the grace period
       // just need to send one tx to the contract

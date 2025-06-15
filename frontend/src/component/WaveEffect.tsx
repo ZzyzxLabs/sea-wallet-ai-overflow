@@ -1,5 +1,5 @@
 "use client";
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useMemo } from 'react';
 
 interface WaveEffectProps {
   className?: string;
@@ -8,7 +8,8 @@ interface WaveEffectProps {
 const WaveEffect: React.FC<WaveEffectProps> = ({ className }) => {
   const svgRef = useRef<SVGSVGElement | null>(null);
   const pathRefs = useRef<Array<SVGPathElement | null>>([]);
-  const waveConfigs = [
+  
+  const waveConfigs = useMemo(() => [
     { amplitude: 70, frequency: 0.025, phaseOffset: 0, yOffset: 0.7, speed: 0.0003, color: "rgba(135, 206, 250, 0.15)" },
     { amplitude: 65, frequency: 0.023, phaseOffset: 0.3, yOffset: 0.65, speed: 0.0004, color: "rgba(100, 149, 237, 0.2)" },
     { amplitude: 60, frequency: 0.022, phaseOffset: 0.6, yOffset: 0.6, speed: 0.0005, color: "rgba(70, 130, 180, 0.25)" },
@@ -18,7 +19,8 @@ const WaveEffect: React.FC<WaveEffectProps> = ({ className }) => {
     { amplitude: 40, frequency: 0.018, phaseOffset: 1.8, yOffset: 0.4, speed: 0.0009, color: "rgba(135, 206, 235, 0.18)" },
     { amplitude: 35, frequency: 0.017, phaseOffset: 2.1, yOffset: 0.35, speed: 0.001, color: "rgba(173, 216, 230, 0.15)" },
     { amplitude: 30, frequency: 0.016, phaseOffset: 2.4, yOffset: 0.3, speed: 0.0011, color: "rgba(176, 224, 230, 0.12)" }
-  ];
+  ], []);
+  
   const waveControls = useRef({
     mouseInfluence: 0,
   });
@@ -84,15 +86,13 @@ const WaveEffect: React.FC<WaveEffectProps> = ({ className }) => {
       animationFrameId = requestAnimationFrame(animate);
     };
 
-    animate();
-
-    return () => {
+    animate();    return () => {
       window.removeEventListener('mousemove', handleMouseMove);
       if (animationFrameId) {
         cancelAnimationFrame(animationFrameId);
       }
     };
-  }, []);
+  }, [waveConfigs]);
 
   return (
     <div className={`max-w-full ${className}`}>
@@ -106,11 +106,12 @@ const WaveEffect: React.FC<WaveEffectProps> = ({ className }) => {
           height: '100%',
           zIndex: -1,
         }}
-      >
-        {waveConfigs.map((config, index) => (
+      >        {waveConfigs.map((config, index) => (
           <path
             key={index}
-            ref={(el) => (pathRefs.current[index] = el)}
+            ref={(el) => {
+              pathRefs.current[index] = el;
+            }}
             fill={config.color}
           />
         ))}

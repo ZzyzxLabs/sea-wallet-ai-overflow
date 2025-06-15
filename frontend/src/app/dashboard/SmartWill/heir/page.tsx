@@ -12,16 +12,31 @@ import { useRouter } from "next/navigation";
 import { AllWilllist } from "@/component/willComponent/willmain";
 import HeirBox from "./_components/HeirBox";
 import useMoveStore from "@/store/moveStore";
+import { SuiObjectResponse } from "@mysten/sui/client";
+
+// Define types to match what HeirBox expects
+type HeirData = {
+  data: {
+    objectId: string;
+    content: {
+      fields: {
+        capID: string;
+        vaultID: string;
+        withdrawn_count: number;
+      };
+    };
+  };
+};
 
 export default function Dashboard() {
   const account = useCurrentAccount();
   const router = useRouter();
   const packageName = useMoveStore((state) => state.packageName);
-  const [heirs, setHeirs] = useState([]);
+  const [heirs, setHeirs] = useState<HeirData[]>([]);
   const walletObjects = useSuiClientQuery(
     "getOwnedObjects",
     {
-      owner: account?.address,
+      owner: account?.address || "",
       options: { showType: true, showContent: true },
     },
     {
@@ -35,12 +50,31 @@ export default function Dashboard() {
     if (typeof window !== "undefined") {
 
     }
-  }, []);
-  useEffect(() => {
-    if (walletObjects.data) {
+  }, []);  useEffect(() => {
+    if (walletObjects.data?.data) {
       console.log("walletObjects",walletObjects.data)
       // current detect all the membercap which generate by whatever contract we deploy 
-      setHeirs(walletObjects.data.data.filter(item => item.data?.type?.includes("MemberCap") && item.data?.type?.includes(packageName)))
+      const filteredHeirs = walletObjects.data.data
+        .filter(item => 
+          item.data?.type?.includes("MemberCap") && 
+          item.data?.type?.includes(packageName) &&
+          item.data?.content &&
+          'fields' in item.data.content
+        )
+        .map(item => ({
+          data: {
+            objectId: item.data!.objectId,
+            content: item.data!.content as unknown as {
+              fields: {
+                capID: string;
+                vaultID: string;
+                withdrawn_count: number;
+              };
+            }
+          }
+        })) as HeirData[];
+      
+      setHeirs(filteredHeirs);
     }
   }, [packageName, walletObjects.data]);
 

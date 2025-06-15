@@ -30,13 +30,15 @@ export function WalrusUploader({ willlistId, capId }: WalrusUploaderProps) {
 
   const NUM_EPOCH = 1;
   const packageId = useNetworkVariable('packageId');
-  const suiClient = useSuiClient();
-  const client = new SealClient({
+  const suiClient = useSuiClient();  const client = new SealClient({
     suiClient,
-    serverObjectIds: getAllowlistedKeyServers('testnet'),
+    serverConfigs: getAllowlistedKeyServers('testnet').map((id) => ({
+      objectId: id,
+      weight: 1,
+    })),
     verifyKeyServers: false,
   });
-
+//subject to change if not work
   const { mutate: signAndExecute } = useSignAndExecuteTransaction({
     execute: async ({ bytes, signature }) =>
       await suiClient.executeTransactionBlock({

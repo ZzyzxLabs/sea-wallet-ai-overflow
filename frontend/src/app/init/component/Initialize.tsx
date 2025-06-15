@@ -14,6 +14,24 @@ import { bcs, BcsType } from "@mysten/bcs";
 import HeirCard from "./HeirCard";
 import Image from "next/image";
 import "./InitializeContract.css"; // Import CSS styles
+
+// Type definitions
+interface Heir {
+  id: string;
+  name: string;
+  address: string;
+  ratio: string;
+}
+
+interface SeparatedHeirs {
+  suiAddressHeirs: Heir[];
+  emailHeirs: Heir[];
+}
+
+interface VecMapData {
+  keys: string[];
+  values: string[];
+}
 // VecMap function for serializing key-value pairs (remains unchanged)
 function VecMap<K extends BcsType<any>, V extends BcsType<any>>(K: K, V: V) {
   return bcs.struct(`VecMap<${K.name}, ${V.name}>`, {
@@ -22,9 +40,9 @@ function VecMap<K extends BcsType<any>, V extends BcsType<any>>(K: K, V: V) {
   });
 }
 // Other helper functions remain unchanged
-function separateHeirsByAddressType(heirs) {
-  const suiAddressHeirs = [];
-  const emailHeirs = [];
+function separateHeirsByAddressType(heirs: Heir[]): SeparatedHeirs {
+  const suiAddressHeirs: Heir[] = [];
+  const emailHeirs: Heir[] = [];
 
   heirs.forEach((heir) => {
     if (
@@ -44,14 +62,14 @@ function separateHeirsByAddressType(heirs) {
   };
 }
 
-function prepareHeirsForVecMap(heirs, keyField, valueField) {
+function prepareHeirsForVecMap(heirs: Heir[], keyField: keyof Heir, valueField: keyof Heir): VecMapData {
   return {
-    keys: heirs.map((heir) => heir[keyField]),
-    values: heirs.map((heir) => heir[valueField]),
+    keys: heirs.map((heir) => heir[keyField] as string),
+    values: heirs.map((heir) => heir[valueField] as string),
   };
 }
 
-function serializeHeirsToVecMaps(heirs) {
+function serializeHeirsToVecMaps(heirs: Heir[]) {
   // Separate heirs
   const { suiAddressHeirs, emailHeirs } = separateHeirsByAddressType(heirs);
 
@@ -126,11 +144,10 @@ export default function InitializeContract() {
         },
       }),
   });
-
   // Store previous heirs count and animation state refs
-  const prevHeirsCountRef = useRef(0);
-  const animationInProgressRef = useRef(false);
-  const cardRef = useRef(null);
+  const prevHeirsCountRef = useRef<number>(0);
+  const animationInProgressRef = useRef<boolean>(false);
+  const cardRef = useRef<HTMLDivElement>(null);
   // State management
   const [vaultID, setVaultID] = useState("");
   const [ownerCap, setOwnerCap] = useState("");
@@ -289,9 +306,8 @@ export default function InitializeContract() {
     if (animationInProgressRef.current) return;
     addHeir();
   };
-
   // Format address display
-  const formatAddress = (address) => {
+  const formatAddress = (address: string | undefined): string => {
     if (!address) return " ";
     return `${address.slice(0, 5)}...${address.slice(-5)}`;
   };
