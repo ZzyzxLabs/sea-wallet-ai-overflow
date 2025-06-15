@@ -315,7 +315,9 @@ function DashboardContent() {
               error
             );
             showWarningMessage(
-              `Transaction ${i + 1}/${tx.length} processing error: ${error.message || String(error)}`
+              `Transaction ${i + 1}/${tx.length} processing error: ${
+                error.message || String(error)
+              }`
             );
             setIsProcessing(false);
             break; // 失敗時停止循環
@@ -371,7 +373,7 @@ function DashboardContent() {
     if (!address) return "不可用";
     return `${address.slice(0, 5)}...${address.slice(-5)}`;
   };
-  
+
   // 控制地址顯示的狀態
   const [owAddCensor, setOwAddCensor] = useState(true);
   const [vaAddCensor, setVaAddCensor] = useState(true);
@@ -381,168 +383,167 @@ function DashboardContent() {
       await navigator.clipboard.writeText(text);
       showWarningMessage(`${type} copied to clipboard!`);
     } catch (err) {
-      console.error('Failed to copy: ', err);
+      console.error("Failed to copy: ", err);
       showWarningMessage(`Failed to copy ${type}`);
     }
   };
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen bg-gray-100/50 p-4">
-      <div className="bg-white/60 p-8 rounded-lg shadow-lg w-full max-w-4xl">
-        <h1 className="text-3xl font-bold mb-6 text-center text-[#4da2ff]">
+    <div className='flex flex-col items-center justify-center min-h-screen bg-gray-100/50 p-4'>
+      <div className='bg-white/60 p-8 rounded-lg shadow-lg w-full max-w-4xl'>
+        <h1 className='text-3xl font-bold mb-6 text-center text-[#4da2ff]'>
           SeaVault Settings
-        </h1>        {/* 顯示保險庫資訊 */}
-        <div className="mb-6 p-4 bg-gray-100/60 rounded-lg">
-          <h2 className="text-xl font-bold mb-3 text-[#4da2ff]">
+        </h1>{" "}
+        {/* 顯示保險庫資訊 */}
+        <div className='mb-6 p-4 bg-gray-100/60 rounded-lg'>
+          <h2 className='text-xl font-bold mb-3 text-[#4da2ff]'>
             Vault Information
           </h2>
-          <div 
-            className="mb-2 border-2 border-[#4da2ff]/40 shadow-lg p-3 rounded-lg cursor-pointer hover:bg-gray-50/50 transition-all duration-300 group overflow-hidden"
+          <div
+            className='mb-2 border-2 border-[#4da2ff]/40 shadow-lg p-3 rounded-lg cursor-pointer hover:bg-gray-50/50 transition-all duration-300 group overflow-hidden'
             onClick={() => setOwAddCensor(!owAddCensor)}
           >
-            <div className="flex items-start justify-between gap-3">
-              <div className="flex-1 min-w-0">
-                <strong className="text-[#4da2ff] block mb-1">
-                  Vault ID:
-                </strong>
-                <div className="relative overflow-hidden">
-                  <span 
+            <div className='flex items-start justify-between gap-3'>
+              <div className='flex-1 min-w-0'>
+                <strong className='text-[#4da2ff] block mb-1'>Vault ID:</strong>
+                <div className='relative overflow-hidden'>
+                  <span
                     className={`text-[#555555] text-sm font-mono break-all block transition-all duration-500 ease-in-out transform ${
-                      owAddCensor 
-                        ? 'opacity-100 translate-y-0' 
-                        : 'opacity-0 -translate-y-2'
+                      owAddCensor
+                        ? "opacity-100 translate-y-0"
+                        : "opacity-0 -translate-y-2"
                     }`}
-                    style={{ 
-                      position: owAddCensor ? 'static' : 'absolute',
-                      width: '100%'
+                    style={{
+                      position: owAddCensor ? "static" : "absolute",
+                      width: "100%",
                     }}
                   >
                     {formatAddress(vaultID)}
                   </span>
-                  <span 
+                  <span
                     className={`text-[#555555] text-sm font-mono break-all block transition-all duration-500 ease-in-out transform ${
-                      !owAddCensor 
-                        ? 'opacity-100 translate-y-0' 
-                        : 'opacity-0 translate-y-2'
+                      !owAddCensor
+                        ? "opacity-100 translate-y-0"
+                        : "opacity-0 translate-y-2"
                     }`}
-                    style={{ 
-                      position: !owAddCensor ? 'static' : 'absolute',
-                      width: '100%',
-                      top: owAddCensor ? '0' : 'auto'
+                    style={{
+                      position: !owAddCensor ? "static" : "absolute",
+                      width: "100%",
+                      top: owAddCensor ? "0" : "auto",
                     }}
                   >
                     {vaultID}
                   </span>
                 </div>
               </div>
-              <div className="flex items-center gap-2 flex-shrink-0">
+              <div className='flex items-center gap-2 flex-shrink-0'>
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
-                    copyToClipboard(vaultID, 'Vault ID');
+                    copyToClipboard(vaultID, "Vault ID");
                   }}
-                  className="opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-gray-200 rounded text-sm"
-                  title="Copy Vault ID"
+                  className='opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-gray-200 rounded text-sm'
+                  title='Copy Vault ID'
                 >
                   📋
                 </button>
-                <span className="text-[#4da2ff] text-sm transition-transform duration-300 hover:scale-110">
-                  {owAddCensor ? '👁️' : '🙈'}
+                <span className='text-[#4da2ff] text-sm transition-transform duration-300 hover:scale-110'>
+                  {owAddCensor ? "👁️" : "🙈"}
                 </span>
               </div>
             </div>
           </div>
-          <div 
-            className="mb-2 border-2 border-[#4da2ff]/40 shadow-lg p-3 rounded-lg cursor-pointer hover:bg-gray-50/50 transition-all duration-300 group overflow-hidden"
+          <div
+            className='mb-2 border-2 border-[#4da2ff]/40 shadow-lg p-3 rounded-lg cursor-pointer hover:bg-gray-50/50 transition-all duration-300 group overflow-hidden'
             onClick={() => setVaAddCensor(!vaAddCensor)}
           >
-            <div className="flex items-start justify-between gap-3">
-              <div className="flex-1 min-w-0">
-                <strong className="text-[#4da2ff] block mb-1">
+            <div className='flex items-start justify-between gap-3'>
+              <div className='flex-1 min-w-0'>
+                <strong className='text-[#4da2ff] block mb-1'>
                   Owner Cap:
                 </strong>
-                <div className="relative overflow-hidden">
-                  <span 
+                <div className='relative overflow-hidden'>
+                  <span
                     className={`text-[#555555] text-sm font-mono break-all block transition-all duration-500 ease-in-out transform ${
-                      vaAddCensor 
-                        ? 'opacity-100 translate-y-0' 
-                        : 'opacity-0 -translate-y-2'
+                      vaAddCensor
+                        ? "opacity-100 translate-y-0"
+                        : "opacity-0 -translate-y-2"
                     }`}
-                    style={{ 
-                      position: vaAddCensor ? 'static' : 'absolute',
-                      width: '100%'
+                    style={{
+                      position: vaAddCensor ? "static" : "absolute",
+                      width: "100%",
                     }}
                   >
                     {formatAddress(ownerCap)}
                   </span>
-                  <span 
+                  <span
                     className={`text-[#555555] text-sm font-mono break-all block transition-all duration-500 ease-in-out transform ${
-                      !vaAddCensor 
-                        ? 'opacity-100 translate-y-0' 
-                        : 'opacity-0 translate-y-2'
+                      !vaAddCensor
+                        ? "opacity-100 translate-y-0"
+                        : "opacity-0 translate-y-2"
                     }`}
-                    style={{ 
-                      position: !vaAddCensor ? 'static' : 'absolute',
-                      width: '100%',
-                      top: vaAddCensor ? '0' : 'auto'
+                    style={{
+                      position: !vaAddCensor ? "static" : "absolute",
+                      width: "100%",
+                      top: vaAddCensor ? "0" : "auto",
                     }}
                   >
                     {ownerCap}
                   </span>
                 </div>
               </div>
-              <div className="flex items-center gap-2 flex-shrink-0">
+              <div className='flex items-center gap-2 flex-shrink-0'>
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
-                    copyToClipboard(ownerCap, 'Owner Cap');
+                    copyToClipboard(ownerCap, "Owner Cap");
                   }}
-                  className="opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-gray-200 rounded text-sm"
-                  title="Copy Owner Cap"
+                  className='opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-gray-200 rounded text-sm'
+                  title='Copy Owner Cap'
                 >
                   📋
                 </button>
-                <span className="text-[#4da2ff] text-sm transition-transform duration-300 hover:scale-110">
-                  {vaAddCensor ? '👁️' : '🙈'}
+                <span className='text-[#4da2ff] text-sm transition-transform duration-300 hover:scale-110'>
+                  {vaAddCensor ? "👁️" : "🙈"}
                 </span>
               </div>
             </div>
           </div>
         </div>
-
         {/* 功能卡片 */}
-        <div className="flex flex-col md:flex-row justify-between space-y-4 md:space-y-0 md:space-x-4">
+        <div className='flex flex-col md:flex-row justify-between space-y-4 md:space-y-0 md:space-x-4'>
           {/* Mint Capabilities 卡片 */}
-          <div className="w-full md:w-1/3 p-4 border border-green-200 rounded-lg bg-transparent">
+          <div className='w-full md:w-1/3 p-4 border border-green-200 rounded-lg bg-transparent'>
             {/*<p className='text-gray-700 mb-4'>
               Mint capability for your heirs, allowing them to access the vault.
             </p>*/}
             <button
               onClick={mintCaps}
-              className={`w-full p-3 bg-green-400 text-white rounded hover:bg-green-600/80 transition ${isProcessing ? "opacity-50 cursor-not-allowed" : ""}`}
+              className={`w-full p-3 bg-green-400 text-white rounded hover:bg-green-600/80 transition ${
+                isProcessing ? "opacity-50 cursor-not-allowed" : ""
+              }`}
               disabled={isProcessing}
             >
               {isProcessing ? (
                 <>
-                  <span className="inline-block animate-spin mr-2">⟳</span>
+                  <span className='inline-block animate-spin mr-2'>⟳</span>
                   Processing...
                 </>
               ) : (
-                "Re-send Heir Capabilities"
+                "Send Heir Capabilities"
               )}
             </button>
           </div>
-
         </div>
       </div>
       {/* 警告/消息對話框 */}
       {showWarning && (
-        <div className="fixed inset-0 bg-black/40 bg-opacity-40 flex items-center justify-center z-50">
-          <div className="bg-white p-6 rounded-lg shadow-xl max-w-md w-full">
-            <h3 className="text-xl font-bold text-gray-800 mb-4">Message</h3>
-            <p className="text-gray-700 mb-6">{warningMessage}</p>
-            <div className="flex justify-end">
+        <div className='fixed inset-0 bg-black/40 bg-opacity-40 flex items-center justify-center z-50'>
+          <div className='bg-white p-6 rounded-lg shadow-xl max-w-md w-full'>
+            <h3 className='text-xl font-bold text-gray-800 mb-4'>Message</h3>
+            <p className='text-gray-700 mb-6'>{warningMessage}</p>
+            <div className='flex justify-end'>
               <button
-                className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition"
+                className='px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition'
                 onClick={closeWarning}
               >
                 OK

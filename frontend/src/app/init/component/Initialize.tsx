@@ -232,7 +232,9 @@ export default function InitializeContract() {
             // Card expansion animation
             cardRef.current.style.transition =
               "max-height 0.5s cubic-bezier(0.4, 0, 0.2, 1)";
-            cardRef.current.style.maxHeight = `${cardRef.current.scrollHeight + 80}px`;
+            cardRef.current.style.maxHeight = `${
+              cardRef.current.scrollHeight + 80
+            }px`;
 
             // Find newly added heir fields
             const newHeirElements = document.querySelectorAll("[data-heir-id]");
@@ -346,7 +348,7 @@ export default function InitializeContract() {
 
                 // Store vaultID and ownerCap in localStorage for use on other pages
                 localStorage.setItem("vaultID", vaultIDFromTx);
-                localStorage.setItem("ownerCap", ownerCapFromTx);                // Display success message and redirect button
+                localStorage.setItem("ownerCap", ownerCapFromTx); // Display success message and redirect button
                 showSuccessMessage();
                 setShowRedirectButton(true);
                 setShowNextCard(false);
@@ -384,60 +386,65 @@ export default function InitializeContract() {
 
   // Handle redirect to dashboard
   const handleRedirectToDashboard = () => {
-    router.push('/dashboard');
+    router.push("/dashboard/settings");
   };
 
   const CustomConnectButton = () => (
-    <div className="connect-button">
+    <div className='connect-button'>
       <ConnectButton />
     </div>
   );
 
   return (
-    <div className="container">
+    <div className='container'>
       {/* Ocean background elements */}
-      <div className="ocean-background">
-        <div className="bubble bubble1"></div>
-        <div className="bubble bubble2"></div>
-        <div className="bubble bubble3"></div>
-        <div className="waves">
-          <div className="wave1"></div>
-          <div className="wave2"></div>
+      <div className='ocean-background'>
+        <div className='bubble bubble1'></div>
+        <div className='bubble bubble2'></div>
+        <div className='bubble bubble3'></div>
+        <div className='waves'>
+          <div className='wave1'></div>
+          <div className='wave2'></div>
         </div>
       </div>
       {/* Main title */}
-      <div className="header">
-        <h1 className="title">
+      <div className='header'>
+        <h1 className='title'>
           <Image
-            src="/RMBGlogo.png"
+            src='/RMBGlogo.png'
             width={36}
             height={36}
-            alt="Anchor"
-            className="title-logo"
+            alt='Anchor'
+            className='title-logo'
           />
-          <span className="title-text">SeaVault</span>
+          <span className='title-text'>SeaVault</span>
         </h1>
-        <p className="subtitle">
+        <p className='subtitle'>
           Protect your digital assets, guard your journey
         </p>
-      </div>{" "}      {/* Connect card */}
-      <div className={`connect-card ${showNextCard || showRedirectButton ? "hidden" : ""}`}>
+      </div>{" "}
+      {/* Connect card */}
+      <div
+        className={`connect-card ${
+          showNextCard || showRedirectButton ? "hidden" : ""
+        }`}
+      >
         <h1>Establish Your Digital Legacy</h1>
         <p>
           Connect your wallet to start planning your digital asset inheritance
         </p>
 
-        <div className="space-y-4">
+        <div className='space-y-4'>
           {/* Always show ConnectButton for wallet connection/switching */}
-          <div className="connect-button" onClick={handleConnect}>
+          <div className='connect-button' onClick={handleConnect}>
             <ConnectButton />
           </div>
 
           {/* Show status and proceed button when wallet is connected */}
 
-          <div className="justify-between items-center flex flex-row-reverse">
+          <div className='justify-between items-center flex flex-row-reverse'>
             <button
-              className="px-6 py-3 bg-transparent hover:bg-white/15 text-white font-medium rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+              className='px-6 py-3 bg-transparent hover:bg-white/15 text-white font-medium rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2'
               onClick={handleProceed}
               disabled={!account?.address || isProcessing}
             >
@@ -448,9 +455,9 @@ export default function InitializeContract() {
       </div>
       {/* Set heirs card */}
       {showNextCard && (
-        <div className="heir-card">
-          <div className="container">
-            <div className="icon"></div>
+        <div className='heir-card'>
+          <div className='container'>
+            <div className='icon'></div>
             <HeirCard
               heirs={heirs}
               addHeir={addHeir}
@@ -461,36 +468,43 @@ export default function InitializeContract() {
               isProcessing={isProcessing}
             />
           </div>
-        </div>      )}
-        {/* Success card with redirect button */}
+        </div>
+      )}
+      {/* Success card with redirect button */}
       {showRedirectButton && (
-        <div className="connect-card">
-
+        <div className='connect-card'>
           <h1>Vault Created Successfully!</h1>
           <p>
-            Your SeaVault has been created and configured. You can now proceed to the dashboard to manage your digital assets.
+            Your SeaVault has been created and configured. You can now proceed
+            to the dashboard to manage your digital assets.
           </p>
-          <div className="space-y-2 mb-6">
-            <p className="text-sm text-slate-300">Vault ID: {formatAddress(vaultID)}</p>
-            <p className="text-sm text-slate-300">Owner Cap: {formatAddress(ownerCap)}</p>
+          <div className='space-y-2 mb-6'>
+            <p className='text-sm text-slate-300'>
+              Vault ID: {formatAddress(vaultID)}
+            </p>
+            <p className='text-sm text-slate-300'>
+              Owner Cap: {formatAddress(ownerCap)}
+            </p>
           </div>
-          <div className="flex justify-center">
+          <div className='flex justify-center'>
             <button
               onClick={handleRedirectToDashboard}
-              className="px-8 py-3 bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-700 hover:to-blue-700 text-white font-medium rounded-lg transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 shadow-lg hover:shadow-xl transform hover:scale-105"
+              className='px-8 py-3 bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-700 hover:to-blue-700 text-white font-medium rounded-lg transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 shadow-lg hover:shadow-xl transform hover:scale-105'
             >
               Go to Dashboard
             </button>
           </div>
         </div>
       )}
-
       {/* Warning dialog */}
       {showWarning && (
-        <div className="fixed inset-0 flex items-center justify-center z-50 bg-black/50 backdrop-blur-sm" onClick={closeWarning}>
-          <div className="bg-white dark:bg-slate-800 rounded-xl shadow-xl w-full max-w-md mx-4 overflow-hidden transform transition-all">
-            <div className="px-6 py-4">
-              <p className="text-l text-gray-700 dark:text-gray-300">
+        <div
+          className='fixed inset-0 flex items-center justify-center z-50 bg-black/50 backdrop-blur-sm'
+          onClick={closeWarning}
+        >
+          <div className='bg-white dark:bg-slate-800 rounded-xl shadow-xl w-full max-w-md mx-4 overflow-hidden transform transition-all'>
+            <div className='px-6 py-4'>
+              <p className='text-l text-gray-700 dark:text-gray-300'>
                 {warningMessage}
               </p>
             </div>
