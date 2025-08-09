@@ -1,0 +1,1 @@
+export const package_addr = "0xd1d2c17f1e249a68caddaa409c547f1abc0d0ece9f283e6858eaf88e7b37108b"
