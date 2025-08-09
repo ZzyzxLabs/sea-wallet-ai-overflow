@@ -1,0 +1,47 @@
+{
+  "name": "seavault",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint"
+  },
+  "dependencies": {
+    "@langchain/community": "^0.3.42",
+    "@langchain/core": "^0.3.55",
+    "@langchain/ollama": "^0.2.0",
+    "@langchain/openai": "^0.5.10",
+    "@langchain/textsplitters": "^0.1.0",
+    "@mysten/bcs": "^1.6.0",
+    "@mysten/dapp-kit": "^0.16.9",
+    "@mysten/mvr-static": "^0.1.8",
+    "@mysten/seal": "^0.4.10",
+    "@mysten/sui": "^1.30.5",
+    "@mysten/zksend": "^0.12.28",
+    "@qdrant/js-client-rest": "^1.14.0",
+    "@radix-ui/themes": "^3.2.1",
+    "@sendgrid/mail": "^8.1.5",
+    "@tanstack/react-query": "^5.72.2",
+    "axios": "^1.9.0",
+    "framer-motion": "^12.10.2",
+    "lucide-react": "^0.509.0",
+    "next": "15.3.0",
+    "idb-keyval": "3.0.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "react-image": "^4.1.0",
+    "zustand": "^5.0.3"
+  },
+  "devDependencies": {
+    "@eslint/eslintrc": "^3",
+    "@tailwindcss/postcss": "^4",
+    "@types/node": "22.14.0",
+    "@types/react": "19.1.0",
+    "eslint": "^9",
+    "eslint-config-next": "15.3.0",
+    "tailwindcss": "^4",
+    "typescript": "^5.8.3"
+  }
+}
