@@ -14,6 +14,7 @@
   "dependencies": {
     "@mysten/dapp-kit": "^0.17.2",
     "@mysten/sui": "^1.37.1",
+    "@mysten/zksend": "^0.13.19",
     "@tanstack/react-query": "^5.84.2",
     "@workspace/ui": "workspace:*",
     "lucide-react": "^0.475.0",
