@@ -38,6 +38,9 @@ importers:
       '@mysten/sui':
         specifier: ^1.37.1
         version: 1.37.1(typescript@5.9.2)
+      '@mysten/zksend':
+        specifier: ^0.13.19
+        version: 0.13.19(typescript@5.9.2)
       '@tanstack/react-query':
         specifier: ^5.84.2
         version: 5.84.2(react@19.1.1)
@@ -490,6 +493,9 @@ packages:
 
   '@mysten/window-wallet-core@0.0.6':
     resolution: {integrity: sha512-uYjdUVok0pAaMGMxAdZfmW+2SCXgdQok9YtKmno5Tj8zlRQGv9Qet7EuCnDcBKquSbtqid3yhug7fcD+t8/KmA==}
+
+  '@mysten/zksend@0.13.19':
+    resolution: {integrity: sha512-P68Y9eefom5I7O8+boVLaZ/CAJccaSOFpiCBjphDbdYbZYPvtwdXeAdWMwErcpK6UaHj6aJNJk72AcQaUSss9Q==}
 
   '@next/env@15.4.5':
     resolution: {integrity: sha512-ruM+q2SCOVCepUiERoxOmZY9ZVoecR3gcXNwCYZRvQQWRjhOiPJGmQ2fAiLR6YKWXcSAh7G79KEFxN3rwhs4LQ==}
@@ -2207,6 +2213,10 @@ packages:
     engines: {node: ^10 || ^12 || ^13.7 || ^14 || >=15.0.1}
     hasBin: true
 
+  nanostores@1.0.1:
+    resolution: {integrity: sha512-kNZ9xnoJYKg/AfxjrVL4SS0fKX++4awQReGqWnwTRHxeHGZ1FJFVgTqr/eMrNQdp0Tz7M7tG/TDaX8QfHDwVCw==}
+    engines: {node: ^20.0.0 || >=22.0.0}
+
   natural-compare@1.4.0:
     resolution: {integrity: sha512-OWND8ei3VtNC9h7V60qff3SVobHr996CTwgxubgyQYEpg290h9J0buyECNNJexkFm5sOajh5G116RYA1c8ZMSw==}
 
@@ -3295,6 +3305,20 @@ snapshots:
       '@mysten/utils': 0.1.1
       jose: 6.0.12
       valibot: 0.36.0
+
+  '@mysten/zksend@0.13.19(typescript@5.9.2)':
+    dependencies:
+      '@mysten/sui': 1.37.1(typescript@5.9.2)
+      '@mysten/utils': 0.1.1
+      '@mysten/wallet-standard': 0.16.9(typescript@5.9.2)
+      '@mysten/window-wallet-core': 0.0.6
+      mitt: 3.0.1
+      nanostores: 1.0.1
+      valibot: 0.36.0
+    transitivePeerDependencies:
+      - '@gql.tada/svelte-support'
+      - '@gql.tada/vue-support'
+      - typescript
 
   '@next/env@15.4.5': {}
 
@@ -5177,6 +5201,8 @@ snapshots:
   mute-stream@0.0.8: {}
 
   nanoid@3.3.11: {}
+
+  nanostores@1.0.1: {}
 
   natural-compare@1.4.0: {}
 
