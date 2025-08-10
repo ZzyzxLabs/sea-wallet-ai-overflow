@@ -1,8 +1,8 @@
 import { Geist, Geist_Mono } from "next/font/google"
-
+import '@mysten/dapp-kit/dist/index.css';
 import "@workspace/ui/globals.css"
+import  Provider  from "./provider"
 import { Providers } from "@/components/providers"
-
 const fontSans = Geist({
   subsets: ["latin"],
   variable: "--font-sans",
@@ -23,7 +23,7 @@ export default function RootLayout({
       <body
         className={`${fontSans.variable} ${fontMono.variable} font-sans antialiased `}
       >
-        <Providers>{children}</Providers>
+        <Providers><Provider>{children}</Provider></Providers>
       </body>
     </html>
   )
