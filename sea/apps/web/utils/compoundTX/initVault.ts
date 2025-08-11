@@ -10,13 +10,13 @@ import { sendEmail } from "../mailService/sendMail";
 export const initVaultTX = async (addrList: Map<string, number>, emailList: Map<string, number>, sender: string) => {
     const tx = new Transaction();
     const [vault, cap] = initVault(tx);
-    for (let i = 0; i < addrList.size; i++) {
-        mintCapAddr(cap, vault, addrList.keys[i], addrList.values[i], tx);
+    for (const [address, amount] of addrList.entries()) {
+        mintCapAddr(cap, vault, address, amount, tx);
     }
-    for (let i = 0; i < emailList.size; i++) {
-        const mailCap = mintCapMail(cap, vault, emailList.keys[i], emailList.values[i], tx);
+    for (const [email, amount] of emailList.entries()) {
+        const mailCap = mintCapMail(cap, vault, email, amount, tx);
         const link = zkTransaction(sender, "testnet", mailCap, `${package_addr}::seaVault::mailCap`, tx);
-        await sendEmail(emailList.keys[i], link);
+        await sendEmail(email, link);
     }
     tx.transferObjects([cap!], sender);
     tx.moveCall({

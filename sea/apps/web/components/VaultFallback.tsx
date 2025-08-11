@@ -5,9 +5,7 @@ import { useState, useRef } from "react";
 import { Transaction } from "@mysten/sui/transactions";
 import { bcs } from "@mysten/sui/bcs";
 import HeirCard from "./HeirCard";
-import { MemberListTile, Member } from "./memberListTile";
-import { package_addr } from "../utils/package";
-
+import { initVaultTX } from "@/utils/compoundTX/initVault";
 interface Heir {
   id: string;
   name: string;
@@ -127,7 +125,7 @@ export function VaultFallback() {
   const client = useSuiClient();
   
   // Package name for the smart contract
-  const packageName = package_addr;
+  const packageName = "0x996fa349767a48a9d211a3deb9ae4055a03e443a85118df9ca312cd29591b30f";
   
   // Transaction hook
   const { mutate: signAndExecuteTransaction } = useSignAndExecuteTransaction({
@@ -148,8 +146,6 @@ export function VaultFallback() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [vaultID, setVaultID] = useState("");
   const [ownerCap, setOwnerCap] = useState("");
-  const [vaultCreated, setVaultCreated] = useState(false);
-  const [members, setMembers] = useState<Member[]>([]);
 
   // Create vault transaction
   const createVaultTx = () => {
@@ -250,10 +246,24 @@ export function VaultFallback() {
       console.table(raw.emailNameRatio);
       console.table(raw.emailAddressRatio);
 
+      // Convert key-value pairs to proper Maps
+      const suiAddressMap = new Map<string, number>();
+      const emailAddressMap = new Map<string, number>();
+      
+      raw.suiAddressRatio.keys.forEach((key, index) => {
+        suiAddressMap.set(key, parseFloat(raw.suiAddressRatio.values[index]));
+      });
+      
+      raw.emailAddressRatio.keys.forEach((key, index) => {
+        emailAddressMap.set(key, parseFloat(raw.emailAddressRatio.values[index]));
+      });
+      console.log("Sui Address Map:", suiAddressMap);
+      console.log("Email Address Map:", emailAddressMap);
       // Execute transaction
-      const transactionResult = await signAndExecuteTransaction(
+      const tx = await initVaultTX(suiAddressMap, emailAddressMap, currentAccount?.address);
+      const transactionResult = signAndExecuteTransaction(
         {
-          transaction: createVaultTx(),
+          transaction: tx,
           chain: "sui:testnet",
         },
         {
@@ -261,13 +271,11 @@ export function VaultFallback() {
             console.log("executed transaction", result);
             // Extract vaultID and ownerCap from transaction result
             const vaultObject = result.objectChanges.find(
-              (obj: any) =>
-                obj.type === "created" &&
+              (obj: any) => obj.type === "created" &&
                 obj.objectType.includes("::seaVault::SeaVault")
             );
             const ownerCapObject = result.objectChanges.find(
-              (obj: any) =>
-                obj.type === "created" &&
+              (obj: any) => obj.type === "created" &&
                 obj.objectType.includes("::seaVault::OwnerCap")
             );
 
@@ -286,24 +294,12 @@ export function VaultFallback() {
               // Store vaultID and ownerCap in localStorage for use on other pages
               localStorage.setItem("vaultID", vaultIDFromTx);
               localStorage.setItem("ownerCap", ownerCapFromTx);
-              
-              // Convert heirs to members for the member list tile
-              const membersList: Member[] = heirs.map((heir, index) => ({
-                id: heir.id,
-                name: heir.name || `Heir ${index + 1}`,
-                role: `${heir.ratio}%`,
-                address: heir.address
-              }));
 
-              // Set members and show vault created state
-              setMembers(membersList);
-              setVaultCreated(true);
-              
               // Show success message
               alert(`🎉 Vault created successfully!\n\nVault ID: ${formatAddress(vaultIDFromTx)}\nOwner Cap: ${formatAddress(ownerCapFromTx)}\nHeirs configured: ${heirs.length}\nTotal allocation: ${getTotalRatio()}%`);
-              
-              // Don't reset the form anymore to keep the heir data visible in member list
-              // setHeirs([{ id: "1", name: "", ratio: "", address: "" }]);
+
+              // Reset the form
+              setHeirs([{ id: "1", name: "", ratio: "", address: "" }]);
             } else {
               console.error(
                 "Failed to retrieve Vault ID or Owner Cap from the result."
@@ -360,39 +356,6 @@ export function VaultFallback() {
           {!currentAccount?.address ? (
             <div className="flex justify-center">
               <ConnectButton />
-            </div>
-          ) : vaultCreated ? (
-            <div className="space-y-6">
-              <div className="max-w-4xl mx-auto">
-                <div className="mb-8 p-6 rounded-2xl bg-green-500/10 border border-green-500/20 backdrop-blur">
-                  <h2 className="text-2xl font-bold text-green-400 mb-2">✅ Vault Created Successfully!</h2>
-                  <div className="text-green-300 space-y-2">
-                    <p><strong>Vault ID:</strong> {formatAddress(vaultID)}</p>
-                    <p><strong>Owner Cap:</strong> {formatAddress(ownerCap)}</p>
-                    <p><strong>Total Heirs:</strong> {members.length}</p>
-                  </div>
-                </div>
-                
-                <MemberListTile 
-                  members={members} 
-                  className="w-full"
-                />
-                
-                <div className="mt-6 flex justify-center">
-                  <button
-                    onClick={() => {
-                      setVaultCreated(false);
-                      setHeirs([{ id: "1", name: "", ratio: "", address: "" }]);
-                      setMembers([]);
-                      setVaultID("");
-                      setOwnerCap("");
-                    }}
-                    className="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-all duration-200 hover:shadow-lg"
-                  >
-                    Create Another Vault
-                  </button>
-                </div>
-              </div>
             </div>
           ) : (
             <div className="space-y-6">
