@@ -1,7 +1,9 @@
 "use client";
 
-import { ConnectButton, useCurrentAccount } from "@mysten/dapp-kit";
-import { useState } from "react";
+import { ConnectButton, useCurrentAccount, useSuiClient, useSignAndExecuteTransaction } from "@mysten/dapp-kit";
+import { useState, useRef } from "react";
+import { Transaction } from "@mysten/sui/transactions";
+import { bcs } from "@mysten/sui/bcs";
 import HeirCard from "./HeirCard";
 
 interface Heir {
@@ -11,12 +13,155 @@ interface Heir {
   address: string;
 }
 
+interface SeparatedHeirs {
+  suiAddressHeirs: Heir[];
+  emailHeirs: Heir[];
+}
+
+interface VecMapData {
+  keys: string[];
+  values: string[];
+}
+
+// VecMap function for serializing key-value pairs
+function VecMap<K, V>(K: any, V: any) {
+  return bcs.struct(`VecMap<${K.name}, ${V.name}>`, {
+    keys: bcs.vector(K),
+    values: bcs.vector(V),
+  });
+}
+
+// Helper functions from Initialize.tsx
+function separateHeirsByAddressType(heirs: Heir[]): SeparatedHeirs {
+  const suiAddressHeirs: Heir[] = [];
+  const emailHeirs: Heir[] = [];
+
+  heirs.forEach((heir) => {
+    if (
+      heir.address &&
+      heir.address.startsWith("0x") &&
+      !heir.address.includes("@")
+    ) {
+      suiAddressHeirs.push({ ...heir });
+    } else {
+      emailHeirs.push({ ...heir });
+    }
+  });
+
+  return {
+    suiAddressHeirs,
+    emailHeirs,
+  };
+}
+
+function prepareHeirsForVecMap(heirs: Heir[], keyField: keyof Heir, valueField: keyof Heir): VecMapData {
+  return {
+    keys: heirs.map((heir) => heir[keyField] as string),
+    values: heirs.map((heir) => heir[valueField] as string),
+  };
+}
+
+function serializeHeirsToVecMaps(heirs: Heir[]) {
+  // Separate heirs
+  const { suiAddressHeirs, emailHeirs } = separateHeirsByAddressType(heirs);
+
+  // Prepare VecMap data for Sui address heirs
+  const suiNameRatioMap = {
+    keys: suiAddressHeirs.map((heir) => heir.name),
+    values: suiAddressHeirs.map((heir) => heir.ratio),
+  };
+
+  const suiAddressRatioMap = {
+    keys: suiAddressHeirs.map((heir) => heir.address),
+    values: suiAddressHeirs.map((heir) => heir.ratio),
+  };
+
+  // Prepare VecMap data for email heirs
+  const emailNameRatioMap = {
+    keys: emailHeirs.map((heir) => heir.name),
+    values: emailHeirs.map((heir) => heir.ratio),
+  };
+
+  const emailAddressRatioMap = {
+    keys: emailHeirs.map((heir) => heir.address),
+    values: emailHeirs.map((heir) => heir.ratio),
+  };
+
+  // Create raw data version for debugging (not serialized)
+  const rawData = {
+    suiNameRatio: suiNameRatioMap,
+    suiAddressRatio: suiAddressRatioMap,
+    emailNameRatio: emailNameRatioMap,
+    emailAddressRatio: emailAddressRatioMap,
+  };
+
+  // Serialize data
+  const serializedData = {
+    suiNameRatio: VecMap(bcs.string(), bcs.string())
+      .serialize(suiNameRatioMap)
+      .toBytes(),
+
+    suiAddressRatio: VecMap(bcs.string(), bcs.string())
+      .serialize(suiAddressRatioMap)
+      .toBytes(),
+
+    emailNameRatio: VecMap(bcs.string(), bcs.string())
+      .serialize(emailNameRatioMap)
+      .toBytes(),
+
+    emailAddressRatio: VecMap(bcs.string(), bcs.string())
+      .serialize(emailAddressRatioMap)
+      .toBytes(),
+  };
+
+  return {
+    raw: rawData,
+    serialized: serializedData,
+  };
+}
+
 export function VaultFallback() {
   const currentAccount = useCurrentAccount();
+  const client = useSuiClient();
+  
+  // Package name for the smart contract
+  const packageName = "0x996fa349767a48a9d211a3deb9ae4055a03e443a85118df9ca312cd29591b30f";
+  
+  // Transaction hook
+  const { mutate: signAndExecuteTransaction } = useSignAndExecuteTransaction({
+    execute: async ({ bytes, signature }) =>
+      await client.executeTransactionBlock({
+        transactionBlock: bytes,
+        signature,
+        options: {
+          showRawEffects: true,
+          showObjectChanges: true,
+        },
+      }),
+  });
+  
   const [heirs, setHeirs] = useState<Heir[]>([
     { id: "1", name: "", ratio: "", address: "" }
   ]);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [vaultID, setVaultID] = useState("");
+  const [ownerCap, setOwnerCap] = useState("");
+
+  // Create vault transaction
+  const createVaultTx = () => {
+    const vaultTx = new Transaction();
+    vaultTx.moveCall({
+      target: `${packageName}::seaVault::create_vault`,
+      arguments: [],
+    });
+    return vaultTx;
+  };
+
+  // Format address display
+  const formatAddress = (address: string | undefined): string => {
+    if (!address) return " ";
+    return `${address.slice(0, 5)}...${address.slice(-5)}`;
+  };
 
   // Heir management functions
   const addHeir = () => {
@@ -64,7 +209,7 @@ export function VaultFallback() {
       } else {
         // Basic validation for address/email
         const isEmail = heir.address.includes("@");
-        const isSuiAddress = heir.address.startsWith("0x") && heir.address.length >= 42;
+        const isSuiAddress = heir.address.startsWith("0x");
         if (!isEmail && !isSuiAddress) {
           errors.push(`Heir ${index + 1}: Please enter a valid email or Sui address`);
         }
@@ -91,38 +236,79 @@ export function VaultFallback() {
     setIsProcessing(true);
     
     try {
-      // Mock API call - simulate vault creation
-      console.log("Creating vault with heirs:", heirs);
-      console.log("Connected wallet:", currentAccount?.address);
-      
-      // Simulate processing time
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
-      // Mock success response
-      const mockVaultData = {
-        vaultId: `vault_${Date.now()}`,
-        owner: currentAccount?.address,
-        heirs: heirs.map(heir => ({
-          ...heir,
-          ratio: parseFloat(heir.ratio)
-        })),
-        createdAt: new Date().toISOString(),
-        status: "active"
-      };
-      
-      console.log("Vault created successfully:", mockVaultData);
-      
-      // Show success message
-      alert(`🎉 Vault created successfully!\n\nVault ID: ${mockVaultData.vaultId}\nHeirs configured: ${heirs.length}\nTotal allocation: ${getTotalRatio()}%`);
-      
-      // In a real app, you would redirect to the vault dashboard
-      // For now, we'll just reset the form
-      setHeirs([{ id: "1", name: "", ratio: "", address: "" }]);
-      
-    } catch (error) {
-      console.error("Error creating vault:", error);
-      alert("Failed to create vault. Please try again.");
-    } finally {
+      // Output data to console for debugging
+      const { raw } = serializeHeirsToVecMaps(heirs);
+      console.log("=== VecMap data at transaction execution ===");
+      console.log("Sui heirs:");
+      console.table(raw.suiNameRatio);
+      console.table(raw.suiAddressRatio);
+      console.log("Email heirs:");
+      console.table(raw.emailNameRatio);
+      console.table(raw.emailAddressRatio);
+
+      // Execute transaction
+      const transactionResult = await signAndExecuteTransaction(
+        {
+          transaction: createVaultTx(),
+          chain: "sui:testnet",
+        },
+        {
+          onSuccess: (result: any) => {
+            console.log("executed transaction", result);
+            // Extract vaultID and ownerCap from transaction result
+            const vaultObject = result.objectChanges.find(
+              (obj: any) =>
+                obj.type === "created" &&
+                obj.objectType.includes("::seaVault::SeaVault")
+            );
+            const ownerCapObject = result.objectChanges.find(
+              (obj: any) =>
+                obj.type === "created" &&
+                obj.objectType.includes("::seaVault::OwnerCap")
+            );
+
+            if (vaultObject && ownerCapObject) {
+              // Type assertion to access the objectId property
+              const vaultIDFromTx = (vaultObject as any).objectId;
+              const ownerCapFromTx = (ownerCapObject as any).objectId;
+
+              console.log("Vault ID:", vaultIDFromTx);
+              console.log("Owner Cap:", ownerCapFromTx);
+
+              // Save values for later use
+              setVaultID(vaultIDFromTx);
+              setOwnerCap(ownerCapFromTx);
+
+              // Store vaultID and ownerCap in localStorage for use on other pages
+              localStorage.setItem("vaultID", vaultIDFromTx);
+              localStorage.setItem("ownerCap", ownerCapFromTx);
+              
+              // Show success message
+              alert(`🎉 Vault created successfully!\n\nVault ID: ${formatAddress(vaultIDFromTx)}\nOwner Cap: ${formatAddress(ownerCapFromTx)}\nHeirs configured: ${heirs.length}\nTotal allocation: ${getTotalRatio()}%`);
+              
+              // Reset the form
+              setHeirs([{ id: "1", name: "", ratio: "", address: "" }]);
+            } else {
+              console.error(
+                "Failed to retrieve Vault ID or Owner Cap from the result."
+              );
+              alert("Unable to retrieve vault information from transaction result.");
+            }
+
+            setIsProcessing(false);
+          },
+          onError: (error: any) => {
+            console.error("Transaction error:", error);
+            alert("Transaction failed: " + error.message);
+            setIsProcessing(false);
+          },
+        }
+      );
+
+      return transactionResult;
+    } catch (error: any) {
+      console.error("Transaction execution error:", error);
+      alert("Transaction execution error: " + error.message);
       setIsProcessing(false);
     }
   };
