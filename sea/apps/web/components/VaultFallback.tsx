@@ -6,6 +6,8 @@ import { Transaction } from "@mysten/sui/transactions";
 import { bcs } from "@mysten/sui/bcs";
 import HeirCard from "./HeirCard";
 import { initVaultTX } from "@/utils/compoundTX/initVault";
+import { sendEmail } from "@/utils/mailService/sendMail";
+
 interface Heir {
   id: string;
   name: string;
@@ -260,62 +262,76 @@ export function VaultFallback() {
       console.log("Sui Address Map:", suiAddressMap);
       console.log("Email Address Map:", emailAddressMap);
       // Execute transaction
-      const tx = await initVaultTX(suiAddressMap, emailAddressMap, currentAccount?.address);
+      const { tx, invitations } = await initVaultTX(
+        suiAddressMap,
+        emailAddressMap,
+        currentAccount?.address as string
+      );
       const transactionResult = signAndExecuteTransaction(
         {
           transaction: tx,
           chain: "sui:testnet",
         },
         {
-          onSuccess: (result: any) => {
-            console.log("executed transaction", result);
-            // Extract vaultID and ownerCap from transaction result
-            const vaultObject = result.objectChanges.find(
-              (obj: any) => obj.type === "created" &&
-                obj.objectType.includes("::seaVault::SeaVault")
+        onSuccess: async (result: any) => {
+          console.log("executed transaction", result);
+
+          const vaultObject = result.objectChanges.find(
+            (obj: any) =>
+              obj.type === "created" &&
+              obj.objectType.includes("::seaVault::SeaVault")
+          );
+          const ownerCapObject = result.objectChanges.find(
+            (obj: any) =>
+              obj.type === "created" &&
+              obj.objectType.includes("::seaVault::OwnerCap")
+          );
+
+          if (vaultObject && ownerCapObject) {
+            const vaultIDFromTx = (vaultObject as any).objectId;
+            const ownerCapFromTx = (ownerCapObject as any).objectId;
+
+            console.log("Vault ID:", vaultIDFromTx);
+            console.log("Owner Cap:", ownerCapFromTx);
+
+            setVaultID(vaultIDFromTx);
+            setOwnerCap(ownerCapFromTx);
+            localStorage.setItem("vaultID", vaultIDFromTx);
+            localStorage.setItem("ownerCap", ownerCapFromTx);
+
+            alert(
+              `🎉 Vault created successfully!\n\nVault ID: ${formatAddress(
+                vaultIDFromTx
+              )}\nOwner Cap: ${formatAddress(
+                ownerCapFromTx
+              )}\nHeirs configured: ${heirs.length}\nTotal allocation: ${getTotalRatio()}%`
             );
-            const ownerCapObject = result.objectChanges.find(
-              (obj: any) => obj.type === "created" &&
-                obj.objectType.includes("::seaVault::OwnerCap")
+
+            setHeirs([{ id: "1", name: "", ratio: "", address: "" }]);
+          } else {
+            console.error("Failed to retrieve Vault ID or Owner Cap from the result.");
+            alert("Unable to retrieve vault information from transaction result.");
+          }
+
+          // === Send emails AFTER on-chain success ===
+          try {
+            await Promise.allSettled(
+              invitations.map(({ email, link }) => sendEmail(email, link))
             );
+          } catch (e) {
+            // Promise.allSettled 不會丟錯，這裡保險 log 一下
+            console.error("sendEmail unexpected error:", e);
+          }
 
-            if (vaultObject && ownerCapObject) {
-              // Type assertion to access the objectId property
-              const vaultIDFromTx = (vaultObject as any).objectId;
-              const ownerCapFromTx = (ownerCapObject as any).objectId;
-
-              console.log("Vault ID:", vaultIDFromTx);
-              console.log("Owner Cap:", ownerCapFromTx);
-
-              // Save values for later use
-              setVaultID(vaultIDFromTx);
-              setOwnerCap(ownerCapFromTx);
-
-              // Store vaultID and ownerCap in localStorage for use on other pages
-              localStorage.setItem("vaultID", vaultIDFromTx);
-              localStorage.setItem("ownerCap", ownerCapFromTx);
-
-              // Show success message
-              alert(`🎉 Vault created successfully!\n\nVault ID: ${formatAddress(vaultIDFromTx)}\nOwner Cap: ${formatAddress(ownerCapFromTx)}\nHeirs configured: ${heirs.length}\nTotal allocation: ${getTotalRatio()}%`);
-
-              // Reset the form
-              setHeirs([{ id: "1", name: "", ratio: "", address: "" }]);
-            } else {
-              console.error(
-                "Failed to retrieve Vault ID or Owner Cap from the result."
-              );
-              alert("Unable to retrieve vault information from transaction result.");
-            }
-
-            setIsProcessing(false);
-          },
-          onError: (error: any) => {
-            console.error("Transaction error:", error);
-            alert("Transaction failed: " + error.message);
-            setIsProcessing(false);
-          },
-        }
-      );
+          setIsProcessing(false);
+        },
+        onError: (error: any) => {
+          console.error("Transaction error:", error);
+          alert("Transaction failed: " + error.message);
+          setIsProcessing(false);
+        },
+      }
+    );
 
       return transactionResult;
     } catch (error: any) {
