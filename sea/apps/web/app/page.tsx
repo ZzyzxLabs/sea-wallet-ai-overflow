@@ -74,7 +74,7 @@ export default function Page() {
       if (ownedObjects?.data) {
         // Filter for OwnerCap objects that match our package address
         const ownerCapObjects = ownedObjects.data.filter((obj) =>
-          obj.data?.type?.includes(packageName + "::seaVault::OwnerCap")
+          obj.data?.type?.includes(packageName + "::sea_vault::OwnerCap")
         );
 
         // If we found any OwnerCap objects for our package, vault exists

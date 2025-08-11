@@ -7,6 +7,7 @@ import { bcs } from "@mysten/sui/bcs";
 import HeirCard from "./HeirCard";
 import { initVaultTX } from "@/utils/compoundTX/initVault";
 import { sendEmail } from "@/utils/mailService/sendMail";
+import { package_addr } from "@/utils/package";
 
 interface Heir {
   id: string;
@@ -127,7 +128,7 @@ export function VaultFallback() {
   const client = useSuiClient();
   
   // Package name for the smart contract
-  const packageName = "0x996fa349767a48a9d211a3deb9ae4055a03e443a85118df9ca312cd29591b30f";
+  const packageName = package_addr;
   
   // Transaction hook
   const { mutate: signAndExecuteTransaction } = useSignAndExecuteTransaction({
@@ -149,15 +150,6 @@ export function VaultFallback() {
   const [vaultID, setVaultID] = useState("");
   const [ownerCap, setOwnerCap] = useState("");
 
-  // Create vault transaction
-  const createVaultTx = () => {
-    const vaultTx = new Transaction();
-    vaultTx.moveCall({
-      target: `${packageName}::seaVault::create_vault`,
-      arguments: [],
-    });
-    return vaultTx;
-  };
 
   // Format address display
   const formatAddress = (address: string | undefined): string => {
@@ -279,12 +271,12 @@ export function VaultFallback() {
           const vaultObject = result.objectChanges.find(
             (obj: any) =>
               obj.type === "created" &&
-              obj.objectType.includes("::seaVault::SeaVault")
+              obj.objectType.includes("::sea_vault::SeaVault")
           );
           const ownerCapObject = result.objectChanges.find(
             (obj: any) =>
               obj.type === "created" &&
-              obj.objectType.includes("::seaVault::OwnerCap")
+              obj.objectType.includes("::sea_vault::OwnerCap")
           );
 
           if (vaultObject && ownerCapObject) {

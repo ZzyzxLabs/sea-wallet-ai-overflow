@@ -64,7 +64,7 @@ export async function getVaultAndOwnerCap(params: { accountAddress: string, pack
     
     if (!prope.isPending && prope.data) {
         const ownerCapObjects = prope.data.data.filter((obj) =>
-            obj.data?.type?.includes(params.packageName + "::seaVault::OwnerCap")
+            obj.data?.type?.includes(params.packageName + "::sea_vault::OwnerCap")
         );
         
         const vaultID = (ownerCapObjects[0]?.data?.content as any)?.fields?.vaultID || null;
