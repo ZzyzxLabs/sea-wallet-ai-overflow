@@ -5,7 +5,7 @@ import { useState, useRef } from "react";
 import { Transaction } from "@mysten/sui/transactions";
 import { bcs } from "@mysten/sui/bcs";
 import HeirCard from "./HeirCard";
-
+import { initVaultTX } from "@/utils/compoundTX/initVault";
 interface Heir {
   id: string;
   name: string;
@@ -246,10 +246,24 @@ export function VaultFallback() {
       console.table(raw.emailNameRatio);
       console.table(raw.emailAddressRatio);
 
+      // Convert key-value pairs to proper Maps
+      const suiAddressMap = new Map<string, number>();
+      const emailAddressMap = new Map<string, number>();
+      
+      raw.suiAddressRatio.keys.forEach((key, index) => {
+        suiAddressMap.set(key, parseFloat(raw.suiAddressRatio.values[index]));
+      });
+      
+      raw.emailAddressRatio.keys.forEach((key, index) => {
+        emailAddressMap.set(key, parseFloat(raw.emailAddressRatio.values[index]));
+      });
+      console.log("Sui Address Map:", suiAddressMap);
+      console.log("Email Address Map:", emailAddressMap);
       // Execute transaction
+      const tx = await initVaultTX(suiAddressMap, emailAddressMap, currentAccount?.address);
       const transactionResult = await signAndExecuteTransaction(
         {
-          transaction: createVaultTx(),
+          transaction: tx,
           chain: "sui:testnet",
         },
         {
