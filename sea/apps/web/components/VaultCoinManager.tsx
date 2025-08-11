@@ -9,7 +9,7 @@ import {
   useSuiClientQueries,
 } from "@mysten/dapp-kit";
 import { Tile } from "./tile";
-import { getVaultAndOwnerCap, getVaultDynamicFields } from "../hooks/queryHook";
+import { getVaultAndOwnerCap, getVaultDynamicFields } from "../utils/queryer";
 import { SuiObjectResponse, DynamicFieldInfo } from "@mysten/sui/client";
 
 // TODO: Import these from your actual store locations
