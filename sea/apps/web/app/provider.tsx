@@ -16,7 +16,7 @@ export default function Providers({ children }: { children: React.ReactNode }) {
 		return (
 		<QueryClientProvider client={queryClient}>
 			<SuiClientProvider networks={networkConfig} defaultNetwork="testnet">
-				<WalletProvider>
+				<WalletProvider autoConnect={true}>
 					{children}					
 				</WalletProvider>
 			</SuiClientProvider>
