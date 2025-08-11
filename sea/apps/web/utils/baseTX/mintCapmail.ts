@@ -6,7 +6,7 @@ export const mintCapMail = (ownerCap, seaVault, email, percentage, tx) => {
     const emailS = bcs.String.serialize(email);
     const percentageS = bcs.U8.serialize(percentage);
     const mailCap = tx.moveCall({
-        target: `${package_addr}::seaVault::add_member_by_email`,
+        target: `${package_addr}::sea_vault::add_member_by_email`,
         arguments: [
             tx.object(ownerCap),
             tx.object(seaVault),
