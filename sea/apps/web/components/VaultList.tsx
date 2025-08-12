@@ -8,7 +8,7 @@ import {
   useSuiClient
 } from "@mysten/dapp-kit";
 import { Tile } from "./tile";
-import { getVaultAndOwnerCap, getVaultDynamicFields } from "../utils/queryer";
+import { getVaultAndOwnerCap, getVaultDynamicFields, getVaultField } from "../utils/queryer";
 import { package_addr } from "@/utils/package";
 import { DynamicFieldInfo, SuiObjectResponse } from "@mysten/sui/client";
 import { Button } from "@workspace/ui/components/button";
@@ -76,7 +76,10 @@ export function VaultList({ note = "Loading vault assets...", minHeight = "min-h
             suiClient,
             vaultID: vaultResult.vaultID
           });
-          
+          const vaultFieldResult = await getVaultField({
+            suiClient,
+            vaultID: vaultResult.vaultID
+          });
           console.log("Vault dynamic fields:", dynamicFieldsResult);
           setDynamicFields(dynamicFieldsResult || null);
         }

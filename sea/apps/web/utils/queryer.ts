@@ -87,7 +87,23 @@ export async function getVaultAndOwnerCap(params: { suiClient: SuiClient, accoun
     }
     return undefined;
 }
-
+export async function getVaultField(params: { suiClient: SuiClient, vaultID: string }): Promise<SuiObjectResponse | undefined> {
+    try {
+        const result = await params.suiClient.getObject({
+            id: params.vaultID,
+            options: { showType: true, showContent: true }
+        });
+        
+        if (result && result.data) {
+            console.log('getVaultField result:', result.data.content?.fields.cap_percentage);
+            return result.data;
+        }
+    } catch (error) {
+        console.error('Error in getVaultField:', error);
+        throw error;
+    }
+    return undefined;
+}
 /**
  * Function to get vault dynamic fields
  * @param {SuiClient} suiClient - Sui client instance
