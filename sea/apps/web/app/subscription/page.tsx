@@ -7,7 +7,7 @@ import {
   useSuiClient,
   useSignAndExecuteTransaction,
 } from "@mysten/dapp-kit";
-import { Tile } from "../../components/tile"; // ← 確認路徑
+import { Tile } from "../../components/tile";
 import { Button } from "@workspace/ui/components/button";
 import { Input } from "@workspace/ui/components/input";
 import { Badge } from "@workspace/ui/components/badge";
@@ -24,7 +24,21 @@ import {
   Layers,
 } from "lucide-react";
 import { Transaction } from "@mysten/sui/transactions";
-import { package_addr } from "@/utils/package";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@workspace/ui/components/dialog";
+import { Label } from "@workspace/ui/components/label";
+import {
+  Select,
+  SelectTrigger,
+  SelectValue,
+  SelectContent,
+  SelectItem,
+} from "@workspace/ui/components/select";
 
 // ----- Types -----
 type Plan = {
@@ -58,6 +72,14 @@ type Subscription = {
   status: "active" | "paused" | "canceled";
   nextBillDate: string; // ISO date
 };
+
+const COIN_OPTIONS = [
+  { symbol: "SUI", coinType: "0x2::sui::SUI", decimals: 9 },
+  // 下面兩個僅示意，請換成你環境的實際 coinType
+  { symbol: "USDC", coinType: "0x0000000000000000000000000000000000000002::usdc::USDC", decimals: 6 },
+  { symbol: "USDT", coinType: "0x0000000000000000000000000000000000000003::usdt::USDT", decimals: 6 },
+  { symbol: "Custom", coinType: "custom", decimals: 0 },
+];
 
 // ----- Mock (hardcode) data -----
 const MOCK_MY_SERVICES: Service[] = [
@@ -158,6 +180,40 @@ export default function SubscriptionDashboard() {
   const suiClient = useSuiClient();
   const { mutate: signAndExecuteTransaction } = useSignAndExecuteTransaction();
   const [isRefreshing, setIsRefreshing] = useState(false);
+ const [createOpen, setCreateOpen] = useState(false);
+ const [form, setForm] = useState({
+    serviceName: "",
+    serviceAddr: "",
+    yearDiscount: "",
+    price: "",
+    coinType: COIN_OPTIONS[0].coinType, // default SUI
+    customCoinType: "",
+ });
+
+ // 封裝欄位變更
+const setField = useCallback(
+  (k: keyof typeof form, v: string) => setForm((prev) => ({ ...prev, [k]: v })),
+  []
+);
+
+// 基本驗證（必要欄位、範圍）
+const validateCreate = useCallback(() => {
+  const errs: string[] = [];
+  if (!form.serviceName.trim()) errs.push("Service Name is required");
+  if (!form.serviceAddr.trim()) errs.push("Service Address is required");
+  if (!form.price.trim() || Number.isNaN(Number(form.price)) || Number(form.price) <= 0)
+    errs.push("Monthly Price must be a positive number");
+  const yd = Number(form.yearDiscount);
+  if (form.yearDiscount.trim() && (Number.isNaN(yd) || yd < 0 || yd > 100))
+    errs.push("Year Discount must be between 0 and 100");
+  const selected = form.coinType === "custom" ? form.customCoinType.trim() : form.coinType;
+  if (!selected) errs.push("coinType is required");
+  // 粗略檢查 coinType 型別格式（允許自訂略過）
+  if (form.coinType !== "custom" && !/^0x[a-fA-F0-9]+::[A-Za-z0-9_]+::[A-Za-z0-9_]+$/.test(selected)) {
+    errs.push("coinType format looks invalid");
+  }
+  return errs;
+}, [form]);
 
   // My services & subscribers
   const [services, setServices] = useState<Service[]>(MOCK_MY_SERVICES);
@@ -186,6 +242,74 @@ export default function SubscriptionDashboard() {
       return matchText && matchStatus;
     });
   }, [subscriptions, search, subStatusFilter]);
+
+  const handleCreateService = useCallback(() => {
+  const errs = validateCreate();
+  if (errs.length > 0) {
+    alert("Please fix the following:\n\n" + errs.join("\n"));
+    return;
+  }
+
+  const monthPrice = Number(form.price);
+  const yd = form.yearDiscount.trim() ? Number(form.yearDiscount) : 0;
+  const yearPrice = Math.max(0, monthPrice * 12 * (1 - yd / 100));
+  const chosen = form.coinType === "custom" ? form.customCoinType.trim() : form.coinType;
+
+  // 估計 symbol（若為 custom，從最後一段取）
+  const symbolGuess =
+    form.coinType === "custom"
+      ? (chosen.split("::").pop() || "COIN").toUpperCase()
+      : (COIN_OPTIONS.find((c) => c.coinType === form.coinType)?.symbol || "COIN");
+
+  // 將新服務加入 services（保持你原先 Service 型別結構）
+  const newService: Service = {
+    id: `svc-${Date.now()}`,
+    title: form.serviceName.trim(),
+    description: `Service at ${form.serviceAddr.trim()}`,
+    subscribers: 0,
+    monthlyRecurringRevenue: 0,
+    status: "active",
+    plans: [
+      {
+        id: `pl-${Date.now()}-m`,
+        name: "Monthly",
+        price: monthPrice,
+        interval: "month",
+        active: true,
+        currency: "SUI", // 僅作展示；實際用 coinType
+        // @ts-ignore - 擴充屬性（若你要嚴格 typing，可把 Plan 型別加上 coinType/symbol）
+        coinType: chosen,
+        // @ts-ignore
+        symbol: symbolGuess,
+      },
+      {
+        id: `pl-${Date.now()}-y`,
+        name: `Yearly (-${yd || 0}%)`,
+        price: Number(yearPrice.toFixed(6)),
+        interval: "year",
+        active: true,
+        currency: "SUI",
+        // @ts-ignore
+        coinType: chosen,
+        // @ts-ignore
+        symbol: symbolGuess,
+      },
+    ],
+  };
+
+  setServices((prev) => [newService, ...prev]);
+
+  // reset & close
+  setForm({
+    serviceName: "",
+    serviceAddr: "",
+    yearDiscount: "",
+    price: "",
+    coinType: COIN_OPTIONS[0].coinType,
+    customCoinType: "",
+  });
+  setCreateOpen(false);
+}, [form, setServices, validateCreate]);
 
   const handleRefresh = useCallback(async () => {
     setIsRefreshing(true);
@@ -313,15 +437,12 @@ export default function SubscriptionDashboard() {
                 <div className="flex items-center gap-2">
                 {/* 新增 Create Service 按鈕 */}
                 <Button
-                    variant="default"
-                    size="sm"
-                    className="h-8 text-xs"
-                    onClick={() => {
-                    // TODO: 未來可改成打開 Modal / 跳轉建立服務頁面
-                    alert("Open create service form...");
-                    }}
+                variant="default"
+                size="sm"
+                className="h-8 text-xs"
+                onClick={() => setCreateOpen(true)}
                 >
-                    + Create Service
+                + Create Service
                 </Button>
 
                 <Badge variant="secondary" className="text-xs">
@@ -565,7 +686,137 @@ export default function SubscriptionDashboard() {
           )}
         </Tile>
       </main>
+    <Dialog open={createOpen} onOpenChange={setCreateOpen}>
+  <DialogContent className="sm:max-w-[520px]">
+    <DialogHeader>
+      <DialogTitle>Create Service</DialogTitle>
+    </DialogHeader>
 
+    <div className="grid gap-4 py-2">
+      <div className="grid grid-cols-4 items-center gap-3">
+        <Label htmlFor="serviceName" className="text-right">
+          Service Name
+        </Label>
+        <Input
+          id="serviceName"
+          placeholder="e.g., Pro Analytics API"
+          className="col-span-3"
+          value={form.serviceName}
+          onChange={(e) => setField("serviceName", e.target.value)}
+        />
+      </div>
+
+      <div className="grid grid-cols-4 items-center gap-3">
+        <Label htmlFor="serviceAddr" className="text-right">
+          Service Address
+        </Label>
+        <Input
+          id="serviceAddr"
+          placeholder="e.g., service owner address or object id"
+          className="col-span-3"
+          value={form.serviceAddr}
+          onChange={(e) => setField("serviceAddr", e.target.value)}
+        />
+      </div>
+
+      <div className="grid grid-cols-4 items-center gap-3">
+        <Label htmlFor="price" className="text-right">
+          Monthly Price
+        </Label>
+        <Input
+          id="price"
+          type="number"
+          step="0.000001"
+          min="0"
+          placeholder="e.g., 1.5"
+          className="col-span-3"
+          value={form.price}
+          onChange={(e) => setField("price", e.target.value)}
+        />
+      </div>
+
+      <div className="grid grid-cols-4 items-center gap-3">
+        <Label htmlFor="yearDiscount" className="text-right">
+          Year Discount (%)
+        </Label>
+        <Input
+          id="yearDiscount"
+          type="number"
+          min="0"
+          max="100"
+          step="1"
+          placeholder="e.g., 20"
+          className="col-span-3"
+          value={form.yearDiscount}
+          onChange={(e) => setField("yearDiscount", e.target.value)}
+        />
+      </div>
+
+      {/* Coin Selector */}
+      <div className="grid grid-cols-4 items-center gap-3">
+        <Label className="text-right">Coin Type</Label>
+        <div className="col-span-3">
+          <Select
+            value={form.coinType}
+            onValueChange={(v) => setField("coinType", v)}
+          >
+            <SelectTrigger className="w-full">
+              <SelectValue placeholder="Select coin" />
+            </SelectTrigger>
+            <SelectContent>
+              {COIN_OPTIONS.map((c) => (
+                <SelectItem key={c.coinType} value={c.coinType}>
+                  {c.symbol} {c.coinType !== "custom" ? `· ${c.coinType}` : "(Custom)"}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          {form.coinType === "custom" && (
+            <Input
+              className="mt-2"
+              placeholder="Enter full coinType, e.g. 0x2::sui::SUI"
+              value={form.customCoinType}
+              onChange={(e) => setField("customCoinType", e.target.value)}
+            />
+          )}
+        </div>
+      </div>
+
+      {/* 預覽區（可選） */}
+      <div className="rounded-md border p-3 text-xs text-muted-foreground">
+        <div className="mb-1 font-medium text-foreground">Preview</div>
+        <div>Name: {form.serviceName || "—"}</div>
+        <div>Addr: {form.serviceAddr || "—"}</div>
+        <div>
+          Price (Monthly): {form.price || "—"} {form.coinType === "custom"
+            ? (form.customCoinType ? `(${form.customCoinType})` : "")
+            : `(${form.coinType})`}
+        </div>
+        <div>
+          Year Discount: {form.yearDiscount || 0}%
+        </div>
+        <div>
+          Est. Yearly:{" "}
+          {form.price
+            ? (
+                Number(form.price) *
+                12 *
+                (1 - (form.yearDiscount ? Number(form.yearDiscount) : 0) / 100)
+              ).toFixed(6)
+            : "—"}
+        </div>
+      </div>
+    </div>
+
+    <DialogFooter>
+      <Button variant="outline" onClick={() => setCreateOpen(false)}>
+        Cancel
+      </Button>
+      <Button onClick={handleCreateService}>Create</Button>
+    </DialogFooter>
+  </DialogContent>
+</Dialog>
       <footer className="max-w-7xl mx-auto px-6 pb-10 text-xs text-slate-400 text-center">
         Sea Vault Console - Secure Digital Asset Management
       </footer>
