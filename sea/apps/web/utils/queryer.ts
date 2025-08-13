@@ -150,3 +150,20 @@ export async function getCertainType(params: { suiClient: SuiClient, address: st
     }
     return undefined;
 }
+
+export async function getCertainField(params: { suiClient: SuiClient, objID: string }): Promise<SuiObjectResponse | undefined> {
+    try {
+        const result = await params.suiClient.getObject({
+            id: params.objID,
+            options: { showType: true, showContent: true }
+        });
+        
+        if (result && result.data) {
+            return result.data;
+        }
+    } catch (error) {
+        console.error('Error in getCertainField:', error);
+        throw error;
+    }
+    return undefined;
+}
