@@ -16,6 +16,7 @@ import { Input } from "@workspace/ui/components/input";
 import { Badge } from "@workspace/ui/components/badge";
 import { RefreshCw, Wallet, Coins, Plus } from "lucide-react";
 import CoinAdd from "./coinAdd";
+import useMoveStore from "../utils/moveStore";
 
 interface CoinData {
   symbol: string;
@@ -38,6 +39,9 @@ export function VaultList({ note = "Loading vault assets...", minHeight = "min-h
   const account = useCurrentAccount();
   const suiClient = useSuiClient();
   const packageName = package_addr;
+  
+  // Get functions from move store
+  const takeCoinTx = useMoveStore((state) => state.takeCoinTx);
   
   // State management
   const [vaultData, setVaultData] = useState<{
@@ -222,7 +226,7 @@ export function VaultList({ note = "Loading vault assets...", minHeight = "min-h
     return typeStr.replace(/^0x0+/, "0x");
   }, []);
 
-  // Handle withdraw from vault - placeholder implementation
+  // Handle withdraw from vault
   const handleWithdraw = async (coin: CoinData, index: number) => {
     if (!withdrawAmount[index] || parseFloat(withdrawAmount[index]) <= 0) {
       alert("Please enter a valid amount to withdraw");
@@ -232,26 +236,74 @@ export function VaultList({ note = "Loading vault assets...", minHeight = "min-h
     setIsWithdrawing(true);
 
     try {
+      // Get coin metadata to calculate decimals
       const decimals = coinMetadata[index]?.decimals || 6;
+
+      // Convert to smallest units
       const amountInSmallestUnit = BigInt(
         Math.floor(parseFloat(withdrawAmount[index]) * Math.pow(10, decimals))
       );
-      const coinType = normalizeType(coin.fullType || coinTypes[index] || "");
+
+      // Get the name of asset in the vault - this should match the stored name in the vault
+      const assetName = coin.symbol;
+      console.log("coin", coin);
+
+      // Get the original full coin type, not the formatted one with ellipses
+      const coinType = normalizeType(coin.fullType || "");
 
       console.log("Using coin type for withdrawal:", coinType);
-      console.log("Amount to withdraw:", amountInSmallestUnit.toString());
+      console.log("Asset name:", assetName);
+      console.log("Amount in smallest unit:", amountInSmallestUnit.toString());
 
-      // TODO: Implement actual withdrawal transaction
-      setTimeout(() => {
-        setWithdrawAmount({ ...withdrawAmount, [index]: "" });
-        refreshData();
-        alert("Withdrawal successful (simulated)");
-        setIsWithdrawing(false);
-      }, 1000);
+      if (!vaultData?.ownerCapObjects?.[0]?.data?.objectId || !vaultData.vaultID) {
+        throw new Error("Vault or owner cap not found");
+      }
 
-    } catch (error) {
+      if (!account?.address) {
+        throw new Error("Account address not found");
+      }
+
+      // Create transaction
+      const tx = takeCoinTx(
+        vaultData.ownerCapObjects[0].data.objectId,
+        vaultData.vaultID,
+        assetName,
+        amountInSmallestUnit,
+        coinType,
+        account.address
+      );
+
+      console.log("Executing withdrawal transaction...");
+
+      // Execute transaction
+      signAndExecuteTransaction(
+        {
+          transaction: tx,
+          chain: "sui:testnet",
+        },
+        {
+          onSuccess: (result: any) => {
+            console.log("Withdrawal successful:", result);
+            setWithdrawAmount({ ...withdrawAmount, [index]: "" });
+
+            // Refresh the data after successful withdrawal
+            setTimeout(() => {
+              refreshData();
+            }, 1000);
+            
+            alert("Withdrawal successful!");
+            setIsWithdrawing(false);
+          },
+          onError: (error: any) => {
+            console.error("Withdrawal failed:", error);
+            alert("Failed to withdraw: " + (error.message || "Unknown error"));
+            setIsWithdrawing(false);
+          }
+        }
+      );
+    } catch (error: any) {
       console.error("Withdrawal failed:", error);
-      alert("Failed to withdraw: " + (error instanceof Error ? error.message : "Unknown error"));
+      alert("Failed to withdraw: " + (error.message || "Unknown error"));
       setIsWithdrawing(false);
     }
   };

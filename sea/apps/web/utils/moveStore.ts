@@ -4,6 +4,7 @@ import { ZkSendLinkBuilder } from "@mysten/zksend";
 import { bcs } from "@mysten/sui/bcs";
 import { coinWithBalance } from "@mysten/sui/transactions";
 import { package_addr } from "./package";
+import { CarTaxiFront } from "lucide-react";
 // Type definitions
 interface SuiData {
   keys: string[];
@@ -43,7 +44,8 @@ interface MoveStoreState {
     vaultId: string,
     assetName: string,
     amount: bigint,
-    coinType: string
+    coinType: string,
+    recipientAddress: string
   ) => Transaction;
   mintCap: (
     cap: string,
@@ -223,7 +225,8 @@ const useMoveStore = create<MoveStoreState>((set, get) => ({
     vaultId: string,
     assetName: string,
     amount: bigint,
-    coinType: string
+    coinType: string,
+    recipientAddress: string
   ): Transaction => {
     const tx = new Transaction();
 
@@ -231,7 +234,7 @@ const useMoveStore = create<MoveStoreState>((set, get) => ({
     const nameBC = bcs.string().serialize(assetName).toBytes();
 
     // Call the Move function to take coin from vault
-    tx.moveCall({
+    const [coinOut] = tx.moveCall({
       target: `${get().packageName}::sea_vault::take_coin`,
       arguments: [
         tx.object(capId),
@@ -241,7 +244,7 @@ const useMoveStore = create<MoveStoreState>((set, get) => ({
       ],
       typeArguments: [coinType],
     });
-
+    tx.transferObjects([coinOut], recipientAddress);
     return tx;
   },
 
