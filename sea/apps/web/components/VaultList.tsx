@@ -14,7 +14,8 @@ import { DynamicFieldInfo, SuiObjectResponse } from "@mysten/sui/client";
 import { Button } from "@workspace/ui/components/button";
 import { Input } from "@workspace/ui/components/input";
 import { Badge } from "@workspace/ui/components/badge";
-import { RefreshCw, Wallet, Coins } from "lucide-react";
+import { RefreshCw, Wallet, Coins, Plus } from "lucide-react";
+import CoinAdd from "./coinAdd";
 
 interface CoinData {
   symbol: string;
@@ -134,19 +135,40 @@ export function VaultList({ note = "Loading vault assets...", minHeight = "min-h
     );
   }, [coinData.data]);
 
-  // Query metadata for each coin type - using individual queries
-  const coinMetadataResults = coinTypes.map(coinType => 
-    useSuiClientQuery(
-      "getCoinMetadata",
-      { coinType },
-      { enabled: Boolean(coinType), staleTime: 30000 }
-    )
-  );
+  // State for coin metadata
+  const [coinMetadata, setCoinMetadata] = useState<any[]>([]);
 
-  // Combine metadata results
-  const coinMetadata = useMemo(() => {
-    return coinMetadataResults.map(result => result.data).filter(Boolean);
-  }, [coinMetadataResults]);
+  // Fetch coin metadata using suiClient directly in useEffect to avoid hook violations
+  useEffect(() => {
+    const fetchCoinMetadata = async () => {
+      if (coinTypes.length === 0) {
+        setCoinMetadata([]);
+        return;
+      }
+      
+      try {
+        const metadataPromises = coinTypes.map(async (coinType) => {
+          try {
+            const metadata = await suiClient.getCoinMetadata({ coinType });
+            return metadata;
+          } catch (error) {
+            console.warn(`Failed to fetch metadata for ${coinType}:`, error);
+            return { decimals: 6 }; // Default decimals
+          }
+        });
+        
+        const metadata = await Promise.all(metadataPromises);
+        setCoinMetadata(metadata);
+      } catch (error) {
+        console.error("Error fetching coin metadata:", error);
+        // Set default metadata for all coin types
+        const defaultMetadata = coinTypes.map(() => ({ decimals: 6 }));
+        setCoinMetadata(defaultMetadata);
+      }
+    };
+
+    fetchCoinMetadata();
+  }, [coinTypes, suiClient]);
 
   // Process coin data
   useEffect(() => {
@@ -255,6 +277,12 @@ export function VaultList({ note = "Loading vault assets...", minHeight = "min-h
         <Badge variant="secondary" className="text-xs">
           {dynamicFields?.length || 0} items
         </Badge>
+      )}
+      {vaultData?.vaultID && (
+        <CoinAdd 
+          coinsInVault={coinsInVault}
+          onTransactionSuccess={refreshData}
+        />
       )}
       <Button 
         variant="outline" 

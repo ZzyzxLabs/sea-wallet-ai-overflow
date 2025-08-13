@@ -152,9 +152,7 @@ export default function Page() {
         </div>
       </main>
 
-      <footer className="max-w-7xl mx-auto px-6 pb-10 text-xs text-slate-400">
-        Text-only interface. Icons and wallet button removed.
-      </footer>
+      <footer className="max-w-7xl mx-auto px-6 pb-10 text-xs text-slate-400">      </footer>
     </div>
   );
 }
