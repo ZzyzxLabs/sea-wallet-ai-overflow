@@ -1,7 +1,7 @@
 import { Transaction } from "@mysten/sui/transactions";
 import { package_addr } from "../package";
 
-export const subscribe = (ownerCap, seaVault, service, isYear) => {
+export const subscribe = (ownerCap, seaVault, service, isYear, coinType) => {
     const tx = new Transaction();
     tx.moveCall({
         target: `${package_addr}::sea_vault::subscribe`,
@@ -11,7 +11,7 @@ export const subscribe = (ownerCap, seaVault, service, isYear) => {
             tx.object(service),
             tx.pure.bool(isYear)
         ],
-        typeArguments: [] // Assuming ownerCap has a type field
+        typeArguments: [coinType]
     })
 
     return tx;

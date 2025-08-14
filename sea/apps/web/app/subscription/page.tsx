@@ -384,7 +384,8 @@ export default function SubscriptionDashboard() {
       result.ownerCapId,
       result.vaultID,
       subInfo?.serviceObjectId ?? "",
-      false
+      false,
+      subInfo?.coinType
     );
     await signAndExecuteTransaction(
       { transaction: tx, chain: "sui:testnet" },
@@ -417,7 +418,8 @@ export default function SubscriptionDashboard() {
       result.ownerCapId,
       result.vaultID,
       subInfo?.serviceObjectId ?? "",
-      true
+      true,
+      subInfo?.coinType
     );
     await signAndExecuteTransaction(
       { transaction: tx, chain: "sui:testnet" },
@@ -440,8 +442,8 @@ export default function SubscriptionDashboard() {
         const fields = data?.content?.fields;
 
         if (!fields) throw new Error("Invalid Service object: missing fields");
-
-        const coinType = String(fields?.coin_type ?? "");
+        console.log("Service fields:", fields);
+        const coinType = String(fields?.asset_name ?? "");
         const priceU64 = String(fields?.price ?? fields?.month_price ?? "0");
         const yearlyDiscount = Number(fields?.yearly_discount ?? 0);
         const serviceName = String(fields?.service_name ?? fields?.name ?? "");
@@ -1120,7 +1122,7 @@ export default function SubscriptionDashboard() {
                       <div className="text-2xl font-semibold">
                         {fromMinorUnit(subInfo.priceU64, subInfo.decimals)}{" "}
                         <span className="text-sm font-normal">
-                          {COIN_OPTIONS.find(c => c.coinType === subInfo.coinType)?.symbol || "COIN"}
+                          {subInfo.coinType}
                         </span>
                         <span className="text-sm text-muted-foreground">/mo</span>
                       </div>
@@ -1155,7 +1157,7 @@ export default function SubscriptionDashboard() {
                             <div className="text-2xl font-semibold">
                               {Number.isFinite(yearly) ? yearly.toFixed(6) : "—"}{" "}
                               <span className="text-sm font-normal">
-                                {COIN_OPTIONS.find(c => c.coinType === subInfo.coinType)?.symbol || "COIN"}
+                                {subInfo.coinType}
                               </span>
                               <span className="text-sm text-muted-foreground">/yr</span>
                             </div>
