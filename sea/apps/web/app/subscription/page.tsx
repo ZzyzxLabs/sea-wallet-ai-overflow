@@ -85,6 +85,16 @@ type ChainService = {
   serviceOwner: string;
   yearlyDiscount: number;
 };
+
+type LoadedService = {
+  serviceObjectId: string;
+  coinType: string;
+  priceU64: string;       // monthly price in smallest unit
+  yearlyDiscount: number; // %
+  serviceName: string;
+  decimals: number;
+};
+
 const COIN_OPTIONS = [
   { symbol: "SUI", coinType: "0x2::sui::SUI", decimals: 9 },
   // 下面兩個僅示意，請換成你環境的實際 coinType
@@ -162,6 +172,12 @@ export default function SubscriptionDashboard() {
   const [myServicesOnChain, setMyServicesOnChain] = useState<ChainService[]>([]);
   const account = useCurrentAccount();
   const suiClient = useSuiClient();
+  const [subscribeOpen, setSubscribeOpen] = useState(false);
+  const [subInputId, setSubInputId] = useState("");
+  const [subLoading, setSubLoading] = useState(false);
+  const [subError, setSubError] = useState<string>("");
+  const [subInfo, setSubInfo] = useState<LoadedService | null>(null);
+
   const { mutate: signAndExecuteTransaction } = useSignAndExecuteTransaction({
     execute: async ({ bytes, signature }) =>
       await suiClient.executeTransactionBlock({
@@ -193,6 +209,16 @@ export default function SubscriptionDashboard() {
     (k: keyof typeof form, v: string) => setForm((prev) => ({ ...prev, [k]: v })),
     []
   );
+
+  function fromMinorUnit(amountU64: string, decimals: number): string {
+    const s = amountU64.toString();
+    if (!decimals) return s;
+    const pad = s.padStart(decimals + 1, "0");
+    const intPart = pad.slice(0, pad.length - decimals);
+    const fracRaw = pad.slice(pad.length - decimals);
+    const frac = fracRaw.replace(/0+$/, "");
+    return frac ? `${intPart}.${frac}` : intPart;
+  }
 
   // 基本驗證（必要欄位、範圍）
   const validateCreate = useCallback(() => {
@@ -331,6 +357,46 @@ export default function SubscriptionDashboard() {
     return () => { cancelled = true; };
 
   }, [account?.address, suiClient]);
+
+  const loadServiceForSubscribe = useCallback(
+    async (id: string) => {
+      setSubLoading(true);
+      setSubError("");
+      setSubInfo(null);
+
+      try {
+        const res = await getCertainField({ suiClient, objID: id });
+        const data = (res as any)?.data ?? res;
+        const fields = data?.content?.fields;
+
+        if (!fields) throw new Error("Invalid Service object: missing fields");
+
+        const coinType = String(fields?.coin_type ?? "");
+        const priceU64 = String(fields?.price ?? fields?.month_price ?? "0");
+        const yearlyDiscount = Number(fields?.yearly_discount ?? 0);
+        const serviceName = String(fields?.service_name ?? fields?.name ?? "");
+
+        const decimals =
+          COIN_OPTIONS.find((c) => c.coinType === coinType)?.decimals ?? 9;
+
+        setSubInfo({
+          serviceObjectId: id,
+          coinType,
+          priceU64,
+          yearlyDiscount,
+          serviceName,
+          decimals,
+        });
+      } catch (e) {
+        setSubError(String((e as any)?.message ?? e));
+        setSubInfo(null);
+      } finally {
+        setSubLoading(false);
+      }
+    },
+    [suiClient]
+  );
+
   // My subscriptions
   const [subscriptions, setSubscriptions] = useState<Subscription[]>(MOCK_MY_SUBSCRIPTIONS);
   const [search, setSearch] = useState("");
@@ -633,6 +699,19 @@ export default function SubscriptionDashboard() {
               </div>
               <div className="flex items-center gap-1 text-xs">
                 <Button
+                  variant="default"
+                  size="sm"
+                  className="h-8"
+                  onClick={() => {
+                    setSubscribeOpen(true);
+                    setSubInputId("");
+                    setSubInfo(null);
+                    setSubError("");
+                  }}
+                >
+                  + Subscribe
+                </Button>
+                <Button
                   variant={subStatusFilter === "all" ? "default" : "outline"}
                   size="sm"
                   className="h-8"
@@ -902,6 +981,147 @@ export default function SubscriptionDashboard() {
               Cancel
             </Button>
             <Button onClick={handleCreateService}>Create</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      <Dialog open={subscribeOpen} onOpenChange={setSubscribeOpen}>
+        <DialogContent className="sm:max-w-[560px]">
+          <DialogHeader>
+            <DialogTitle>Subscribe Service</DialogTitle>
+          </DialogHeader>
+
+          <div className="grid gap-4 py-2">
+            {/* Service ID 輸入 + 載入 */}
+            <div className="grid grid-cols-4 items-center gap-3">
+              <Label htmlFor="subServiceId" className="text-right">
+                Service ID
+              </Label>
+              <div className="col-span-3 flex items-center gap-2">
+                <Input
+                  id="subServiceId"
+                  placeholder="Enter service object id"
+                  value={subInputId}
+                  onChange={(e) => setSubInputId(e.target.value.trim())}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && subInputId) {
+                      loadServiceForSubscribe(subInputId);
+                    }
+                  }}
+                />
+                <Button
+                  variant="outline"
+                  disabled={!subInputId || subLoading}
+                  onClick={() => loadServiceForSubscribe(subInputId)}
+                >
+                  {subLoading ? "Loading..." : "Load"}
+                </Button>
+              </div>
+            </div>
+
+            {/* 錯誤訊息 */}
+            {subError && (
+              <div className="rounded-md border border-destructive/50 bg-destructive/10 text-destructive text-xs px-3 py-2">
+                {subError}
+              </div>
+            )}
+
+            {/* 成功載入後顯示方案 */}
+            {subInfo && (
+              <div className="space-y-3">
+                <div className="flex items-center gap-2">
+                  <Badge variant="secondary" className="text-xs">
+                    {subInfo.serviceName || "(Unnamed Service)"}
+                  </Badge>
+                  <Badge variant="outline" className="text-xs">
+                    {subInfo.coinType || "—"}
+                  </Badge>
+                  <Badge variant="outline" className="text-xs">
+                    Discount: {isFinite(subInfo.yearlyDiscount) ? `${subInfo.yearlyDiscount}%` : "0%"}
+                  </Badge>
+                </div>
+
+                {/* 方案卡片 */}
+                {/* Plans */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 items-stretch">
+                  {/* Monthly */}
+                  <div className="p-4 border rounded-lg bg-card/50 flex flex-col h-full">
+                    <div>
+                      <div className="text-sm font-medium mb-1">Monthly</div>
+                      <div className="text-2xl font-semibold">
+                        {fromMinorUnit(subInfo.priceU64, subInfo.decimals)}{" "}
+                        <span className="text-sm font-normal">
+                          {COIN_OPTIONS.find(c => c.coinType === subInfo.coinType)?.symbol || "COIN"}
+                        </span>
+                        <span className="text-sm text-muted-foreground">/mo</span>
+                      </div>
+                      <div className="text-xs text-muted-foreground mt-1 break-all">
+                        service_id: {subInfo.serviceObjectId}
+                      </div>
+                    </div>
+
+                    <div className="mt-auto pt-3">
+                      <Button
+                        className="w-full h-10"
+                        onClick={() => {
+                          // TODO: subscribe monthly TX
+                          alert("Subscribe monthly (TODO TX)");
+                          setSubscribeOpen(false);
+                        }}
+                      >
+                        Subscribe Monthly
+                      </Button>
+                    </div>
+                  </div>
+
+                  {/* Yearly */}
+                  <div className="p-4 border rounded-lg bg-card/50 flex flex-col h-full">
+                    <div>
+                      <div className="text-sm font-medium mb-1">Yearly</div>
+                      {(() => {
+                        const monthly = Number(fromMinorUnit(subInfo.priceU64, subInfo.decimals));
+                        const discount = isFinite(subInfo.yearlyDiscount) ? subInfo.yearlyDiscount : 0;
+                        const yearly = monthly * 12 * (1 - discount / 100);
+                        return (
+                          <>
+                            <div className="text-2xl font-semibold">
+                              {Number.isFinite(yearly) ? yearly.toFixed(6) : "—"}{" "}
+                              <span className="text-sm font-normal">
+                                {COIN_OPTIONS.find(c => c.coinType === subInfo.coinType)?.symbol || "COIN"}
+                              </span>
+                              <span className="text-sm text-muted-foreground">/yr</span>
+                            </div>
+                            <div className="text-xs text-muted-foreground">
+                              You save {discount}% vs paying monthly
+                            </div>
+                          </>
+                        );
+                      })()}
+                    </div>
+
+                    <div className="mt-auto pt-3">
+                      <Button
+                        className="w-full h-10"
+                        variant="secondary"
+                        onClick={() => {
+                          // TODO: subscribe yearly TX
+                          alert("Subscribe yearly (TODO TX)");
+                          setSubscribeOpen(false);
+                        }}
+                      >
+                        Subscribe Yearly
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+
+              </div>
+            )}
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setSubscribeOpen(false)}>
+              Close
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
