@@ -431,7 +431,7 @@ function HeirBox({ heir, index }: { heir: HeirData; index: number }) {
               <h3 className="text-lg font-semibold text-white">
                 Vault #{vaultID?.slice(-8)}
               </h3>
-              <p className="text-sm text-slate-400">Cap ID: {capID?.slice(-8)}</p>
+              <p className="text-sm text-slate-400">Cap ID: {capID}</p>
             </div>
           </div>
           
