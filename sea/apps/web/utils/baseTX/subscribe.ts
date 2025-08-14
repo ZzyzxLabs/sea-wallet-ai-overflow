@@ -1,7 +1,6 @@
 import { Transaction } from "@mysten/sui/transactions";
 import { package_addr } from "../package";
-import { getCertainField } from "../queryer";
-import 
+
 export const subscribe = (ownerCap, seaVault, service, isYear) => {
     const tx = new Transaction();
     tx.moveCall({

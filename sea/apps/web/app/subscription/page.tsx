@@ -43,6 +43,9 @@ import { createService } from "@/utils/baseTX/createService";
 import { getCertainField, getCertainType } from "@/utils/queryer";
 import { get } from "http";
 import { package_addr } from "@/utils/package";
+import { subscribe } from "@/utils/baseTX/subscribe";
+import { getVaultAndOwnerCap } from "@/utils/queryer";
+
 // ----- Types -----
 type Plan = {
   id: string;
@@ -358,6 +361,48 @@ export default function SubscriptionDashboard() {
 
   }, [account?.address, suiClient]);
 
+  const monthlySubscribe = async () => {
+    const { vaultId, ownerCapId } = await getVaultAndOwnerCap({
+      suiClient,
+      accountAddress: account.address,
+      packageName: package_addr,
+    });
+    const tx = subscribe(
+      ownerCapId,
+      vaultId,
+      subInfo?.serviceObjectId ?? "",
+      false
+    );
+    await signAndExecuteTransaction(
+      { transaction: tx, chain: "sui:testnet" },
+      {
+        onSuccess: (res) => {
+          console.log("Subscribe tx success:", res);
+        },
+      }
+    );
+  };
+  const yearlySubscribe = async () => {
+    const { vaultId, ownerCapId } = await getVaultAndOwnerCap({
+      suiClient,
+      accountAddress: account.address,
+      packageName: package_addr
+    });
+    const tx = subscribe(
+      ownerCapId,
+      vaultId,
+      subInfo?.serviceObjectId ?? "",
+      true
+    );
+    await signAndExecuteTransaction(
+      { transaction: tx, chain: "sui:testnet" },
+      {
+        onSuccess: (res) => {
+          console.log("Subscribe tx success:", res);
+        },
+      }
+    );
+  };
   const loadServiceForSubscribe = useCallback(
     async (id: string) => {
       setSubLoading(true);
@@ -1063,8 +1108,7 @@ export default function SubscriptionDashboard() {
                       <Button
                         className="w-full h-10"
                         onClick={() => {
-                          // TODO: subscribe monthly TX
-                          alert("Subscribe monthly (TODO TX)");
+                          monthlySubscribe()
                           setSubscribeOpen(false);
                         }}
                       >
@@ -1103,8 +1147,7 @@ export default function SubscriptionDashboard() {
                         className="w-full h-10"
                         variant="secondary"
                         onClick={() => {
-                          // TODO: subscribe yearly TX
-                          alert("Subscribe yearly (TODO TX)");
+                          yearlySubscribe()
                           setSubscribeOpen(false);
                         }}
                       >
