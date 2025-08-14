@@ -9,7 +9,7 @@ export const subscribe = (ownerCap, seaVault, service, isYear) => {
             tx.object(ownerCap),
             tx.object(seaVault),
             tx.object(service),
-            tx.pure(isYear)
+            tx.pure.bool(isYear)
         ],
         typeArguments: [] // Assuming ownerCap has a type field
     })

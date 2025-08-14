@@ -203,7 +203,7 @@ export default function SubscriptionDashboard() {
     serviceAddr: "",
     yearDiscount: "",
     price: "",
-    coinType: COIN_OPTIONS[0].coinType, // default SUI
+    coinType: COIN_OPTIONS[0]?.coinType || "0x2::sui::SUI", // default SUI
     customCoinType: "",
   });
 
@@ -260,6 +260,8 @@ export default function SubscriptionDashboard() {
 
     async function fetchAll() {
       try {
+        if (!account?.address) return;
+        
         // 1) First query: ServiceCap list
         const firstResult = await getCertainType({
           suiClient,
@@ -362,14 +364,25 @@ export default function SubscriptionDashboard() {
   }, [account?.address, suiClient]);
 
   const monthlySubscribe = async () => {
-    const { vaultId, ownerCapId } = await getVaultAndOwnerCap({
+    if (!account?.address) {
+      alert("Please connect your wallet first.");
+      return;
+    }
+    
+    const result = await getVaultAndOwnerCap({
       suiClient,
       accountAddress: account.address,
       packageName: package_addr,
     });
+    
+    if (!result || !result.vaultID || !result.ownerCapId) {
+      alert("No vault or owner cap found. Please create a vault first.");
+      return;
+    }
+    
     const tx = subscribe(
-      ownerCapId,
-      vaultId,
+      result.ownerCapId,
+      result.vaultID,
       subInfo?.serviceObjectId ?? "",
       false
     );
@@ -383,14 +396,26 @@ export default function SubscriptionDashboard() {
     );
   };
   const yearlySubscribe = async () => {
-    const { vaultId, ownerCapId } = await getVaultAndOwnerCap({
+    if (!account?.address) {
+      alert("Please connect your wallet first.");
+      return;
+    }
+    
+    const result = await getVaultAndOwnerCap({
       suiClient,
       accountAddress: account.address,
       packageName: package_addr
     });
+    
+    if (!result || !result.vaultID || !result.ownerCapId) {
+      alert("No vault or owner cap found. Please create a vault first.");
+      return;
+    }
+    
+    console.log("detail", result.ownerCapId, result.vaultID, subInfo?.serviceObjectId);
     const tx = subscribe(
-      ownerCapId,
-      vaultId,
+      result.ownerCapId,
+      result.vaultID,
       subInfo?.serviceObjectId ?? "",
       true
     );
@@ -523,7 +548,7 @@ export default function SubscriptionDashboard() {
               serviceAddr: "",
               yearDiscount: "",
               price: "",
-              coinType: COIN_OPTIONS[0].coinType,
+              coinType: COIN_OPTIONS[0]?.coinType || "0x2::sui::SUI",
               customCoinType: "",
             });
             setCreateOpen(false);
