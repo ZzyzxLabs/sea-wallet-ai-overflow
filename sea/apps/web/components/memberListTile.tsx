@@ -69,7 +69,7 @@ export function MemberListTile({
       headerExtra={
         <Input
           placeholder="Search by key or label"
-          className="w-72 bg-white/5 border-white/10"
+          className="w-fit bg-white/5 border-white/10"
           value={q}
           onChange={(e) => setQ(e.target.value)}
         />
