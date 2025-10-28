@@ -35,32 +35,28 @@ export default function Page() {
     }
     let active = true;
 
-    (async () => {
-      try {
-        const res = await getVaultAndOwnerCap({
-          suiClient,
-          accountAddress: currentAccount.address,
-          packageName,
-        });
-
-        // res 可能為 undefined/null，就先短路返回
-        if (!res || !res.vaultID) {
+      (async () => {
+        try {
+          const { vaultID } = await getVaultAndOwnerCap({
+            suiClient,
+            accountAddress: currentAccount.address,
+            packageName,
+          });
+          if (!vaultID) {
+            if (active) setCapPercent(null);
+            return;
+          }
+          const data = await getVaultField({ suiClient, vaultID });
+          const capRaw = (data?.content as any)?.fields?.cap_percentage;
+          const parsed = parseCapPercentage(capRaw); // Map<number, number>
+          if (active) setCapPercent(parsed);
+          console.log("Parsed cap percentage:", parsed);
+        } catch (e) {
+          console.error(e);
           if (active) setCapPercent(null);
-          return;
         }
+      })();
 
-        const { vaultID } = res; // 這裡已保證存在
-        const data = await getVaultField({ suiClient, vaultID });
-        const capRaw = (data?.content as any)?.fields?.cap_percentage;
-        const parsed = parseCapPercentage(capRaw); // Map<number | string, number>
-
-        if (active) setCapPercent(parsed);
-        console.log("Parsed cap percentage:", parsed);
-      } catch (e) {
-        console.error(e);
-        if (active) setCapPercent(null);
-      }
-    })();
     return () => { active = false; };
   }, [currentAccount?.address, packageName, suiClient]);
 
@@ -137,7 +133,7 @@ export default function Page() {
             <div className="font-bold tracking-tight">Vault Console</div>
             <nav className="hidden sm:flex items-center gap-1 text-sm">
               <a className="px-3 py-2 rounded-lg bg-white/10 border border-white/10 hover:bg-white/15 transition">Dashboard</a>
-              <a href="/memberWithdraw" className="px-3 py-2 rounded-lg hover:bg-white/10 transition">Member Withdraw</a>
+                <a href="/memberWithdraw" className="px-3 py-2 rounded-lg hover:bg-white/10 transition">Member Withdraw</a>
               <ConnectButton />
             </nav>
           </div>
@@ -149,7 +145,7 @@ export default function Page() {
         <div className="space-y-6 order-2 lg:order-1">
           {/* 若還沒抓到資料就給空 Map，元件會顯示 "—" */}
           <MemberListTile capPercent={capPercent ?? new Map()} />
-          <FileSystemTile files={filesSeed} onUpload={() => { }} />
+          <FileSystemTile files={filesSeed} onUpload={() => {}} />
         </div>
         <div className="lg:col-span-2 order-1 lg:order-2">
           <VaultTile />
