@@ -35,7 +35,7 @@ export function WalrusUploader({ willlistId, capId }: WalrusUploaderProps) {
   const client = new SealClient({
     suiClient: suiClient as any,
     serverConfigs: [
-      { objectId: '0x0b4830cc7f444723cc5f00b0ed6b08ea8ddbdfc55e4d3d8306be3091e28b4e13', weight: 1 }
+      { objectId: '0x73d05d62c18d9374e3ea529e8e0ed6161da1a141a94d3f76ae3fe4e99356db75', weight: 1 }
     ],
     verifyKeyServers: false,
   });
@@ -83,7 +83,7 @@ export function WalrusUploader({ willlistId, capId }: WalrusUploaderProps) {
   const handleSubmit = (uploadFile?: File) => {
     setIsUploading(true);
     const fileToUpload = uploadFile || file;
-    
+    console.log(packageId);
     if (fileToUpload) {
       const reader = new FileReader();
       reader.onload = async function (event) {
@@ -93,10 +93,12 @@ export function WalrusUploader({ willlistId, capId }: WalrusUploaderProps) {
             try {
               const nonce = crypto.getRandomValues(new Uint8Array(5));
               const policyObjectBytes = fromHex(willlistId);
+              const pid = fromHex(packageId);
+              console.log(pid);
               const id = toHex(new Uint8Array([...policyObjectBytes, ...nonce]));
               const { encryptedObject: encryptedBytes } = await client.encrypt({
                 threshold: 2,
-                packageId,
+                packageId: pid,
                 id,
                 data: new Uint8Array(result),
               });

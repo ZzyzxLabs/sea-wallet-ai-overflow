@@ -17,7 +17,7 @@ const { networkConfig, useNetworkVariable, useNetworkVariables } = createNetwork
   mainnet: {
     url: getFullnodeUrl('mainnet'),
     variables: {
-      packageId: '', // Add mainnet package ID when deployed
+      packageId: TESTNET_PACKAGE_ID, // Add mainnet package ID when deployed
       gqlClient: 'https://sui-mainnet.mystenlabs.com/graphql',
     },
   },
