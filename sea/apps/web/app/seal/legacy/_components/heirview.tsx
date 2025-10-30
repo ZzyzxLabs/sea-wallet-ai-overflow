@@ -11,13 +11,8 @@ import { fromHex, toHex } from '@mysten/sui/utils';
 import { downloadAndDecrypt } from './utils_download';
 import { set, get } from 'idb-keyval';
 import { getFullnodeUrl, SuiClient } from '@mysten/sui/client';
-<<<<<<< HEAD
 import { getVaultAndOwnerCap, getVaultDynamicFields, getVaultField } from "../../../../utils/queryer";
 import { package_addr } from '@/utils/package';
-=======
-import { package_addr } from '@/utils/package';
-
->>>>>>> 51eb4d6048c20dfbe547781b122262c72cc9a242
 const TTL_MIN = 10;
 
 // Define Cap Type Enum

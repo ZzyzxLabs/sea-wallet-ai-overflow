@@ -58,7 +58,7 @@ export const downloadAndDecrypt = async (
     const ids = batch.map((enc) => EncryptedObject.parse(new Uint8Array(enc)).id);
     console.log('Fetching keys for ids:', ids);
     const tx = new Transaction();
-    moveCallConstructor(tx, ids[0]);
+    ids.forEach((id) => moveCallConstructor(tx, id));
     const txBytes = await tx.build({ client: suiClient, onlyTransactionKind: true });
     try {
       await sealClient.fetchKeys({ ids, txBytes, sessionKey, threshold: 1 });
