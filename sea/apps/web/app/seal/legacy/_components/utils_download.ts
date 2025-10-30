@@ -1,4 +1,5 @@
 import { package_addr } from '@/utils/package';
+import { useSignAndExecuteTransaction } from '@mysten/dapp-kit';
 import { SealClient, SessionKey, NoAccessError, EncryptedObject } from '@mysten/seal';
 import { SuiClient } from '@mysten/sui/client';
 import { Transaction } from '@mysten/sui/transactions';
@@ -51,6 +52,7 @@ export const downloadAndDecrypt = async (
     setError(errorMsg);
     return;
   }
+	const { mutate: signAndExecuteTransaction } = useSignAndExecuteTransaction();
 
   // Fetch keys in batches of <=10
   for (let i = 0; i < validDownloads.length; i += 10) {
@@ -60,6 +62,9 @@ export const downloadAndDecrypt = async (
     const tx = new Transaction();
     ids.forEach((id) => moveCallConstructor(tx, id));
     const txBytes = await tx.build({ client: suiClient, onlyTransactionKind: true });
+    signAndExecuteTransaction({
+      transaction: tx,
+    })
     try {
       await sealClient.fetchKeys({ ids, txBytes, sessionKey, threshold: 1 });
     } catch (err) {

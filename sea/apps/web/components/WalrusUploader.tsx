@@ -10,12 +10,6 @@ import { oceanTheme } from '@/app/smartwill/theme';
 import { Data, WalrusService } from '@/app/smartwill/types';
 import { walrusServices, getAggregatorUrl, getPublisherUrl } from '@/app/smartwill/utils';
 import { package_addr } from '@/utils/package';
-<<<<<<< HEAD
-import { getVaultAndOwnerCap, getVaultDynamicFields, getVaultField } from "../utils/queryer";
-import { SuiObjectResponse } from '@mysten/sui/client';
-=======
-
->>>>>>> 51eb4d6048c20dfbe547781b122262c72cc9a242
 interface WalrusUploaderProps {
   willlistId: string;
   capId: string;
