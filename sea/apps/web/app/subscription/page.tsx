@@ -2,11 +2,11 @@
 
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
-  ConnectButton,
   useCurrentAccount,
   useSuiClient,
   useSignAndExecuteTransaction,
 } from "@mysten/dapp-kit";
+import { Navigation } from "@/components/Navigation";
 import { Tile } from "../../components/tile";
 import { Button } from "@workspace/ui/components/button";
 import { Input } from "@workspace/ui/components/input";
@@ -627,17 +627,7 @@ export default function SubscriptionDashboard() {
   return (
     <div className="min-h-screen text-slate-100 bg-[radial-gradient(60rem_60rem_at_-10%_-10%,rgba(99,102,241,0.25),transparent),radial-gradient(40rem_40rem_at_110%_10%,rgba(147,51,234,0.18),transparent)] bg-slate-950">
       {/* Header */}
-      <header className="sticky top-0 z-20 backdrop-blur supports-[backdrop-filter]:bg-slate-900/50 border-b border-white/10">
-        <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-8">
-            <div className="font-bold tracking-tight">Vault Console</div>
-            <nav className="hidden sm:flex items-center gap-1 text-sm">
-              <ConnectButton />
-            </nav>
-          </div>
-          <div />
-        </div>
-      </header>
+      <Navigation />
 
       <main className="max-w-7xl mx-auto px-6 py-12 space-y-8">
         {/* Page Title */}

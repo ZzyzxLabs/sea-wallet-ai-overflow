@@ -2,10 +2,10 @@
 
 import React, { useCallback, useMemo, useState, useEffect } from "react";
 import { 
-  ConnectButton, 
   useCurrentAccount, 
   useSuiClientQuery 
 } from "@mysten/dapp-kit";
+import { Navigation } from "@/components/Navigation";
 import { Gift, Wallet, RefreshCw } from "lucide-react";
 import { Tile } from "../../components/tile";
 import { Button } from "@workspace/ui/components/button";
@@ -95,17 +95,7 @@ export default function MemberWithdraw() {
 
   return (
     <div className="min-h-screen text-slate-100 bg-[radial-gradient(60rem_60rem_at_-10%_-10%,rgba(99,102,241,0.25),transparent),radial-gradient(40rem_40rem_at_110%_10%,rgba(147,51,234,0.18),transparent)] bg-slate-950">
-      <header className="sticky top-0 z-20 backdrop-blur supports-[backdrop-filter]:bg-slate-900/50 border-b border-white/10">
-        <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-8">
-            <div className="font-bold tracking-tight">Sea Vault Console</div>
-            <nav className="hidden sm:flex items-center gap-1 text-sm">
-              <ConnectButton />
-            </nav>
-          </div>
-          <div />
-        </div>
-      </header>
+      <Navigation />
 
       <main className="max-w-7xl mx-auto px-6 py-12">
         <div className="mx-auto space-y-6">
@@ -149,9 +139,7 @@ export default function MemberWithdraw() {
               <div className="flex flex-col items-center justify-center py-10 text-muted-foreground">
                 <Wallet className="h-8 w-8 mb-2 opacity-50" />
                 <p className="text-sm">No wallet connected.</p>
-                <div className="mt-3">
-                  <ConnectButton />
-                </div>
+                <p className="text-xs text-slate-500 mt-1">Please connect your wallet using the button in the header.</p>
               </div>
             ) : heirs.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-10 text-muted-foreground">
