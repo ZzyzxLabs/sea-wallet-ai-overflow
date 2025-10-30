@@ -5,15 +5,19 @@ import { Button, Card, Flex, Box, Text, Heading, Separator, Badge, Spinner, Dial
 import { useCallback, useEffect, useState, useMemo } from 'react';
 import { Eye, Crown, Users, Anchor, Fish, Droplet, Waves, Shield, Database } from 'lucide-react';
 import { isValidSuiAddress } from '@mysten/sui/utils';
-import { useNetworkVariable } from '@/app/networkConfig';
 import { getObjectExplorerLink } from '@/app/seal/_sealWill/Will_utils';
 import { SealClient, SessionKey, NoAccessError } from '@mysten/seal';
 import { fromHex, toHex } from '@mysten/sui/utils';
 import { downloadAndDecrypt } from './utils_download';
 import { set, get } from 'idb-keyval';
 import { getFullnodeUrl, SuiClient } from '@mysten/sui/client';
+<<<<<<< HEAD
 import { getVaultAndOwnerCap, getVaultDynamicFields, getVaultField } from "../../../../utils/queryer";
 import { package_addr } from '@/utils/package';
+=======
+import { package_addr } from '@/utils/package';
+
+>>>>>>> 51eb4d6048c20dfbe547781b122262c72cc9a242
 const TTL_MIN = 10;
 
 // Define Cap Type Enum
@@ -240,7 +244,7 @@ const UnifiedOceanCard = ({
 export const WillListDisplay = () => {
   const currentAccount = useCurrentAccount();
   const suiClient = useSuiClient();
-  const packageId = useNetworkVariable('packageId');
+  const packageId = package_addr;
   const [cardItems, setCardItems] = useState<CardItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [selectedWillId, setSelectedWillId] = useState<string | null>(null);

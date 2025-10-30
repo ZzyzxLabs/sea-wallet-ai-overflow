@@ -4,15 +4,18 @@ import { Transaction } from '@mysten/sui/transactions';
 import { Button, Card, Flex, Box, Text, Heading, Tabs, TextArea, Spinner } from '@radix-ui/themes';
 import { useEffect, useState } from 'react';
 import { Upload, FileText, Waves } from 'lucide-react';
-import { useNetworkVariable } from '@/app/networkConfig';
 import { SealClient } from '@mysten/seal';
 import { fromHex, toHex } from '@mysten/sui/utils';
 import { oceanTheme } from '@/app/smartwill/theme';
 import { Data, WalrusService } from '@/app/smartwill/types';
 import { walrusServices, getAggregatorUrl, getPublisherUrl } from '@/app/smartwill/utils';
 import { package_addr } from '@/utils/package';
+<<<<<<< HEAD
 import { getVaultAndOwnerCap, getVaultDynamicFields, getVaultField } from "../utils/queryer";
 import { SuiObjectResponse } from '@mysten/sui/client';
+=======
+
+>>>>>>> 51eb4d6048c20dfbe547781b122262c72cc9a242
 interface WalrusUploaderProps {
   willlistId: string;
   capId: string;
@@ -32,7 +35,7 @@ export function WalrusUploader({ willlistId, capId }: WalrusUploaderProps) {
   const SUI_VIEW_TX_URL = `https://suiscan.xyz/testnet/tx`;
   const SUI_VIEW_OBJECT_URL = `https://suiscan.xyz/testnet/object`;
   const NUM_EPOCH = 1;
-  const packageId = useNetworkVariable('packageId');
+  const packageId = package_addr;
   const suiClient = useSuiClient();
   console.log(willlistId, capId);
   const client = new SealClient({
