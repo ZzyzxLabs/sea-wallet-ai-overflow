@@ -8,14 +8,14 @@ import { Plus, Waves } from 'lucide-react';
 import { WalrusUploader } from "@/components/WalrusUploader";
 import { useCallback } from 'react';
 import { useSuiClient } from '@mysten/dapp-kit';
-import { useNetworkVariable } from '@/app/networkConfig';
 import { CardItem, Cap } from './types';
 import { oceanTheme, injectGlobalStyles } from './theme';
+import { package_addr } from '@/utils/package';
 
 export default function SmartWillPage() {
   const account = useCurrentAccount();
   const suiClient = useSuiClient();
-  const packageId = useNetworkVariable('packageId');
+  const packageId = package_addr;
   
   const [cardItems, setCardItems] = useState<CardItem[]>([]);
   const [selectedWilllist, setSelectedWilllist] = useState<string | null>(null);
