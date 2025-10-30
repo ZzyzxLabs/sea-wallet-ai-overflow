@@ -1,13 +1,13 @@
 "use client";
 import "@mysten/dapp-kit/dist/index.css";
 import {
-  ConnectButton,
   useAutoConnectWallet,
   useSuiClientQuery,
 } from "@mysten/dapp-kit";
 import { useCurrentAccount } from "@mysten/dapp-kit";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { Navigation } from "@/components/Navigation";
 import HeirBox from "./_components/HeirBox";
 import useMoveStore from "@/store/moveStore";
 
@@ -75,23 +75,40 @@ export default function Dashboard() {
     }
   }, [packageName, walletObjects.data]);
 
-  
-  console.log("heirs",heirs)
   return (
-    <div className="flex-1 px-8 py-8 bg-white">
-      <h1 className="text-4xl font-bold mb-8 text-blue-800">Your Heir Accounts</h1>
+    <div className="min-h-screen text-slate-100 bg-[radial-gradient(60rem_60rem_at_-10%_-10%,rgba(99,102,241,0.25),transparent),radial-gradient(40rem_40rem_at_110%_10%,rgba(147,51,234,0.18),transparent)] bg-slate-950">
+      <Navigation />
       
-      {heirs.length === 0 ? (
-        <div className="text-gray-600 p-6 border-2 rounded-lg text-xl font-medium bg-gray-50">
-          No heir accounts found. You are not an heir of any vaults.
+      <div className="max-w-7xl mx-auto px-8 py-12">
+        <div className="mb-8 text-center">
+          <h1 className="text-5xl font-bold mb-4 bg-gradient-to-r from-blue-400 to-indigo-400 bg-clip-text text-transparent">
+            Your Heir Accounts
+          </h1>
+          <p className="text-slate-400 text-lg">
+            Manage and monitor your inherited vault memberships
+          </p>
         </div>
-      ) : (
-        <div className="flex flex-col space-y-4 w-full">
-          {heirs.map((heir, index) => (
-            <HeirBox key={index} heir={heir} index={index}/>
-          ))}
-        </div>
-      )}
+        
+        {heirs.length === 0 ? (
+          <div className="text-center p-12 border-2 border-dashed border-white/10 rounded-2xl text-xl font-medium bg-slate-900/30 backdrop-blur-sm shadow-lg">
+            <div className="flex flex-col items-center gap-4">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-24 w-24 text-slate-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+              </svg>
+              <div>
+                <p className="text-slate-300 mb-2">No heir accounts found</p>
+                <p className="text-slate-500 text-base">You are not currently an heir of any vaults</p>
+              </div>
+            </div>
+          </div>
+        ) : (
+          <div className="flex flex-col space-y-6 w-full">
+            {heirs.map((heir, index) => (
+              <HeirBox key={index} heir={heir} index={index}/>
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
