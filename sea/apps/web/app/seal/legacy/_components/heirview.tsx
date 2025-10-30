@@ -3,7 +3,7 @@ import { useCurrentAccount, useSignAndExecuteTransaction, useSuiClient, useSignP
 import { Transaction } from '@mysten/sui/transactions';
 import { Button, Card, Flex, Box, Text, Heading, Separator, Badge, Spinner, Dialog, AlertDialog } from '@radix-ui/themes';
 import { useCallback, useEffect, useState, useMemo } from 'react';
-import { Eye, Crown, Users, Anchor, Fish, Droplet, Waves, Shield } from 'lucide-react';
+import { Eye, Crown, Users, Anchor, Fish, Droplet, Waves, Shield, Database } from 'lucide-react';
 import { isValidSuiAddress } from '@mysten/sui/utils';
 import { useNetworkVariable } from '@/app/networkConfig';
 import { getObjectExplorerLink } from '@/store/sealWill/Will_utils';
@@ -269,53 +269,51 @@ export const WillListDisplay = () => {
     
     setLoading(true);
     try {
-      // Parallel retrieval of both types of Caps
-      const [ownerRes, memberRes] = await Promise.all([
-        suiClient.getOwnedObjects({
-          owner: currentAccount.address,
-          options: {
-            showContent: true,
-            showType: true,
-          },
-          filter: {
-            StructType: `${packageId}::seaVault::OwnerCap`,
-          },
-        }),
-        suiClient.getOwnedObjects({
-          owner: currentAccount.address,
-          options: {
-            showContent: true,
-            showType: true,
-          },
-          filter: {
-            StructType: `${packageId}::seaVault::MemberCap`,
-          },
-        })
-      ]);
+      // Get all owned objects first
+      const allObjects = await suiClient.getOwnedObjects({
+        owner: currentAccount.address,
+        options: {
+          showContent: true,
+          showType: true,
+        },
+      });
+      
+      // Filter for OwnerCap and MemberCap locally
+      const ownerCapObjects = allObjects.data.filter(obj => 
+        obj.data?.type?.includes('::sea_vault::OwnerCap') || 
+        obj.data?.type?.includes('::seaVault::OwnerCap')
+      );
+      
+      const memberCapObjects = allObjects.data.filter(obj => 
+        obj.data?.type?.includes('::sea_vault::MemberCap') || 
+        obj.data?.type?.includes('::seaVault::MemberCap')
+      );
       
       // Process OwnerCap
-      const ownerCaps: Cap[] = ownerRes.data
+      const ownerCaps: Cap[] = ownerCapObjects
         .map((obj) => {
-          const fields = (obj!.data!.content as { fields: any }).fields;
+          if (!obj.data?.content || !('fields' in obj.data.content)) return null;
+          const fields = (obj.data.content as { fields: any }).fields;
           return {
-            id: fields?.id.id,
+            id: fields?.id?.id || obj.data.objectId,
             vault_id: fields?.vaultID,
             type: CapType.OWNER,
           } as OwnerCap;
         })
-        .filter((item) => item !== null);
+        .filter((item): item is OwnerCap => item !== null && item.vault_id !== undefined);
 
       // Process MemberCap  
-      const memberCaps: Cap[] = memberRes.data
+      const memberCaps: Cap[] = memberCapObjects
         .map((obj) => {
-          const fields = (obj!.data!.content as { fields: any }).fields;
+          if (!obj.data?.content || !('fields' in obj.data.content)) return null;
+          const fields = (obj.data.content as { fields: any }).fields;
           return {
-            id: fields?.id.id,
+            id: fields?.id?.id || obj.data.objectId,
             vault_id: fields?.vaultID,
             type: CapType.MEMBER,
           } as MemberCap;
         })
-        .filter((item) => item !== null);
+        .filter((item): item is MemberCap => item !== null && item.vault_id !== undefined);
 
       // Merge both types of Caps
       const allCaps = [...ownerCaps, ...memberCaps];
@@ -464,43 +462,44 @@ export const WillListDisplay = () => {
 
   return (
     <Box 
-      className='w-full min-h-screen bg-gradient-to-br from-blue-50 via-cyan-50 to-teal-50'
+      className='w-full min-h-screen'
       style={{
         padding: '32px 24px',
+        background: 'transparent',
       }}
     >
       {/* Title area with enhanced design */}
       <Flex direction="column" align="center" mb="6" className="text-center">
         <Flex align="center" gap="3" mb="3">
-          <Waves size={48} color="#0d47a1" style={{ animation: 'pulse 2s infinite' }} />
+          <Waves size={48} color="#6366f1" style={{ animation: 'pulse 2s infinite' }} />
           <Heading size="8" style={{ 
-            color: '#0d47a1', 
+            color: '#e0e7ff', 
             fontWeight: 'bold',
-            textShadow: '0 2px 4px rgba(13, 71, 161, 0.1)'
+            textShadow: '0 2px 4px rgba(99, 102, 241, 0.3)'
           }}>
             Ocean Will Management
           </Heading>
-          <Waves size={48} color="#0d47a1" style={{ animation: 'pulse 2s infinite' }} />
+          <Waves size={48} color="#6366f1" style={{ animation: 'pulse 2s infinite' }} />
         </Flex>
-        <Text size="4" style={{ color: '#1565c0', maxWidth: '600px' }}>
+        <Text size="4" style={{ color: '#a5b4fc', maxWidth: '600px' }}>
           Protecting your digital heritage with the depth and security of the ocean
         </Text>
         
         {/* Enhanced Statistics with better visual hierarchy */}
         <Flex gap="4" mt="5" wrap="wrap" justify="center">
           <Card style={{ 
-            background: 'linear-gradient(135deg, #1e3c72 0%, #2a5298 100%)',
+            background: 'linear-gradient(135deg, rgba(99, 102, 241, 0.15) 0%, rgba(99, 102, 241, 0.25) 100%)',
             padding: '16px 24px',
-            border: 'none',
-            boxShadow: '0 4px 12px rgba(30, 60, 114, 0.3)'
+            border: '1px solid rgba(99, 102, 241, 0.3)',
+            boxShadow: '0 4px 12px rgba(99, 102, 241, 0.2)'
           }}>
             <Flex align="center" gap="2">
-              <Crown size={24} color="white" />
+              <Crown size={24} color="#a5b4fc" />
               <Box>
-                <Text size="1" style={{ color: 'rgba(255, 255, 255, 0.8)', marginBottom: '4px' }}>
+                <Text size="1" style={{ color: '#94a3b8', marginBottom: '4px' }}>
                   Owner Wills
                 </Text>
-                <Heading size="6" style={{ color: 'white' }}>
+                <Heading size="6" style={{ color: '#e0e7ff' }}>
                   {stats.ownerCount}
                 </Heading>
               </Box>
@@ -508,18 +507,18 @@ export const WillListDisplay = () => {
           </Card>
           
           <Card style={{ 
-            background: 'linear-gradient(135deg, #2e7d32 0%, #4caf50 100%)',
+            background: 'linear-gradient(135deg, rgba(34, 197, 94, 0.15) 0%, rgba(34, 197, 94, 0.25) 100%)',
             padding: '16px 24px',
-            border: 'none',
-            boxShadow: '0 4px 12px rgba(46, 125, 50, 0.3)'
+            border: '1px solid rgba(34, 197, 94, 0.3)',
+            boxShadow: '0 4px 12px rgba(34, 197, 94, 0.2)'
           }}>
             <Flex align="center" gap="2">
-              <Users size={24} color="white" />
+              <Users size={24} color="#86efac" />
               <Box>
-                <Text size="1" style={{ color: 'rgba(255, 255, 255, 0.8)', marginBottom: '4px' }}>
+                <Text size="1" style={{ color: '#94a3b8', marginBottom: '4px' }}>
                   Member Wills
                 </Text>
-                <Heading size="6" style={{ color: 'white' }}>
+                <Heading size="6" style={{ color: '#e0e7ff' }}>
                   {stats.memberCount}
                 </Heading>
               </Box>
@@ -527,18 +526,18 @@ export const WillListDisplay = () => {
           </Card>
           
           <Card style={{ 
-            background: 'linear-gradient(135deg, #0d47a1 0%, #42a5f5 100%)',
+            background: 'linear-gradient(135deg, rgba(147, 51, 234, 0.15) 0%, rgba(147, 51, 234, 0.25) 100%)',
             padding: '16px 24px',
-            border: 'none',
-            boxShadow: '0 4px 12px rgba(13, 71, 161, 0.3)'
+            border: '1px solid rgba(147, 51, 234, 0.3)',
+            boxShadow: '0 4px 12px rgba(147, 51, 234, 0.2)'
           }}>
             <Flex align="center" gap="2">
-              <Shield size={24} color="white" />
+              <Database size={24} color="#c4b5fd" />
               <Box>
-                <Text size="1" style={{ color: 'rgba(255, 255, 255, 0.8)', marginBottom: '4px' }}>
-                  Total Wills
+                <Text size="1" style={{ color: '#94a3b8', marginBottom: '4px' }}>
+                  Total Items
                 </Text>
-                <Heading size="6" style={{ color: 'white' }}>
+                <Heading size="6" style={{ color: '#e0e7ff' }}>
                   {stats.total}
                 </Heading>
               </Box>
@@ -587,27 +586,28 @@ export const WillListDisplay = () => {
           justify="center"
           p="8"
           style={{
-            background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.9) 0%, rgba(227, 242, 253, 0.9) 100%)',
+            background: 'rgba(255, 255, 255, 0.05)',
             borderRadius: '24px',
-            boxShadow: '0 8px 32px rgba(13, 71, 161, 0.15)',
+            boxShadow: '0 8px 32px rgba(0, 0, 0, 0.3)',
             maxWidth: '600px',
             margin: '64px auto',
-            border: '2px solid rgba(13, 71, 161, 0.1)',
+            border: '1px solid rgba(255, 255, 255, 0.1)',
           }}
         >
           <Box style={{ 
-            background: 'linear-gradient(135deg, #0d47a1 0%, #42a5f5 100%)',
+            background: 'linear-gradient(135deg, rgba(99, 102, 241, 0.4) 0%, rgba(147, 51, 234, 0.3) 100%)',
             borderRadius: '50%',
             padding: '24px',
             marginBottom: '24px',
-            boxShadow: '0 4px 16px rgba(13, 71, 161, 0.3)'
+            boxShadow: '0 4px 16px rgba(99, 102, 241, 0.3)',
+            border: '1px solid rgba(99, 102, 241, 0.5)'
           }}>
             <Waves size={64} color="white" />
           </Box>
-          <Heading size="6" mb="3" style={{ color: '#0d47a1', textAlign: 'center' }}>
+          <Heading size="6" mb="3" style={{ color: '#e0e7ff', textAlign: 'center' }}>
             No Wills Found
           </Heading>
-          <Text size="4" style={{ color: '#1565c0', textAlign: 'center', maxWidth: '400px' }}>
+          <Text size="4" style={{ color: '#a5b4fc', textAlign: 'center', maxWidth: '400px' }}>
             Your digital heritage will be securely stored and protected here, deep and eternal like the ocean
           </Text>
         </Flex>
@@ -618,14 +618,15 @@ export const WillListDisplay = () => {
         <Dialog.Content 
           maxWidth="600px"
           style={{
-            background: 'linear-gradient(135deg, #ffffff 0%, #e3f2fd 100%)',
+            background: 'linear-gradient(135deg, rgba(15, 23, 42, 0.95) 0%, rgba(30, 41, 59, 0.95) 100%)',
             borderRadius: '16px',
-            boxShadow: '0 24px 48px rgba(0, 0, 0, 0.2)',
+            boxShadow: '0 24px 48px rgba(0, 0, 0, 0.4)',
+            border: '1px solid rgba(255, 255, 255, 0.1)',
           }}
         >
           <Dialog.Title 
             style={{ 
-              color: '#0d47a1',
+              color: '#e0e7ff',
               fontSize: '1.5rem',
               display: 'flex',
               alignItems: 'center',
@@ -637,8 +638,9 @@ export const WillListDisplay = () => {
             <Badge 
               size="2" 
               style={{ 
-                background: selectedCapType === CapType.OWNER ? '#1e3c72' : '#2e7d32', 
-                color: 'white' 
+                background: selectedCapType === CapType.OWNER ? 'rgba(99, 102, 241, 0.3)' : 'rgba(34, 197, 94, 0.3)', 
+                color: 'white',
+                border: `1px solid ${selectedCapType === CapType.OWNER ? 'rgba(99, 102, 241, 0.5)' : 'rgba(34, 197, 94, 0.5)'}`
               }}
             >
               {selectedCapType === CapType.OWNER ? 'Owner' : 'Member'}
@@ -649,39 +651,40 @@ export const WillListDisplay = () => {
             {decrypting && (
               <Flex align="center" justify="center" p="4">
                 <Spinner size="3" />
-                <Text ml="3" style={{ color: '#0d47a1' }}>Decrypting data...</Text>
+                <Text ml="3" style={{ color: '#a5b4fc' }}>Decrypting data...</Text>
               </Flex>
             )}
             
             {!decrypting && decryptedTexts.length > 0 && (
               <Box>
-                <Text size="3" mb="3" style={{ color: '#1565c0' }}>
+                <Text size="3" mb="3" style={{ color: '#a5b4fc' }}>
                   Decrypted Content:
                 </Text>
                 <Box
                   style={{
-                    background: 'rgba(13, 71, 161, 0.05)',
+                    background: 'rgba(99, 102, 241, 0.1)',
                     borderRadius: '12px',
                     padding: '16px',
                     maxHeight: '400px',
                     overflowY: 'auto',
+                    border: '1px solid rgba(99, 102, 241, 0.2)',
                   }}
                 >
                   {decryptedTexts.map((txt, idx) => (
                     <Box
                       key={idx}
                       style={{
-                        background: 'white',
+                        background: 'rgba(15, 23, 42, 0.5)',
                         padding: '12px',
                         borderRadius: '8px',
                         marginBottom: idx < decryptedTexts.length - 1 ? '12px' : '0',
-                        border: '1px solid rgba(13, 71, 161, 0.1)',
+                        border: '1px solid rgba(255, 255, 255, 0.1)',
                       }}
                     >
                       <pre style={{ 
                         margin: 0, 
                         whiteSpace: 'pre-wrap',
-                        color: '#333',
+                        color: '#e2e8f0',
                         fontFamily: 'monospace',
                         fontSize: '14px',
                       }}>
@@ -694,7 +697,7 @@ export const WillListDisplay = () => {
             )}
             
             {!decrypting && feedData?.blobIds.length === 0 && (
-              <Text style={{ color: '#757575', textAlign: 'center', padding: '32px' }}>
+              <Text style={{ color: '#94a3b8', textAlign: 'center', padding: '32px' }}>
                 This will has no encrypted files
               </Text>
             )}
@@ -706,7 +709,9 @@ export const WillListDisplay = () => {
                 variant="soft" 
                 color="gray"
                 style={{
-                  background: 'rgba(0, 0, 0, 0.05)',
+                  background: 'rgba(148, 163, 184, 0.15)',
+                  color: '#e0e7ff',
+                  border: '1px solid rgba(148, 163, 184, 0.3)',
                 }}
                 onClick={() => {
                   setDecryptedTexts([]);
@@ -723,12 +728,29 @@ export const WillListDisplay = () => {
 
       {/* Error dialog */}
       <AlertDialog.Root open={!!error} onOpenChange={() => setError(null)}>
-        <AlertDialog.Content maxWidth="450px">
-          <AlertDialog.Title style={{ color: '#d32f2f' }}>Error</AlertDialog.Title>
-          <AlertDialog.Description size="2">{error}</AlertDialog.Description>
+        <AlertDialog.Content 
+          maxWidth="450px"
+          style={{
+            background: 'rgba(15, 23, 42, 0.95)',
+            border: '1px solid rgba(239, 68, 68, 0.3)',
+          }}
+        >
+          <AlertDialog.Title style={{ color: '#fca5a5' }}>Error</AlertDialog.Title>
+          <AlertDialog.Description size="2" style={{ color: '#e0e7ff' }}>
+            {error}
+          </AlertDialog.Description>
           <Flex gap="3" mt="4" justify="end">
             <AlertDialog.Action>
-              <Button variant="solid" color="red" onClick={() => setError(null)}>
+              <Button 
+                variant="solid" 
+                color="red"
+                style={{
+                  background: 'rgba(239, 68, 68, 0.2)',
+                  color: '#fca5a5',
+                  border: '1px solid rgba(239, 68, 68, 0.4)',
+                }}
+                onClick={() => setError(null)}
+              >
                 Close
               </Button>
             </AlertDialog.Action>
