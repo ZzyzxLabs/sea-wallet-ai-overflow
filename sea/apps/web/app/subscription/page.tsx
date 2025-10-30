@@ -7,6 +7,7 @@ import {
   useSuiClient,
   useSignAndExecuteTransaction,
 } from "@mysten/dapp-kit";
+import { Navigation } from "@/components/Navigation";
 import { Tile } from "../../components/tile";
 import { Button } from "@workspace/ui/components/button";
 import { Input } from "@workspace/ui/components/input";
@@ -40,7 +41,7 @@ import {
   SelectItem,
 } from "@workspace/ui/components/select";
 import { createService } from "@/utils/baseTX/createService";
-import { getCertainField, getCertainType } from "@/utils/queryer";
+import { getCertainField, getCertainType, getMyReceipts } from "@/utils/queryer";
 import { get } from "http";
 import { package_addr } from "@/utils/package";
 import { subscribe } from "@/utils/baseTX/subscribe";
@@ -363,6 +364,84 @@ export default function SubscriptionDashboard() {
 
   }, [account?.address, suiClient]);
 
+  // Fetch user's receipts (subscriptions)
+  useEffect(() => {
+    if (!account?.address) {
+      setSubscriptions([]);
+      return;
+    }
+
+    let cancelled = false;
+
+    async function fetchReceipts() {
+      try {
+        if (!account?.address) return;
+        
+        const receipts = await getMyReceipts({
+          suiClient,
+          address: account.address,
+          packageName: package_addr,
+        });
+
+        if (!receipts || receipts.length === 0) {
+          if (!cancelled) setSubscriptions([]);
+          return;
+        }
+
+        // Convert receipts to subscription objects
+        const subs: Subscription[] = [];
+        for (let i = 0; i < receipts.length; i++) {
+          const receipt = receipts[i] as any;
+          const data = receipt?.data ?? receipt;
+          const fields = data?.content?.fields;
+
+          if (!fields) {
+            console.warn("Receipt missing fields:", receipt);
+            continue;
+          }
+
+          // Determine coin type from the receipt type
+          const receiptType = data?.type || "";
+          const coinTypeMatch = receiptType.match(/<(.+?)>/);
+          const coinType = coinTypeMatch ? coinTypeMatch[1] : "0x2::sui::SUI";
+
+          // Parse expiry date
+          const expireDate = Number(fields?.expire_date ?? 0);
+          const nextBillDate = expireDate > 0 
+            ? new Date(expireDate).toISOString().split('T')[0]
+            : "—";
+
+          // Determine if subscription is active based on expiry
+          const isActive = expireDate > Date.now();
+          const status: Subscription["status"] = isActive ? "active" : "paused";
+
+          const sub: Subscription = {
+            id: data?.objectId || `receipt-${i}`,
+            providerServiceId: String(fields?.serviceID ?? ""),
+            provider: "Service Provider",
+            title: "Subscription",
+            planName: "Standard",
+            amount: Number(fields?.paid_amount ?? 0),
+            currency: coinType.includes("::SUI") ? "SUI" : "USD",
+            interval: "month", // Default to month, could be inferred from ChargeCap
+            status,
+            nextBillDate: nextBillDate ?? "—",
+          };
+
+          subs.push(sub);
+        }
+
+        if (!cancelled) setSubscriptions(subs);
+        console.log("Fetched receipts as subscriptions:", subs);
+      } catch (err) {
+        console.error("fetchReceipts error:", err);
+      }
+    }
+
+    fetchReceipts();
+    return () => { cancelled = true; };
+  }, [account?.address, suiClient]);
+
   const monthlySubscribe = async () => {
     if (!account?.address) {
       alert("Please connect your wallet first.");
@@ -470,7 +549,7 @@ export default function SubscriptionDashboard() {
   );
 
   // My subscriptions
-  const [subscriptions, setSubscriptions] = useState<Subscription[]>(MOCK_MY_SUBSCRIPTIONS);
+  const [subscriptions, setSubscriptions] = useState<Subscription[]>([]);
   const [search, setSearch] = useState("");
   const [subStatusFilter, setSubStatusFilter] = useState<"all" | "active" | "paused" | "canceled">("all");
 
@@ -537,12 +616,30 @@ export default function SubscriptionDashboard() {
           onSuccess: (res) => {
             console.log("Create service tx success:", res);
 
-            // ✅ 可選：從事件解析新 serviceId，然後刷新或樂觀更新 UI
-            // 例：
-            // const createdEvt = res.events?.find(
-            //   (e) => e.type.endsWith("::subscription::ServiceCreated")
-            // );
-            // const newServiceId = createdEvt?.parsedJson?.service_id;
+            // ✅ Extract the created shared Service object (2nd created object)
+            const createdService = (res as any)?.objectChanges?.find(
+              (obj: any) =>
+                obj.type === "created" &&
+                obj.owner?.Shared &&
+                obj.objectType?.includes("::subscription::::subscription::ServiceCap")
+            );
+
+            const newServiceId = createdService?.objectId;
+            console.log("New Service Object ID:", newServiceId);
+
+            if (newServiceId) {
+              // Optimistically add the new service to the display list
+              const newChainService: ChainService = {
+                capObjectId: "",  // We don't have the cap ID in the objectChanges, query it separately if needed
+                serviceObjectId: newServiceId,
+                price: String(toMinorUnitU64(monthPriceStr, decimals)),
+                coinType: chosen,
+                serviceName: form.serviceName.trim(),
+                serviceOwner: account.address,
+                yearlyDiscount: yd,
+              };
+              setMyServicesOnChain((prev) => [...prev, newChainService]);
+            }
 
             // 先關閉對話框 & 重置表單
             setForm({
@@ -554,10 +651,6 @@ export default function SubscriptionDashboard() {
               customCoinType: "",
             });
             setCreateOpen(false);
-
-            // ⛳️ 後續你可以：
-            // - 呼叫後端或鏈上 query 重新拉取服務清單
-            // - 或使用 newServiceId 做樂觀加入
           },
           onError: (e) => {
             console.error("Create service tx error:", e);
@@ -572,14 +665,107 @@ export default function SubscriptionDashboard() {
   }, [validateCreate, form, account?.address, signAndExecuteTransaction]);
 
   const handleRefresh = useCallback(async () => {
+    if (!account?.address) return;
+    
     setIsRefreshing(true);
     try {
-      // TODO: 接上鏈上/後端拉取最新訂閱、服務資料
-      await new Promise((res) => setTimeout(res, 600));
+      // Re-query services from blockchain
+      const firstResult = await getCertainType({
+        suiClient,
+        address: account.address,
+        type: `${package_addr}::subscription::ServiceCap`,
+      });
+
+      console.log("Refresh - First query result:", firstResult);
+      if (!firstResult || firstResult.length === 0) {
+        setMyServicesOnChain([]);
+        return;
+      }
+
+      // Build map: service_id -> capObjectId
+      const sidToCapId = new Map<string, string>();
+      const allIds = firstResult
+        .map((x) => {
+          const sid = (x as any)?.data?.content?.fields?.service_id as string | undefined;
+          const capId = (x as any)?.data?.objectId as string | undefined;
+          if (sid && capId) sidToCapId.set(sid, capId);
+          return sid;
+        })
+        .filter((x): x is string => Boolean(x));
+
+      // Unique service_ids
+      const ids = Array.from(new Set(allIds));
+      console.log("Refresh - Service IDs:", ids);
+
+      // Second query in batches (id -> object)
+      const concurrency = 5;
+      const chunks: string[][] = [];
+      for (let i = 0; i < ids.length; i += concurrency) chunks.push(ids.slice(i, i + concurrency));
+
+      const resultsMap = new Map<string, unknown>();
+      for (const group of chunks) {
+        const settled = await Promise.allSettled(
+          group.map((id) =>
+            getCertainField({ suiClient, objID: id }).then((res) => ({ id, res }))
+          )
+        );
+        for (const r of settled) {
+          if (r.status === "fulfilled") resultsMap.set(r.value.id, r.value.res);
+          else console.error("getCertainField failed:", r.reason);
+        }
+      }
+
+      console.log("Refresh - Second query map (id -> result):", resultsMap);
+
+      // Build display list
+      const list: ChainService[] = [];
+
+      for (const [sid, obj] of resultsMap) {
+        const raw = obj as any;
+
+        // 兼容兩種回傳型態：{ data: {...} } 或直接 {...}
+        const data = raw?.data ?? raw;
+        const content = data?.content ?? {};
+        const fields = content?.fields;
+
+        if (!fields) {
+          console.warn("No fields in refresh query object:", obj);
+          continue;
+        }
+
+        const capObjectId = sidToCapId.get(sid) ?? "";
+
+        // 兼容 id 可能是 { id: '0x...' } 或直接字串
+        const serviceObjectId =
+          fields?.id?.id ?? fields?.id ?? data?.objectId ?? "";
+
+        // 兼容多個欄位名稱
+        const price = String(
+          fields?.price ??
+          fields?.month_price ??
+          fields?.monthly_price ??
+          "0"
+        );
+
+        list.push({
+          capObjectId,
+          serviceObjectId,
+          price,
+          coinType: String(fields?.coin_type ?? ""),
+          serviceName: String(fields?.service_name ?? fields?.name ?? ""),
+          serviceOwner: String(fields?.service_owner ?? ""),
+          yearlyDiscount: Number(fields?.yearly_discount ?? 0),
+        });
+      }
+
+      console.log("Refresh - assembled list:", list);
+      setMyServicesOnChain(list);
+    } catch (err) {
+      console.error("Refresh error:", err);
     } finally {
       setIsRefreshing(false);
     }
-  }, []);
+  }, [account?.address, suiClient]);
 
   // ----- Actions: My Services -----
   const toggleServiceStatus = useCallback((svc: Service) => {
@@ -626,18 +812,7 @@ export default function SubscriptionDashboard() {
 
   return (
     <div className="min-h-screen text-slate-100 bg-[radial-gradient(60rem_60rem_at_-10%_-10%,rgba(99,102,241,0.25),transparent),radial-gradient(40rem_40rem_at_110%_10%,rgba(147,51,234,0.18),transparent)] bg-slate-950">
-      {/* Header */}
-      <header className="sticky top-0 z-20 backdrop-blur supports-[backdrop-filter]:bg-slate-900/50 border-b border-white/10">
-        <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-8">
-            <div className="font-bold tracking-tight">Vault Console</div>
-            <nav className="hidden sm:flex items-center gap-1 text-sm">
-              <ConnectButton />
-            </nav>
-          </div>
-          <div />
-        </div>
-      </header>
+      <Navigation />
 
       <main className="max-w-7xl mx-auto px-6 py-12 space-y-8">
         {/* Page Title */}

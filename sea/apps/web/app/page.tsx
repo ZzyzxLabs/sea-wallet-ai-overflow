@@ -5,6 +5,7 @@ import { VaultTile } from "@/components/vaultTile";
 import { FileSystemTile } from "@/components/fileTile";
 import { VaultFallback } from "@/components/VaultFallback";
 import { FileItem } from "@/components/fileTile";
+import { Navigation } from "@/components/Navigation";
 import { ConnectButton, useCurrentAccount, useSuiClient, useSuiClientQuery } from "@mysten/dapp-kit";
 import { useState, useEffect, useRef } from "react";
 import { package_addr } from "@/utils/package";
@@ -127,19 +128,7 @@ export default function Page() {
 
   return (
     <div className="min-h-screen text-slate-100 bg-[radial-gradient(60rem_60rem_at_-10%_-10%,rgba(99,102,241,0.25),transparent),radial-gradient(40rem_40rem_at_110%_10%,rgba(147,51,234,0.18),transparent)] bg-slate-950">
-      <header className="sticky top-0 z-20 backdrop-blur supports-[backdrop-filter]:bg-slate-900/50 border-b border-white/10">
-        <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-8">
-            <div className="font-bold tracking-tight">Vault Console</div>
-            <nav className="hidden sm:flex items-center gap-1 text-sm">
-              <a className="px-3 py-2 rounded-lg bg-white/10 border border-white/10 hover:bg-white/15 transition">Dashboard</a>
-                <a href="/memberWithdraw" className="px-3 py-2 rounded-lg hover:bg-white/10 transition">Member Withdraw</a>
-              <ConnectButton />
-            </nav>
-          </div>
-          <div />
-        </div>
-      </header>
+      <Navigation />
 
       <main className="max-w-7xl mx-auto px-6 py-8 grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="space-y-6 order-2 lg:order-1">

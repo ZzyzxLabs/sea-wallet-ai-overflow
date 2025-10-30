@@ -87,7 +87,7 @@ export async function getVaultAndOwnerCap(params: { suiClient: SuiClient, accoun
     }
     return undefined;
 }
-export async function getVaultField(params: { suiClient: SuiClient, vaultID: string }): Promise<SuiObjectResponse | undefined> {
+export async function getVaultField(params: { suiClient: SuiClient, vaultID: string }): Promise<any> {
     try {
         const result = await params.suiClient.getObject({
             id: params.vaultID,
@@ -95,7 +95,7 @@ export async function getVaultField(params: { suiClient: SuiClient, vaultID: str
         });
         
         if (result && result.data) {
-            console.log('getVaultField result:', result.data.content?.fields.cap_percentage);
+            console.log('getVaultField result:', (result.data as any).content?.fields?.cap_percentage);
             return result.data;
         }
     } catch (error) {
@@ -134,7 +134,7 @@ export async function getVaultDynamicFields(params: { suiClient: SuiClient, vaul
  * @param {string} params.type - Object type to filter by (partial match)
  * @returns {Promise<SuiObjectResponse[] | undefined>} Array of objects matching the type or undefined if pending
  */
-export async function getCertainType(params: { suiClient: SuiClient, address: string, type: string }): Promise<SuiObjectResponse[] | undefined> {
+export async function getCertainType(params: { suiClient: SuiClient, address: string, type: string }): Promise<any[] | undefined> {
     try {
         const result = await params.suiClient.getOwnedObjects({
             owner: params.address,
@@ -151,7 +151,7 @@ export async function getCertainType(params: { suiClient: SuiClient, address: st
     return undefined;
 }
 
-export async function getCertainField(params: { suiClient: SuiClient, objID: string }): Promise<SuiObjectResponse | undefined> {
+export async function getCertainField(params: { suiClient: SuiClient, objID: string }): Promise<any> {
     try {
         const result = await params.suiClient.getObject({
             id: params.objID,
@@ -163,6 +163,32 @@ export async function getCertainField(params: { suiClient: SuiClient, objID: str
         }
     } catch (error) {
         console.error('Error in getCertainField:', error);
+        throw error;
+    }
+    return undefined;
+}
+
+/**
+ * Function to get all Receipt objects owned by a user
+ * @param {SuiClient} suiClient - Sui client instance
+ * @param {string} address - Owner address
+ * @param {string} packageName - Package name for filtering Receipt objects
+ * @returns {Promise<any[] | undefined>} Array of Receipt objects or undefined if error
+ */
+export async function getMyReceipts(params: { suiClient: SuiClient, address: string, packageName: string }): Promise<any[] | undefined> {
+    try {
+        const result = await params.suiClient.getOwnedObjects({
+            owner: params.address,
+            options: { showType: true, showContent: true }
+        });
+        
+        if (result && result.data) {
+            return result.data.filter(item => 
+                item.data?.type?.includes(params.packageName + "::subscription::Receipt")
+            );
+        }
+    } catch (error) {
+        console.error('Error in getMyReceipts:', error);
         throw error;
     }
     return undefined;

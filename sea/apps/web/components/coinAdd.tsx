@@ -150,7 +150,8 @@ const CoinAdd: React.FC<CoinAddProps> = ({
             const metadata = await suiClient.getCoinMetadata({
               coinType: normalizeType(coin.coinType)
             });
-            return metadata;
+            // Ensure we always return an object with at least decimals
+            return metadata || { decimals: 6 };
           } catch (error) {
             console.warn(`Failed to fetch metadata for ${coin.coinType}:`, error);
             return { decimals: 6 }; // Default decimals
@@ -158,7 +159,9 @@ const CoinAdd: React.FC<CoinAddProps> = ({
         });
         
         const metadata = await Promise.all(metadataPromises);
-        setCoinMetadata(metadata);
+        // Filter out any null values and ensure all entries have decimals
+        const safeMetadata = metadata.map(m => m || { decimals: 6 });
+        setCoinMetadata(safeMetadata);
       } catch (error) {
         console.error("Error fetching coin metadata:", error);
         // Set default metadata for all coins
@@ -248,41 +251,32 @@ const CoinAdd: React.FC<CoinAddProps> = ({
       return [];
     }
     
+    // Handle both formats: { data: { objectId } } and { coinObjectId }
     return coins
-      .filter(coin => coin && coin.data && coin.data.objectId)
-      .map(coin => coin.data.objectId);
+      .filter(coin => coin && (coin.data?.objectId || coin.coinObjectId))
+      .map(coin => coin.data?.objectId || coin.coinObjectId);
   };
   
   // Function to find matching coins for the selected coin type
-  const findMatchingCoins = () => {
+  const findMatchingCoins = async () => {
     if (!selectedCoin) return [];
 
-    // Get the full coin type path
-    const coinType = normalizeType(selectedCoin.coinType);
-    console.log(`Searching for coin type: ${coinType}`);
+    const targetCoinType = normalizeType(selectedCoin.coinType);
+    console.log(`Searching for coin type: ${targetCoinType}`);
 
-    // Find coins that match the coin type within a Coin<Type> structure
-    const coinss =
-      vaultAndCap.data?.data.filter((obj: any) => {
-        const objType = obj.data?.type;
-        if (!objType) return false;
+    try {
+      // Query for coins owned by the user that match the selected coin type
+      const coins = await suiClient.getCoins({
+        owner: account?.address || "",
+        coinType: targetCoinType,
+      });
 
-        // Extract coin type from within <>
-        const match = objType.match(/<([^>]+)>/);
-        if (match && match[1]) {
-          const extractedCoinType = match[1];
-          console.log(
-            `Matching: extracted coin type = ${extractedCoinType}, target = ${normalizeType(selectedCoin.coinType)}`
-          );
-
-          return extractedCoinType === normalizeType(selectedCoin.coinType);
-        }
-        return false;
-      }) || [];
-
-    console.log(`Found ${coinss.length} matching coins`, coinss, coinType);
-
-    return coinss;
+      console.log(`Found ${coins.data.length} matching coins for ${targetCoinType}`, coins.data);
+      return coins.data;
+    } catch (error) {
+      console.error(`Error fetching coins of type ${targetCoinType}:`, error);
+      return [];
+    }
   };
 
   // Handle adding a new coin - using modified fuseTxFunctions
@@ -326,7 +320,7 @@ const CoinAdd: React.FC<CoinAddProps> = ({
       setIsProcessing(true);
       
       // Get the matching coins and safely extract object IDs
-      const matchingCoins = findMatchingCoins();
+      const matchingCoins = await findMatchingCoins();
       console.log("Found matching coins:", matchingCoins);
       
       // Safely extract the object IDs
