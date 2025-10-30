@@ -144,7 +144,6 @@ function HeirBox({ heir, index }: { heir: HeirData; index: number }) {
               setCapActivated(capItem?.fields?.value ?? null);
             }
           }
-
           if (fields?.cap_percentage && "fields" in fields.cap_percentage) {
             const capPercentageField = fields.cap_percentage;
             if (

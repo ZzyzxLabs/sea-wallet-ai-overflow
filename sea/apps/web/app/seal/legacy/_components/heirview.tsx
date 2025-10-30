@@ -12,7 +12,8 @@ import { fromHex, toHex } from '@mysten/sui/utils';
 import { downloadAndDecrypt } from './utils_download';
 import { set, get } from 'idb-keyval';
 import { getFullnodeUrl, SuiClient } from '@mysten/sui/client';
-
+import { getVaultAndOwnerCap, getVaultDynamicFields, getVaultField } from "../../../../utils/queryer";
+import { package_addr } from '@/utils/package';
 const TTL_MIN = 10;
 
 // Define Cap Type Enum
@@ -57,10 +58,10 @@ interface FeedData {
 // Construct different types of MoveCalls
 function constructMoveCall(packageId: string, allowlistId: string, cap_id: string, capType: CapType) {
   return (tx: Transaction, id: string) => {
-    const target = capType === CapType.OWNER 
-      ? `${packageId}::seaVault::seal_approve_owner`
-      : `${packageId}::seaVault::seal_approve`;
-      
+    const target = capType === CapType.OWNER
+      ? `${packageId}::sea_vault::seal_approve_owner`
+      : `${packageId}::sea_vault::seal_approve`;
+    console.log(fromHex(id))
     tx.moveCall({
       target,
       arguments: [tx.pure.vector('u8', fromHex(id)), tx.object(cap_id), tx.object(allowlistId)],
@@ -68,12 +69,12 @@ function constructMoveCall(packageId: string, allowlistId: string, cap_id: strin
   };
 }
 
-const UnifiedOceanCard = ({ 
-  item, 
+const UnifiedOceanCard = ({
+  item,
   index,
-  onViewDetails 
-}: { 
-  item: CardItem; 
+  onViewDetails
+}: {
+  item: CardItem;
   index: number;
   onViewDetails: (capId: string, willlistId: string, capType: CapType) => void;
 }) => {
@@ -85,16 +86,16 @@ const UnifiedOceanCard = ({
       'linear-gradient(135deg, #006994 0%, #0089b8 50%, #00b4d8 100%)',
       'linear-gradient(135deg, #0d47a1 0%, #2e6bc0 50%, #42a5f5 100%)',
     ];
-    
+
     const memberGradients = [
       'linear-gradient(135deg, #2e7d32 0%, #3d9142 50%, #4caf50 100%)',
       'linear-gradient(135deg, #388e3c 0%, #4da250 50%, #66bb6a 100%)',
       'linear-gradient(135deg, #43a047 0%, #5db75b 50%, #81c784 100%)',
       'linear-gradient(135deg, #1b5e20 0%, #2e7d32 50%, #4caf50 100%)',
     ];
-    
+
     const gradients = capType === CapType.OWNER ? ownerGradients : memberGradients;
-    
+
     return {
       background: gradients[index % gradients.length],
       border: 'none',
@@ -156,11 +157,11 @@ const UnifiedOceanCard = ({
               {item.name || 'Unnamed Will'}
             </Heading>
           </Flex>
-          
-          <Badge 
-            size="2" 
-            style={{ 
-              background: 'rgba(255, 255, 255, 0.2)', 
+
+          <Badge
+            size="2"
+            style={{
+              background: 'rgba(255, 255, 255, 0.2)',
               color: 'white',
               border: '1px solid rgba(255, 255, 255, 0.3)'
             }}
@@ -250,7 +251,7 @@ export const WillListDisplay = () => {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [feedData, setFeedData] = useState<FeedData | null>(null);
   const [decrypting, setDecrypting] = useState(false);
-
+  const [blobId, setBlobId] = useState<string[]>([]);
   const { mutate: signPersonalMessage } = useSignPersonalMessage();
 
   // Initialize SealClient with proper configuration
@@ -263,10 +264,42 @@ export const WillListDisplay = () => {
     verifyKeyServers: false,
   }), [suiClient]);
 
+  useEffect(() => {
+    let active = true;
+
+    const fetchVault = async () => {
+      try {
+        const { vaultID } = await getVaultAndOwnerCap({
+          suiClient,
+          accountAddress: currentAccount!.address,
+          packageName: package_addr,
+        });
+
+        if (!active) return;
+
+        const data = await getVaultField({ suiClient, vaultID });
+
+        if (active) {
+          setBlobId(data.content.fields.blob);
+          // 這裡可以 setState 或其他操作
+        }
+      } catch (err) {
+        console.error("Error fetching vault data:", err);
+      }
+    };
+
+    fetchVault();
+
+    return () => {
+      active = false;
+    };
+  }, [currentAccount?.address, package_addr, suiClient]);
+
+
   // Unified retrieval of both types of Caps
   const getUnifiedCapObj = useCallback(async () => {
     if (!currentAccount?.address) return;
-    
+
     setLoading(true);
     try {
       // Get all owned objects first
@@ -277,18 +310,18 @@ export const WillListDisplay = () => {
           showType: true,
         },
       });
-      
+
       // Filter for OwnerCap and MemberCap locally
-      const ownerCapObjects = allObjects.data.filter(obj => 
-        obj.data?.type?.includes('::sea_vault::OwnerCap') || 
+      const ownerCapObjects = allObjects.data.filter(obj =>
+        obj.data?.type?.includes('::sea_vault::OwnerCap') ||
         obj.data?.type?.includes('::seaVault::OwnerCap')
       );
-      
-      const memberCapObjects = allObjects.data.filter(obj => 
-        obj.data?.type?.includes('::sea_vault::MemberCap') || 
+
+      const memberCapObjects = allObjects.data.filter(obj =>
+        obj.data?.type?.includes('::sea_vault::MemberCap') ||
         obj.data?.type?.includes('::seaVault::MemberCap')
       );
-      
+
       // Process OwnerCap
       const ownerCaps: Cap[] = ownerCapObjects
         .map((obj) => {
@@ -317,7 +350,7 @@ export const WillListDisplay = () => {
 
       // Merge both types of Caps
       const allCaps = [...ownerCaps, ...memberCaps];
-        
+
       // Get corresponding will details for each Cap
       const cardItems: CardItem[] = await Promise.all(
         allCaps.map(async (cap) => {
@@ -336,7 +369,7 @@ export const WillListDisplay = () => {
           };
         }),
       );
-      
+
       setCardItems(cardItems);
     } catch (error) {
       console.error('Error occurred while fetching data:', error);
@@ -355,22 +388,20 @@ export const WillListDisplay = () => {
     setSelectedCapType(capType);
     setIsDialogOpen(true);
     setDecryptedTexts([]);
-    
+
     try {
       const allowlist = await suiClient.getObject({ id: willlistId, options: { showContent: true } });
-      const encryptedObjects = await suiClient.getDynamicFields({ parentId: willlistId }).then(res =>
-        res.data.map(obj => obj.name.value as string)
-      );
+      const encryptedObjects = [blobId];
       const fields = (allowlist.data?.content as { fields: any })?.fields || {};
-      
-      const feed: FeedData = { 
-        allowlistId: willlistId, 
-        allowlistName: fields.name, 
+
+      const feed: FeedData = {
+        allowlistId: willlistId,
+        allowlistName: fields.name,
         blobIds: encryptedObjects,
         capType
       };
       setFeedData(feed);
-      
+
       // Automatically start decryption
       if (encryptedObjects.length > 0) {
         await onView(encryptedObjects, willlistId, capId, capType);
@@ -382,16 +413,17 @@ export const WillListDisplay = () => {
   };
 
   const onView = async (blobIds: string[], allowlistId: string, capId: string, capType: CapType) => {
+    console.log(blobIds, allowlistId, capId, capType);
     setDecrypting(true);
     const imported: any = await get('sessionKey');
-    
+
     if (imported) {
       try {
         const currentSessionKey = await SessionKey.import(
           imported,
           suiClient as any,
         );
-        
+
         if (currentSessionKey && !currentSessionKey.isExpired() && currentSessionKey.getAddress() === currentAccount?.address) {
           await handleDecrypt(blobIds, allowlistId, currentSessionKey, capId, capType);
           return;
@@ -400,17 +432,17 @@ export const WillListDisplay = () => {
         console.log('Imported session key has expired', error);
       }
     }
-    
+
     set('sessionKey', null);
     setCurrentSessionKey(null);
-    
+
     const sessionKey = await SessionKey.create({
       address: currentAccount?.address!,
-      packageId,
+      packageId: package_addr,
       ttlMin: TTL_MIN,
       suiClient: suiClient as any,
     });
-    
+
     signPersonalMessage(
       { message: sessionKey.getPersonalMessage() },
       {
@@ -428,15 +460,16 @@ export const WillListDisplay = () => {
   };
 
   const handleDecrypt = async (
-    blobIds: string[], 
-    allowlistId: string, 
-    sessionKey: SessionKey, 
-    capId: string, 
+    blobIds: string[],
+    allowlistId: string,
+    sessionKey: SessionKey,
+    capId: string,
     capType: CapType
   ) => {
+    console.log(blobIds, allowlistId, capId, capType);
     // Construct different MoveCalls based on Cap type
     const moveCallConstructor = constructMoveCall(packageId, allowlistId, capId, capType);
-    
+
     await downloadAndDecrypt(
       blobIds,
       sessionKey,
@@ -447,7 +480,7 @@ export const WillListDisplay = () => {
       setDecryptedTexts,
       setIsDialogOpen,
       setDecryptedTexts,
-      () => {}
+      () => { }
     );
     setDecrypting(false);
   };
@@ -456,12 +489,12 @@ export const WillListDisplay = () => {
   const stats = useMemo(() => {
     const ownerCount = cardItems.filter(item => item.cap_type === CapType.OWNER).length;
     const memberCount = cardItems.filter(item => item.cap_type === CapType.MEMBER).length;
-    
+
     return { ownerCount, memberCount, total: cardItems.length };
   }, [cardItems]);
 
   return (
-    <Box 
+    <Box
       className='w-full min-h-screen'
       style={{
         padding: '32px 24px',
@@ -472,8 +505,8 @@ export const WillListDisplay = () => {
       <Flex direction="column" align="center" mb="6" className="text-center">
         <Flex align="center" gap="3" mb="3">
           <Waves size={48} color="#6366f1" style={{ animation: 'pulse 2s infinite' }} />
-          <Heading size="8" style={{ 
-            color: '#e0e7ff', 
+          <Heading size="8" style={{
+            color: '#e0e7ff',
             fontWeight: 'bold',
             textShadow: '0 2px 4px rgba(99, 102, 241, 0.3)'
           }}>
@@ -484,10 +517,10 @@ export const WillListDisplay = () => {
         <Text size="4" style={{ color: '#a5b4fc', maxWidth: '600px' }}>
           Protecting your digital heritage with the depth and security of the ocean
         </Text>
-        
+
         {/* Enhanced Statistics with better visual hierarchy */}
         <Flex gap="4" mt="5" wrap="wrap" justify="center">
-          <Card style={{ 
+          <Card style={{
             background: 'linear-gradient(135deg, rgba(99, 102, 241, 0.15) 0%, rgba(99, 102, 241, 0.25) 100%)',
             padding: '16px 24px',
             border: '1px solid rgba(99, 102, 241, 0.3)',
@@ -505,8 +538,8 @@ export const WillListDisplay = () => {
               </Box>
             </Flex>
           </Card>
-          
-          <Card style={{ 
+
+          <Card style={{
             background: 'linear-gradient(135deg, rgba(34, 197, 94, 0.15) 0%, rgba(34, 197, 94, 0.25) 100%)',
             padding: '16px 24px',
             border: '1px solid rgba(34, 197, 94, 0.3)',
@@ -524,8 +557,8 @@ export const WillListDisplay = () => {
               </Box>
             </Flex>
           </Card>
-          
-          <Card style={{ 
+
+          <Card style={{
             background: 'linear-gradient(135deg, rgba(147, 51, 234, 0.15) 0%, rgba(147, 51, 234, 0.25) 100%)',
             padding: '16px 24px',
             border: '1px solid rgba(147, 51, 234, 0.3)',
@@ -568,9 +601,9 @@ export const WillListDisplay = () => {
           }}
         >
           {cardItems.map((item, index) => (
-            <UnifiedOceanCard 
-              key={`${item.cap_type}-${item.cap_id}`} 
-              item={item} 
+            <UnifiedOceanCard
+              key={`${item.cap_type}-${item.cap_id}`}
+              item={item}
               index={index}
               onViewDetails={handleViewDetails}
             />
@@ -594,7 +627,7 @@ export const WillListDisplay = () => {
             border: '1px solid rgba(255, 255, 255, 0.1)',
           }}
         >
-          <Box style={{ 
+          <Box style={{
             background: 'linear-gradient(135deg, rgba(99, 102, 241, 0.4) 0%, rgba(147, 51, 234, 0.3) 100%)',
             borderRadius: '50%',
             padding: '24px',
@@ -615,7 +648,7 @@ export const WillListDisplay = () => {
 
       {/* Details dialog */}
       <Dialog.Root open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <Dialog.Content 
+        <Dialog.Content
           maxWidth="600px"
           style={{
             background: 'linear-gradient(135deg, rgba(15, 23, 42, 0.95) 0%, rgba(30, 41, 59, 0.95) 100%)',
@@ -624,8 +657,8 @@ export const WillListDisplay = () => {
             border: '1px solid rgba(255, 255, 255, 0.1)',
           }}
         >
-          <Dialog.Title 
-            style={{ 
+          <Dialog.Title
+            style={{
               color: '#e0e7ff',
               fontSize: '1.5rem',
               display: 'flex',
@@ -635,10 +668,10 @@ export const WillListDisplay = () => {
           >
             {selectedCapType === CapType.OWNER ? <Crown size={24} /> : <Users size={24} />}
             {feedData?.allowlistName || 'Will Details'}
-            <Badge 
-              size="2" 
-              style={{ 
-                background: selectedCapType === CapType.OWNER ? 'rgba(99, 102, 241, 0.3)' : 'rgba(34, 197, 94, 0.3)', 
+            <Badge
+              size="2"
+              style={{
+                background: selectedCapType === CapType.OWNER ? 'rgba(99, 102, 241, 0.3)' : 'rgba(34, 197, 94, 0.3)',
                 color: 'white',
                 border: `1px solid ${selectedCapType === CapType.OWNER ? 'rgba(99, 102, 241, 0.5)' : 'rgba(34, 197, 94, 0.5)'}`
               }}
@@ -646,7 +679,7 @@ export const WillListDisplay = () => {
               {selectedCapType === CapType.OWNER ? 'Owner' : 'Member'}
             </Badge>
           </Dialog.Title>
-          
+
           <Box mt="4">
             {decrypting && (
               <Flex align="center" justify="center" p="4">
@@ -654,7 +687,7 @@ export const WillListDisplay = () => {
                 <Text ml="3" style={{ color: '#a5b4fc' }}>Decrypting data...</Text>
               </Flex>
             )}
-            
+
             {!decrypting && decryptedTexts.length > 0 && (
               <Box>
                 <Text size="3" mb="3" style={{ color: '#a5b4fc' }}>
@@ -681,8 +714,8 @@ export const WillListDisplay = () => {
                         border: '1px solid rgba(255, 255, 255, 0.1)',
                       }}
                     >
-                      <pre style={{ 
-                        margin: 0, 
+                      <pre style={{
+                        margin: 0,
                         whiteSpace: 'pre-wrap',
                         color: '#e2e8f0',
                         fontFamily: 'monospace',
@@ -695,18 +728,18 @@ export const WillListDisplay = () => {
                 </Box>
               </Box>
             )}
-            
+
             {!decrypting && feedData?.blobIds.length === 0 && (
               <Text style={{ color: '#94a3b8', textAlign: 'center', padding: '32px' }}>
                 This will has no encrypted files
               </Text>
             )}
           </Box>
-          
+
           <Flex gap="3" mt="4" justify="end">
             <Dialog.Close>
-              <Button 
-                variant="soft" 
+              <Button
+                variant="soft"
                 color="gray"
                 style={{
                   background: 'rgba(148, 163, 184, 0.15)',
@@ -728,7 +761,7 @@ export const WillListDisplay = () => {
 
       {/* Error dialog */}
       <AlertDialog.Root open={!!error} onOpenChange={() => setError(null)}>
-        <AlertDialog.Content 
+        <AlertDialog.Content
           maxWidth="450px"
           style={{
             background: 'rgba(15, 23, 42, 0.95)',
@@ -741,8 +774,8 @@ export const WillListDisplay = () => {
           </AlertDialog.Description>
           <Flex gap="3" mt="4" justify="end">
             <AlertDialog.Action>
-              <Button 
-                variant="solid" 
+              <Button
+                variant="solid"
                 color="red"
                 style={{
                   background: 'rgba(239, 68, 68, 0.2)',

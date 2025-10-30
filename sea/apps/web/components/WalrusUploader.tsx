@@ -1,8 +1,8 @@
 "use client"
-import { useSignAndExecuteTransaction, useSuiClient } from '@mysten/dapp-kit';
+import { useCurrentAccount, useSignAndExecuteTransaction, useSuiClient } from '@mysten/dapp-kit';
 import { Transaction } from '@mysten/sui/transactions';
 import { Button, Card, Flex, Box, Text, Heading, Tabs, TextArea, Spinner } from '@radix-ui/themes';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Upload, FileText, Waves } from 'lucide-react';
 import { useNetworkVariable } from '@/app/networkConfig';
 import { SealClient } from '@mysten/seal';
@@ -10,7 +10,9 @@ import { fromHex, toHex } from '@mysten/sui/utils';
 import { oceanTheme } from '@/app/smartwill/theme';
 import { Data, WalrusService } from '@/app/smartwill/types';
 import { walrusServices, getAggregatorUrl, getPublisherUrl } from '@/app/smartwill/utils';
-
+import { package_addr } from '@/utils/package';
+import { getVaultAndOwnerCap, getVaultDynamicFields, getVaultField } from "../utils/queryer";
+import { SuiObjectResponse } from '@mysten/sui/client';
 interface WalrusUploaderProps {
   willlistId: string;
   capId: string;
@@ -18,20 +20,21 @@ interface WalrusUploaderProps {
 
 export function WalrusUploader({ willlistId, capId }: WalrusUploaderProps) {
   const [file, setFile] = useState<File | null>(null);
+  const account = useCurrentAccount();
   const [info, setInfo] = useState<Data | null>(null);
   const [isUploading, setIsUploading] = useState<boolean>(false);
   const [selectedService, setSelectedService] = useState<string>('service1');
   const [currentRetry, setCurrentRetry] = useState<number>(0);
   const [textInput, setTextInput] = useState<string>('');
+  const [willListId, setWillListId] = useState<string>(willlistId);
+  const [isLoading, setIsLoading] = useState(false);
   const maxRetries = 2;
-
   const SUI_VIEW_TX_URL = `https://suiscan.xyz/testnet/tx`;
   const SUI_VIEW_OBJECT_URL = `https://suiscan.xyz/testnet/object`;
-
   const NUM_EPOCH = 1;
   const packageId = useNetworkVariable('packageId');
   const suiClient = useSuiClient();
-  
+  console.log(willlistId, capId);
   const client = new SealClient({
     suiClient: suiClient as any,
     serverConfigs: [
@@ -39,7 +42,34 @@ export function WalrusUploader({ willlistId, capId }: WalrusUploaderProps) {
     ],
     verifyKeyServers: false,
   });
+  const [vaultData, setVaultData] = useState<{
+    ownerCapObjects: SuiObjectResponse[] | null;
+    vaultID: string | null;
+    ownerCapId: string | null;
+  } | null>(null);
+  useEffect(() => {
+    const fetchVaultData = async () => {
+      if (!account?.address) return;
 
+      setIsLoading(true);
+      try {
+        const vaultResult = await getVaultAndOwnerCap({
+          suiClient,
+          accountAddress: account.address,
+          packageName: package_addr
+        });
+
+        console.log("Vault and OwnerCap data:", vaultResult);
+        setVaultData(vaultResult || null);
+      } catch (error) {
+        console.error("Error fetching vault data:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchVaultData();
+  }, [account?.address, package_addr]);
   const { mutate: signAndExecute } = useSignAndExecuteTransaction({
     execute: async ({ bytes, signature }) =>
       await suiClient.executeTransactionBlock({
@@ -74,7 +104,7 @@ export function WalrusUploader({ willlistId, capId }: WalrusUploaderProps) {
 
     setFile(textFile);
     setInfo(null);
-    
+
     setTimeout(() => {
       handleSubmit(textFile);
     }, 0);
@@ -93,16 +123,16 @@ export function WalrusUploader({ willlistId, capId }: WalrusUploaderProps) {
             try {
               const nonce = crypto.getRandomValues(new Uint8Array(5));
               const policyObjectBytes = fromHex(willlistId);
-              const pid = fromHex(packageId);
+              const pid = fromHex(package_addr);
               console.log(pid);
               const id = toHex(new Uint8Array([...policyObjectBytes, ...nonce]));
               const { encryptedObject: encryptedBytes } = await client.encrypt({
-                threshold: 2,
-                packageId: pid,
+                threshold: 1,
+                packageId: package_addr,
                 id,
                 data: new Uint8Array(result),
               });
-              
+
               try {
                 const storageInfo = await storeBlob(encryptedBytes);
                 displayUpload(storageInfo.info, fileToUpload.type);
@@ -132,17 +162,17 @@ export function WalrusUploader({ willlistId, capId }: WalrusUploaderProps) {
     if (currentRetry < maxRetries) {
       const nextServiceIndex = (walrusServices.findIndex((s: WalrusService) => s.id === selectedService) + 1) % walrusServices.length;
       const nextService = walrusServices[nextServiceIndex];
-      
+
       if (!nextService) {
         alert('No more services available to retry');
         setIsUploading(false);
         return;
       }
-      
+
       console.log(`Upload failed, retrying... (${currentRetry + 1}/${maxRetries}) using service: ${nextService.name}`);
       setSelectedService(nextService.id);
       setCurrentRetry(prev => prev + 1);
-      
+
       setTimeout(async () => {
         try {
           const storageInfo = await storeBlob(encryptedBytes);
@@ -199,7 +229,7 @@ export function WalrusUploader({ willlistId, capId }: WalrusUploaderProps) {
         method: 'PUT',
         body: encryptedData as any,
       });
-      
+
       if (response.status === 200) {
         return response.json().then((info) => {
           return { info };
@@ -215,9 +245,13 @@ export function WalrusUploader({ willlistId, capId }: WalrusUploaderProps) {
 
   async function handlePublish() {
     const tx = new Transaction();
+    console.log(info!.blobId)
+    console.log(packageId)
+    console.log(willListId)
+    console.log(capId)
     tx.moveCall({
-      target: `${packageId}::seaVault::publish`,
-      arguments: [tx.object(willlistId), tx.object(capId), tx.pure.string(info!.blobId)],
+      target: `${package_addr}::sea_vault::publish`,
+      arguments: [tx.object(vaultData!.vaultID), tx.object(capId), tx.pure.string("2"), tx.pure.string(info!.blobId)],
     });
 
     tx.setGasBudget(10000000);
@@ -241,14 +275,14 @@ export function WalrusUploader({ willlistId, capId }: WalrusUploaderProps) {
   return (
     <Card className="ocean-card" style={{ padding: '24px' }}>
       <Tabs.Root defaultValue="file">
-        <Tabs.List style={{ 
-          background: oceanTheme.gradients.oceanLight, 
+        <Tabs.List style={{
+          background: oceanTheme.gradients.oceanLight,
           borderRadius: '12px',
           padding: '4px',
           marginBottom: '20px'
         }}>
-          <Tabs.Trigger value="file" style={{ 
-            borderRadius: '8px', 
+          <Tabs.Trigger value="file" style={{
+            borderRadius: '8px',
             padding: '8px 16px',
             color: oceanTheme.colors.text.primary,
             fontWeight: '600'
@@ -256,8 +290,8 @@ export function WalrusUploader({ willlistId, capId }: WalrusUploaderProps) {
             <Upload size={16} style={{ marginRight: '8px' }} />
             File Upload
           </Tabs.Trigger>
-          <Tabs.Trigger value="text" style={{ 
-            borderRadius: '8px', 
+          <Tabs.Trigger value="text" style={{
+            borderRadius: '8px',
             padding: '8px 16px',
             color: oceanTheme.colors.text.primary,
             fontWeight: '600'
@@ -266,7 +300,7 @@ export function WalrusUploader({ willlistId, capId }: WalrusUploaderProps) {
             Text Upload
           </Tabs.Trigger>
         </Tabs.List>
-        
+
         <Box style={{ padding: '16px 0' }}>
           <Tabs.Content value="file">
             <Flex direction="column" gap="3">
@@ -288,9 +322,9 @@ export function WalrusUploader({ willlistId, capId }: WalrusUploaderProps) {
                   ))}
                 </select>
               </Flex>
-              
-              <Box 
-                style={{ 
+
+              <Box
+                style={{
                   border: `2px dashed ${oceanTheme.colors.wave.medium}`,
                   borderRadius: '12px',
                   padding: '24px',
@@ -303,7 +337,7 @@ export function WalrusUploader({ willlistId, capId }: WalrusUploaderProps) {
                 <input
                   type="file"
                   onChange={handleFileChange}
-                  style={{ 
+                  style={{
                     position: 'absolute',
                     opacity: 0,
                     width: '100%',
@@ -319,9 +353,9 @@ export function WalrusUploader({ willlistId, capId }: WalrusUploaderProps) {
                   File size must be less than 10 MiB
                 </Text>
               </Box>
-              
+
               {file && (
-                <Card style={{ 
+                <Card style={{
                   background: oceanTheme.colors.wave.light,
                   padding: '12px',
                   borderRadius: '8px'
@@ -331,7 +365,7 @@ export function WalrusUploader({ willlistId, capId }: WalrusUploaderProps) {
                   </Text>
                 </Card>
               )}
-              
+
               <Button
                 className="ocean-button"
                 onClick={() => handleSubmit()}
@@ -352,20 +386,20 @@ export function WalrusUploader({ willlistId, capId }: WalrusUploaderProps) {
               </Button>
             </Flex>
           </Tabs.Content>
-          
+
           <Tabs.Content value="text">
             <Flex direction="column" gap="3">
               <Text size="3" style={{ color: oceanTheme.colors.text.secondary, fontWeight: '500' }}>
                 Enter text to upload:
               </Text>
-              <TextArea 
+              <TextArea
                 value={textInput}
                 onChange={(e) => setTextInput(e.target.value)}
                 placeholder="Enter text here..."
                 className="ocean-input"
                 style={{ minHeight: '150px', resize: 'vertical' }}
               />
-              
+
               <Flex gap="3" align="center">
                 <Text size="3" style={{ color: oceanTheme.colors.text.secondary, fontWeight: '500' }}>
                   Select Walrus service:
@@ -384,7 +418,7 @@ export function WalrusUploader({ willlistId, capId }: WalrusUploaderProps) {
                   ))}
                 </select>
               </Flex>
-              
+
               <Button
                 className="ocean-button"
                 onClick={handleTextUpload}
@@ -407,9 +441,9 @@ export function WalrusUploader({ willlistId, capId }: WalrusUploaderProps) {
           </Tabs.Content>
         </Box>
       </Tabs.Root>
-      
+
       {isUploading && (
-        <Card style={{ 
+        <Card style={{
           marginTop: '16px',
           padding: '16px',
           background: oceanTheme.colors.wave.light,
@@ -423,10 +457,10 @@ export function WalrusUploader({ willlistId, capId }: WalrusUploaderProps) {
           </Flex>
         </Card>
       )}
-      
+
       {info && (
-        <Card style={{ 
-          padding: '20px', 
+        <Card style={{
+          padding: '20px',
           marginTop: '20px',
           background: oceanTheme.gradients.card,
           borderRadius: '16px',
@@ -443,11 +477,11 @@ export function WalrusUploader({ willlistId, capId }: WalrusUploaderProps) {
               <strong>Blob ID:</strong> {info.blobId}
             </Text>
             <Flex gap="3" style={{ marginTop: '12px' }}>
-              <Button 
-                size="2" 
-                variant="outline" 
+              <Button
+                size="2"
+                variant="outline"
                 asChild
-                style={{ 
+                style={{
                   borderColor: oceanTheme.colors.primary,
                   color: oceanTheme.colors.primary,
                   borderRadius: '8px'
@@ -461,11 +495,11 @@ export function WalrusUploader({ willlistId, capId }: WalrusUploaderProps) {
                   View encrypted Blob
                 </a>
               </Button>
-              <Button 
-                size="2" 
-                variant="outline" 
+              <Button
+                size="2"
+                variant="outline"
                 asChild
-                style={{ 
+                style={{
                   borderColor: oceanTheme.colors.secondary,
                   color: oceanTheme.colors.secondary,
                   borderRadius: '8px'
@@ -483,7 +517,7 @@ export function WalrusUploader({ willlistId, capId }: WalrusUploaderProps) {
           </Flex>
         </Card>
       )}
-      
+
       <Button
         className="ocean-button"
         onClick={handlePublish}

@@ -1,3 +1,4 @@
+import { package_addr } from '@/utils/package';
 import { SealClient, SessionKey, NoAccessError, EncryptedObject } from '@mysten/seal';
 import { SuiClient } from '@mysten/sui/client';
 import { Transaction } from '@mysten/sui/transactions';
@@ -55,11 +56,12 @@ export const downloadAndDecrypt = async (
   for (let i = 0; i < validDownloads.length; i += 10) {
     const batch = validDownloads.slice(i, i + 10);
     const ids = batch.map((enc) => EncryptedObject.parse(new Uint8Array(enc)).id);
+    console.log('Fetching keys for ids:', ids);
     const tx = new Transaction();
-    ids.forEach((id) => moveCallConstructor(tx, id));
+    moveCallConstructor(tx, ids[0]);
     const txBytes = await tx.build({ client: suiClient, onlyTransactionKind: true });
     try {
-      await sealClient.fetchKeys({ ids, txBytes, sessionKey, threshold: 2 });
+      await sealClient.fetchKeys({ ids, txBytes, sessionKey, threshold: 1 });
     } catch (err) {
       console.log(err);
       const errorMsg =
