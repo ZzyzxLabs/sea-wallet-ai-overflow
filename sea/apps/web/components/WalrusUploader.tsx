@@ -10,6 +10,7 @@ import { oceanTheme } from '@/app/smartwill/theme';
 import { Data, WalrusService } from '@/app/smartwill/types';
 import { walrusServices, getAggregatorUrl, getPublisherUrl } from '@/app/smartwill/utils';
 import { package_addr } from '@/utils/package';
+import { getVaultAndOwnerCap } from '@/utils/queryer';
 interface WalrusUploaderProps {
   willlistId: string;
   capId: string;

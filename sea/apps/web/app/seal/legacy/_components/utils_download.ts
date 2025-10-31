@@ -52,7 +52,6 @@ export const downloadAndDecrypt = async (
     setError(errorMsg);
     return;
   }
-	const { mutate: signAndExecuteTransaction } = useSignAndExecuteTransaction();
 
   // Fetch keys in batches of <=10
   for (let i = 0; i < validDownloads.length; i += 10) {
@@ -62,9 +61,6 @@ export const downloadAndDecrypt = async (
     const tx = new Transaction();
     ids.forEach((id) => moveCallConstructor(tx, id));
     const txBytes = await tx.build({ client: suiClient, onlyTransactionKind: true });
-    signAndExecuteTransaction({
-      transaction: tx,
-    })
     try {
       await sealClient.fetchKeys({ ids, txBytes, sessionKey, threshold: 1 });
     } catch (err) {
@@ -92,7 +88,7 @@ export const downloadAndDecrypt = async (
         sessionKey,
         txBytes,
       });
-      
+
       // Decode Uint8Array to text
       const text = new TextDecoder('utf-8').decode(decryptedFile);
       decryptedTexts.push(text);

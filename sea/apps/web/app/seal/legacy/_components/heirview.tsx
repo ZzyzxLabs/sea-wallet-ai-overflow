@@ -258,7 +258,7 @@ export const WillListDisplay = () => {
     suiClient: suiClient as any,
     serverConfigs: [
       // Using testnet key server configuration
-      { objectId: '0x0b4830cc7f444723cc5f00b0ed6b08ea8ddbdfc55e4d3d8306be3091e28b4e13', weight: 1 }
+      { objectId: '0x73d05d62c18d9374e3ea529e8e0ed6161da1a141a94d3f76ae3fe4e99356db75', weight: 1 }
     ],
     verifyKeyServers: false,
   }), [suiClient]);
@@ -447,6 +447,7 @@ export const WillListDisplay = () => {
       {
         onSuccess: async result => {
           await sessionKey.setPersonalMessageSignature(result.signature);
+          console.log(blobIds, allowlistId, capId, capType);
           await handleDecrypt(blobIds, allowlistId, sessionKey, capId, capType);
           setCurrentSessionKey(sessionKey);
         },
