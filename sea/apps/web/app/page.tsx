@@ -38,11 +38,12 @@ export default function Page() {
 
       (async () => {
         try {
-          const { vaultID } = await getVaultAndOwnerCap({
+          const result = await getVaultAndOwnerCap({
             suiClient,
             accountAddress: currentAccount.address,
             packageName,
           });
+          const vaultID = result?.vaultID;
           if (!vaultID) {
             if (active) setCapPercent(null);
             return;

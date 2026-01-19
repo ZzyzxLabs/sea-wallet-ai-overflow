@@ -268,19 +268,22 @@ export const WillListDisplay = () => {
 
     const fetchVault = async () => {
       try {
-        const { vaultID } = await getVaultAndOwnerCap({
+        const result = await getVaultAndOwnerCap({
           suiClient,
           accountAddress: currentAccount!.address,
           packageName: package_addr,
         });
+        const vaultID = result?.vaultID;
 
         if (!active) return;
 
-        const data = await getVaultField({ suiClient, vaultID });
+        if (vaultID) {
+          const data = await getVaultField({ suiClient, vaultID });
 
-        if (active) {
-          setBlobId(data.content.fields.blob);
-          // 這裡可以 setState 或其他操作
+          if (active) {
+            setBlobId(data.content.fields.blob);
+            // 這裡可以 setState 或其他操作
+          }
         }
       } catch (err) {
         console.error("Error fetching vault data:", err);
