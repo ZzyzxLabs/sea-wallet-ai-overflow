@@ -368,7 +368,7 @@ const CoinAdd: React.FC<CoinAddProps> = ({
           vault?.objectId, 
           coinObjectIds,
           amountInSmallestUnit,
-          finalCoinType,
+          selectedCoin.name,
           finalCoinType,
           account.address
         );
@@ -378,7 +378,7 @@ const CoinAdd: React.FC<CoinAddProps> = ({
           vault?.objectId,
           coinObjectIds,
           amountInSmallestUnit,
-          finalCoinType,
+          selectedCoin.name,
           finalCoinType,
           account.address
         );

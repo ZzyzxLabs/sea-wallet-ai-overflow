@@ -23,6 +23,7 @@ interface CoinData {
   formattedType: string;
   amount: string;
   fullType: string;
+  storedKey: string; // The specific key used in dynamic fields (asset_name)
 }
 
 interface WithdrawAmounts {
@@ -206,11 +207,19 @@ export function VaultList({ note = "Loading vault assets...", minHeight = "min-h
           const coinSymbol = fullCoinType && fullCoinType !== "Unknown" ? fullCoinType.split("::").pop() || "Unknown" : "Unknown";
           const amount = (coinObj.data?.content as any)?.fields?.balance || "0";
 
+          // Find the dynamic field info to get the actual stored key
+          const dfInfo = dynamicFields?.find(df => df.objectId === coinObj.data?.objectId);
+          
+          // Use the dynamic field name value as the stored key, or fallback to symbol if not found
+          // The Move contract uses localized string keys for dynamic fields
+          const storedKey = dfInfo?.name?.value || coinSymbol;
+
           return {
             symbol: coinSymbol,
             formattedType: formattedCoinType,
             amount: amount,
-            fullType: fullCoinType
+            fullType: fullCoinType,
+            storedKey: storedKey
           };
         })
         .filter((coin): coin is CoinData => coin !== null);
@@ -245,7 +254,8 @@ export function VaultList({ note = "Loading vault assets...", minHeight = "min-h
       );
 
       // Get the name of asset in the vault - this should match the stored name in the vault
-      const assetName = coin.symbol;
+      // Use storedKey which comes directly from the dynamic field name
+      const assetName = coin.storedKey;
       console.log("coin", coin);
 
       // Get the original full coin type, not the formatted one with ellipses

@@ -323,7 +323,7 @@ function HeirBox({ heir, index }: { heir: HeirData; index: number }) {
       });
 
       // Collect asset names and coin types from coinsWithBalance
-      let assetNames = coinsWithBalance.map((coin: string[]) => coin[0]);
+      let assetNames = coinsWithBalance.map((coin: string[]) => coin[0]).filter((name): name is string => Boolean(name));
       let coinTypesFiltered = coinsWithBalance.map((coin: string[]) => coin[3]).filter((type): type is string => Boolean(type));
 
       // For the first time to trigger the grace period
@@ -338,7 +338,7 @@ function HeirBox({ heir, index }: { heir: HeirData; index: number }) {
       const tx = memberWithdrawTx(
         heir.data.objectId,
         vaultID || "",
-        coinTypesFiltered,
+        assetNames,
         coinTypesFiltered
       );
 

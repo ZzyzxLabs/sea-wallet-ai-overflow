@@ -358,7 +358,7 @@ function HeirBox({ heir, index }: { heir: HeirData; index: number }) {
       const tx = memberWithdrawTx(
         heir.data.objectId,
         vaultID,
-        coinTypes,
+        assetNames,
         coinTypes
       );
       console.log("tx", tx);
