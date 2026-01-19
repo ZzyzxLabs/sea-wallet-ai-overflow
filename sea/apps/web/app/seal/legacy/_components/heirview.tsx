@@ -393,7 +393,7 @@ export const WillListDisplay = () => {
 
     try {
       const allowlist = await suiClient.getObject({ id: willlistId, options: { showContent: true } });
-      const encryptedObjects = [blobId];
+      const encryptedObjects = blobId;
       const fields = (allowlist.data?.content as { fields: any })?.fields || {};
 
       const feed: FeedData = {

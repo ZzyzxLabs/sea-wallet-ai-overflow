@@ -157,6 +157,7 @@ export function VaultCoinManager({
       setLoading(true);
       try {
         const vaultResult = await getVaultAndOwnerCap({
+          suiClient,
           accountAddress: account.address,
           packageName: packageName
         });
@@ -167,6 +168,7 @@ export function VaultCoinManager({
         // If we have a vault ID, get dynamic fields
         if (vaultResult?.vaultID) {
           const dynamicFieldsResult = await getVaultDynamicFields({
+            suiClient,
             vaultID: vaultResult.vaultID
           });
           

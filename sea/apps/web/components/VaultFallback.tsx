@@ -245,11 +245,11 @@ export function VaultFallback() {
       const emailAddressMap = new Map<string, number>();
       
       raw.suiAddressRatio.keys.forEach((key, index) => {
-        suiAddressMap.set(key, parseFloat(raw.suiAddressRatio.values[index]));
+        suiAddressMap.set(key, parseFloat(raw.suiAddressRatio.values[index] || "0"));
       });
       
       raw.emailAddressRatio.keys.forEach((key, index) => {
-        emailAddressMap.set(key, parseFloat(raw.emailAddressRatio.values[index]));
+        emailAddressMap.set(key, parseFloat(raw.emailAddressRatio.values[index] || "0"));
       });
       console.log("Sui Address Map:", suiAddressMap);
       console.log("Email Address Map:", emailAddressMap);
