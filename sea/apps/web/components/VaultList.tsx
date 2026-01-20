@@ -344,6 +344,9 @@ export function VaultList({ note = "Loading vault assets...", minHeight = "min-h
         <CoinAdd 
           coinsInVault={coinsInVault}
           onTransactionSuccess={refreshData}
+          onOpen={refreshData}
+          vaultID={vaultData.vaultID}
+          ownerCapId={vaultData.ownerCapId}
         />
       )}
       <Button 

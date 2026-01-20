@@ -31,6 +31,9 @@ interface CoinData {
 interface CoinAddProps {
   coinsInVault?: any[];
   onTransactionSuccess?: () => void;
+  onOpen?: () => void;
+  vaultID?: string | null;
+  ownerCapId?: string | null;
 }
 
 const Modal: React.FC<ModalProps> = ({ isOpen, onClose, children }) => {
@@ -63,7 +66,10 @@ const Modal: React.FC<ModalProps> = ({ isOpen, onClose, children }) => {
 
 const CoinAdd: React.FC<CoinAddProps> = ({ 
   coinsInVault, 
-  onTransactionSuccess
+  onTransactionSuccess,
+  onOpen,
+  vaultID: propVaultID,
+  ownerCapId: propOwnerCapId
 }) => {
   const account = useCurrentAccount();
   const suiClient = useSuiClient();
@@ -173,7 +179,7 @@ const CoinAdd: React.FC<CoinAddProps> = ({
     fetchCoinMetadata();
   }, [availableCoins, suiClient]);
 
-  // Get vault and owner cap objects
+  // Get vault and owner cap objects - Only if props are not provided
   const vaultAndCap = useSuiClientQuery(
     "getOwnedObjects",
     {
@@ -181,35 +187,45 @@ const CoinAdd: React.FC<CoinAddProps> = ({
       options: { showType: true, showContent: true },
     },
     {
-      enabled: !!account?.address,
+      enabled: !!account?.address && (!propVaultID || !propOwnerCapId),
     }
   );
 
   // Extract owner cap and find vault ID
-  const { ownerCapObjects, vaultID } = useMemo(() => {
-    let ownerCapObjects: any = null;
-    let vaultID: string | null = null;
+  const { activeOwnerCapId, activeVaultID } = useMemo(() => {
+    // If props are provided, use them
+    if (propVaultID && propOwnerCapId) {
+      return { 
+        activeOwnerCapId: propOwnerCapId, 
+        activeVaultID: propVaultID 
+      };
+    }
+
+    let extractedOwnerCapId: string | null = null;
+    let extractedVaultID: string | null = null;
+    
     if (vaultAndCap.data) {
       console.log("Vault and Cap Data:", vaultAndCap.data.data);
       console.log(packageName + "::sea_vault::OwnerCap");
       // Search for smart will owner cap in the data
-      ownerCapObjects = vaultAndCap.data.data.filter((obj: any) =>
+      const ownerCapObjects = vaultAndCap.data.data.filter((obj: any) =>
         obj.data?.type?.includes(packageName + "::sea_vault::OwnerCap")
       );
-      vaultID = ownerCapObjects[0]?.data?.content?.fields?.vaultID || null;
+      extractedVaultID = ownerCapObjects[0]?.data?.content?.fields?.vaultID || null;
+      extractedOwnerCapId = ownerCapObjects[0]?.data?.objectId || null;
     }
-    return { ownerCapObjects, vaultID };
-  }, [vaultAndCap.data, packageName]);
+    return { activeOwnerCapId: extractedOwnerCapId, activeVaultID: extractedVaultID };
+  }, [vaultAndCap.data, packageName, propVaultID, propOwnerCapId]);
 
   // Query for the vault object separately
   const vaultObject = useSuiClientQuery(
     "getObject",
     {
-      id: vaultID || "",
+      id: activeVaultID || "",
       options: { showContent: true },
     },
     {
-      enabled: !!vaultID,
+      enabled: !!activeVaultID,
     }
   );
 
@@ -221,6 +237,10 @@ const CoinAdd: React.FC<CoinAddProps> = ({
 
   // Modal functions
   const openModal = () => {
+    // Call the onOpen callback if provided to refresh data
+    if (onOpen) {
+      onOpen();
+    }
     setIsModalOpen(true);
     // Apply fade-in animation
     setModalAnimation("animate-fadeIn");
@@ -292,7 +312,7 @@ const CoinAdd: React.FC<CoinAddProps> = ({
       return;
     }
 
-    if (!ownerCapObjects || ownerCapObjects.length === 0) {
+    if (!activeOwnerCapId) {
       setErrorr("Owner capability object not found");
       return;
     }
@@ -349,8 +369,16 @@ const CoinAdd: React.FC<CoinAddProps> = ({
       
       // Extract the coin type
       const finalCoinType = normalizeType(selectedCoin.coinType);
+      
+      // Ensure we have active IDs
+      if (!activeOwnerCapId || !vault?.objectId) {
+          setErrorr("Missing vault or cap ID");
+          setIsProcessing(false);
+          return;
+      }
+      
       console.log("Transaction parameters:", {
-        capId: ownerCapObjects[0]?.data?.objectId,
+        capId: activeOwnerCapId,
         vaultId: vault?.objectId,
         coinIds: coinObjectIds,
         amountInSmallestUnit: amountInSmallestUnit.toString(),
@@ -360,12 +388,33 @@ const CoinAdd: React.FC<CoinAddProps> = ({
 
       let tx;
       console.log("coinsInVault", coinsInVault);
-      console.log("condition", !coinsInVault || !Array.isArray(coinsInVault) || !coinsInVault.map((coin: any) => coin[0]).includes(selectedCoin.name));
       
-      if (!coinsInVault || !Array.isArray(coinsInVault) || !coinsInVault.map((coin: any) => coin[0]).includes(selectedCoin.name)) {
+      
+      // Check if coin is already in vault by matching the full coin type
+      // We look for a coin in the vault that has the same type as the selected coin
+      const existingCoin = coinsInVault && Array.isArray(coinsInVault) 
+        ? coinsInVault.find((coin: any) => {
+            // Check fullType first (passed from VaultList)
+            if (coin.fullType && normalizeType(coin.fullType) === finalCoinType) {
+              return true;
+            }
+            // Fallback legacy checks (just in case structure is different)
+            if (coin.coinType && normalizeType(coin.coinType) === finalCoinType) {
+              return true;
+            }
+            // Last resort: check if symbol matches name (less reliable)
+            return coin.storedKey === selectedCoin.name || coin.symbol === selectedCoin.name; 
+          })
+        : null;
+      
+      console.log("existingCoin", existingCoin);
+      
+      if (!existingCoin) {
+        // Not in vault -> Add new coin
+        console.log("Adding new coin to vault");
         tx = fuseTxFunctions(
-          ownerCapObjects[0]?.data?.objectId,
-          vault?.objectId, 
+          activeOwnerCapId,
+          vault.objectId, 
           coinObjectIds,
           amountInSmallestUnit,
           selectedCoin.name,
@@ -373,12 +422,18 @@ const CoinAdd: React.FC<CoinAddProps> = ({
           account.address
         );
       } else {
+        // Already in vault -> Organize coin
+        // IMPORTANT: Use the storedKey from the existing coin as the name
+        // This ensures we match the key used in the dynamic object field
+        const assetName = existingCoin.storedKey || selectedCoin.name;
+        console.log("Organizing existing coin with key:", assetName);
+        
         tx = alterTx(
-          ownerCapObjects[0]?.data?.objectId,
-          vault?.objectId,
+          activeOwnerCapId,
+          vault.objectId, 
           coinObjectIds,
           amountInSmallestUnit,
-          selectedCoin.name,
+          assetName,
           finalCoinType,
           account.address
         );
@@ -608,3 +663,4 @@ const CoinAdd: React.FC<CoinAddProps> = ({
 };
 
 export default CoinAdd;
+
