@@ -1,6 +1,10 @@
 {
   "$schema": "https://turbo.build/schema.json",
   "ui": "tui",
+  "globalEnv": [
+    "MAILGUN_API_KEY",
+    "MAILGUN_DOMAIN"
+  ],
   "tasks": {
     "build": {
       "dependsOn": ["^build"],
