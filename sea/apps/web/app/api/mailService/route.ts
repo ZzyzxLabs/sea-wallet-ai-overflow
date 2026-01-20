@@ -1,8 +1,12 @@
 import { NextResponse } from "next/server";
-import sgMail from "@sendgrid/mail";
+import FormData from "form-data";
+import Mailgun from "mailgun.js";
 
-// 設定 SendGrid API 金鑰
-sgMail.setApiKey(process.env.SENDGRID_API_KEY as string);
+const API_KEY = process.env.MAILGUN_API_KEY || "";
+const DOMAIN = process.env.MAILGUN_DOMAIN || "";
+
+const mailgun = new Mailgun(FormData);
+const client = mailgun.client({ username: "api", key: API_KEY });
 
 export async function POST(request: Request) {
   try {
@@ -11,7 +15,7 @@ export async function POST(request: Request) {
 
     const msg = {
       to: to,
-      from: process.env.SENDER_EMAIL as string,
+      from: process.env.SENDER_EMAIL || `SeaWallet <postmaster@${DOMAIN}>`,
       subject: "SeaWallet - SmartWill Service",
       text: "and easy to do anywhere, even with Node.js",
       html: `<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
@@ -194,7 +198,7 @@ export async function POST(request: Request) {
 </html> `,
     };
 
-    await sgMail.send(msg);
+    await client.messages.create(DOMAIN, msg);
 
     return NextResponse.json(
       { success: true, message: "郵件發送成功" },
